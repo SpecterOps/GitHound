@@ -60,6 +60,49 @@ function New-GithubSession {
     }
 }
 
+function New-GithubAppSession {
+    [OutputType('GitHound.Session')] 
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position=0, Mandatory = $true)]
+        [string]
+        $OrganizationName,
+
+        [Parameter(Position=1, Mandatory = $true)]
+        [string]
+        $ClientId,
+
+        [Parameter(Position=2, Mandatory = $false)]
+        [string]
+        $PrivateKeyPath = './priv.pem'
+    )
+
+    $header = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject @{
+    alg = "RS256"
+    typ = "JWT"
+    }))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+    $payload = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject @{
+    iat = [System.DateTimeOffset]::UtcNow.AddSeconds(-30).ToUnixTimeSeconds()
+    exp = [System.DateTimeOffset]::UtcNow.AddMinutes(5).ToUnixTimeSeconds()
+    iss = $ClientId 
+    }))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+    $rsa = [System.Security.Cryptography.RSA]::Create()
+    $rsa.ImportFromPem((Get-Content $PrivateKeyPath -Raw))
+
+    $signature = [Convert]::ToBase64String($rsa.SignData([System.Text.Encoding]::UTF8.GetBytes("$header.$payload"), [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+    $jwt = "$header.$payload.$signature"
+
+    $presession = New-GithubSession -OrganizationName $OrganizationName -Token $jwt 
+
+    $Installation = Invoke-GithubRestMethod -Session $presession -Path "app/installations" 
+    $AccessToken = Invoke-GithubRestMethod -Session $presession -Path "app/installations/$($Installation.id)/access_tokens" -Method 'POST'
+
+    New-GithubSession -OrganizationName $OrganizationName -Token $AccessToken.token 
+
+}
+
 function Invoke-GithubRestMethod {
     [CmdletBinding()]
     Param(
@@ -80,10 +123,10 @@ function Invoke-GithubRestMethod {
     try {
         do {
             if($LinkHeader) {
-                $Response = Invoke-WebRequest -Uri "$LinkHeader" -Headers $Session.Headers -Method Get -ErrorAction Stop
+                $Response = Invoke-WebRequest -Uri "$LinkHeader" -Headers $Session.Headers -Method $Method -ErrorAction Stop
             } else {
                 Write-Verbose "https://api.github.com/$($Path)"
-                $Response = Invoke-WebRequest -Uri "$($Session.Uri)$($Path)" -Headers $Session.Headers -Method Get -ErrorAction Stop
+                $Response = Invoke-WebRequest -Uri "$($Session.Uri)$($Path)" -Headers $Session.Headers -Method $Method -ErrorAction Stop
             }
 
             $Response.Content | ConvertFrom-Json | ForEach-Object { $_ }
@@ -401,7 +444,7 @@ function Git-HoundBranch
     {
         $list = [System.Collections.Generic.List[pscustomobject]]::new()
         $nodes = New-Object System.Collections.ArrayList
-        $edges = New-Object System.Collections.ArrayList
+        $edges = New-Object System.Collections.ArrayList     
     }
 
     process
@@ -518,6 +561,137 @@ function Git-HoundBranch
                     }
                 }
 
+                if ($branch.protected) {
+                    try {
+                        $Protections = Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.Properties.full_name)/rules/branches/$($branch.name)"
+                        
+                        $aggregatedRules = @{
+                            pull_request = @()
+                            deletion = @()
+                            non_fast_forward = @()
+                            required_signatures = @()
+                            code_scanning = @()
+                            other = @()
+                        }
+                        
+                        $uniqueRulesets = @{}
+                        
+
+                        foreach ($rule in $Protections) {
+                            $rulesetId = $rule.ruleset_id
+                            $ruleType = $rule.type
+                            
+                            if (-not $uniqueRulesets.ContainsKey($rulesetId)) {
+                                $uniqueRulesets[$rulesetId] = @{
+                                    source = $rule.ruleset_source
+                                    source_type = $rule.ruleset_source_type
+                                    rules = @()
+                                }
+                            }
+                            $uniqueRulesets[$rulesetId].rules += $rule
+                            
+                            if ($aggregatedRules.ContainsKey($ruleType)) {
+                                $aggregatedRules[$ruleType] += $rule
+                            } else {
+                                $aggregatedRules['other'] += $rule
+                            }
+                        }
+                        
+                        if ($aggregatedRules['pull_request'].Count -gt 0) {
+                            
+                            $maxRequiredReviews = 0
+                            $requireCodeOwnerReview = $false
+                            $requireLastPushApproval = $false
+                            
+                            foreach ($prRule in $aggregatedRules['pull_request']) {
+                                
+                                if ($prRule.parameters) {
+                                    if ($prRule.parameters.required_approving_review_count -gt $maxRequiredReviews) {
+                                        $maxRequiredReviews = $prRule.parameters.required_approving_review_count
+                                    }
+                                    
+                                    if ($prRule.parameters.require_code_owner_review -eq $true) {
+                                        $requireCodeOwnerReview = $true
+                                    }
+                                    
+                                    if ($prRule.parameters.require_last_push_approval -eq $true) {
+                                        $requireLastPushApproval = $true
+                                    }
+                                    
+                                }
+                            }
+                            
+                            if ($branch.protection.enabled -and $Protections.required_pull_request_reviews) {
+
+                                if ($maxRequiredReviews -gt 0){
+                                    $BranchProtectionProperties["protection_required_pull_request_reviews"] = $true
+                                }
+                                if ($maxRequiredReviews -gt $Protections.required_pull_request_reviews.required_approving_review_count){
+                                    $BranchProtectionProperties["protection_required_approving_review_count"] = $maxRequiredReviews
+                                }
+                                if ($requireCodeOwnerReview -and $maxRequiredReviews -gt 0){
+                                    $BranchProtectionProperties["protection_required_pull_request_reviews"] = $true
+                                    $BranchProtectionProperties["protection_require_code_owner_review"] = $requireCodeOwnerReview
+                                }
+                                if ($requireLastPushApproval){
+                                    $BranchProtectionProperties["protection_required_pull_request_reviews"] = $true
+                                    $BranchProtectionProperties["protection_require_last_push_approval"] = $requireLastPushApproval
+                                }
+
+                            } else {
+
+                                $BranchProtectionProperties["protection_required_pull_request_reviews"] = $false
+                                
+                                if ($maxRequiredReviews -gt 0){
+                                    $BranchProtectionProperties["protection_required_pull_request_reviews"] = $true
+                                    $BranchProtectionProperties["protection_required_approving_review_count"] = $maxRequiredReviews
+                                }
+                                else {
+                                    $BranchProtectionProperties["protection_required_approving_review_count"] = 0
+                                }
+                                if ($requireCodeOwnerReview -and $maxRequiredReviews -gt 0){
+                                    $BranchProtectionProperties["protection_required_pull_request_reviews"] = $true
+                                    $BranchProtectionProperties["protection_require_code_owner_review"] = $requireCodeOwnerReview                                    
+                                }
+                                else {
+                                    $BranchProtectionProperties["protection_require_code_owner_review"] = $false
+                                }
+                                
+                                if ($requireLastPushApproval){
+                                    $BranchProtectionProperties["protection_required_pull_request_reviews"] = $true
+                                    $BranchProtectionProperties["protection_require_last_push_approval"] = $requireLastPushApproval
+                                }
+                                else {
+                                    $BranchProtectionProperties["protection_require_last_push_approval"] = $false
+                                }
+                            }
+
+                        }
+
+                        else {
+                            $BranchProtectionProperties["protection_required_pull_request_reviews"] = $false
+                        }
+                        
+                        if ($aggregatedRules['deletion'].Count -gt 0) {
+                            $BranchProtectionProperties["protection_restrict_deletions"] = $true
+                        }
+                                               
+                        if ($aggregatedRules['required_signatures'].Count -gt 0) {
+                            $BranchProtectionProperties["protection_required_signed_commits"] = $true
+                        }
+                        
+                        if ($aggregatedRules['code_scanning'].Count -gt 0) {
+                            $BranchProtectionProperties["protection_code_scanning"] = $true
+                        }
+
+                        
+                    } catch {
+                        Write-Warning "Failed to fetch branch rules for '$($branch.name)': $_"
+                    }
+                }
+
+                $branchHash = [System.BitConverter]::ToString([System.Security.Cryptography.MD5]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes("$($repo.properties.organization_name)+$($repo.properties.full_name)+$($branch.name)"))) -replace '-', ''
+
                 $props = [pscustomobject]@{
                     organization    = Normalize-Null $repo.properties.organization_name
                     organization_id = Normalize-Null $repo.properties.organization_id
@@ -532,8 +706,8 @@ function Git-HoundBranch
                     $props | Add-Member -MemberType NoteProperty -Name $BranchProtectionProperty.Key -Value $BranchProtectionProperty.Value
                 }
 
-                $null = $nodes.Add((New-GitHoundNode -Id $branch.commit.sha -Kind GHBranch -Properties $props))
-                $null = $edges.Add((New-GitHoundEdge -Kind GHHasBranch -StartId $repo.id -EndId $branch.commit.sha))
+                $null = $nodes.Add((New-GitHoundNode -Id $branchHash -Kind GHBranch -Properties $props))
+                $null = $edges.Add((New-GitHoundEdge -Kind GHHasBranch -StartId $repo.id -EndId $branchHash))
             }
         }
 

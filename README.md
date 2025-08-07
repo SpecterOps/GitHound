@@ -98,13 +98,16 @@ Once the PAT is created, GitHub will present it to you as shown below. You must 
   . ./github.ps1
  ```
 
-3. Create a GitHub Session using your Personal Access Token.
+3. Create a GitHub Session using your Personal Access Token or as a Github App.
 
 ```powershell
+#Github Session with PAT
 $session = New-GitHubSession -OrganizationName <Name of your Organization> -Token (Get-Clipboard)
+#Github Session with Github App, require powershell 7.0 or later
+$session = New-GithubAppSession -OrganizationName <Name of your Organization> -ClientId (Get-Clipboard) -PrivateKeyPath <Path to Private Key Pem>
 ```
 
-Note: You must specify the name of your GitHub organziation. For example, this repository is part of the `SpecterOps` organization, so I would specify `SpecterOps` as the argument for the OrganizationName parameter. Additionally, you must specify your Personal Access Token. I find that it is easiest to paste it directly from the clipboard as this is where it will be after you create it or if you save it in a password manager.
+Note: You must specify the name of your GitHub organziation. For example, this repository is part of the `SpecterOps` organization, so I would specify `SpecterOps` as the argument for the OrganizationName parameter. Additionally, you must specify your Personal Access Token (or Priv key and Client ID). I find that it is easiest to paste it directly from the clipboard as this is where it will be after you create it or if you save it in a password manager. 
 
 4.  Run the collection on the specified organization:
 
