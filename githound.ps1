@@ -1249,7 +1249,7 @@ function Invoke-GitHound
 
     $payload = [PSCustomObject]@{
         metadata = [PSCustomObject]@{
-            source_kind = "GHBase"
+            #source_kind = "GHBase"
         }
         graph = [PSCustomObject]@{
             nodes = $nodes.ToArray()
