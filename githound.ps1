@@ -79,12 +79,38 @@ function Invoke-GithubRestMethod {
     $LinkHeader = $Null;
     try {
         do {
-            if($LinkHeader) {
-                $Response = Invoke-WebRequest -Uri "$LinkHeader" -Headers $Session.Headers -Method Get -ErrorAction Stop
-            } else {
-                Write-Verbose "https://api.github.com/$($Path)"
-                $Response = Invoke-WebRequest -Uri "$($Session.Uri)$($Path)" -Headers $Session.Headers -Method Get -ErrorAction Stop
+            $requestSuccessful = $false
+            $retryCount = 0
+            
+            while (-not $requestSuccessful -and $retryCount -lt 3) {
+                try {
+                    if($LinkHeader) {
+                        $Response = Invoke-WebRequest -Uri "$LinkHeader" -Headers $Session.Headers -Method $Method -ErrorAction Stop
+                    } else {
+                        Write-Verbose "https://api.github.com/$($Path)"
+                        $Response = Invoke-WebRequest -Uri "$($Session.Uri)$($Path)" -Headers $Session.Headers -Method $Method -ErrorAction Stop
+                    }
+                    $requestSuccessful = $true
+                }
+                catch {
+                    $httpException = $_.ErrorDetails | ConvertFrom-Json
+                    if (($httpException.status -eq "403" -and $httpException.message -match "rate limit") -or $httpException.status -eq "429") {
+                        Write-Warning "Rate limit hit when doing Github RestAPI call. Retry $($retryCount + 1)/3"
+                        Write-Debug $_
+                        Wait-GithubRestRateLimit -Session $Session
+                        $retryCount++
+                    }
+                    else {
+                        throw $_
+                    }
+                }
             }
+            
+            if (-not $requestSuccessful) {
+                throw "Failed after 3 retry attempts due to rate limiting"
+            }
+
+            
 
             $Response.Content | ConvertFrom-Json | ForEach-Object { $_ }
 
@@ -119,6 +145,9 @@ function Get-Headers
 function Invoke-GitHubGraphQL
 {
     param(
+        [Parameter(Mandatory=$true)]
+        [PSTypeName('GitHound.Session')]
+        $Session,
         [Parameter()]
         [string]
         $Uri = "https://api.github.com/graphql",
@@ -147,10 +176,87 @@ function Invoke-GitHubGraphQL
         Headers = $Headers
         Body = $Body
     }
+    $requestSuccessful = $false
+    $retryCount = 0
+    
+    while (-not $requestSuccessful -and $retryCount -lt 3) {
+        try {
+            $result = Invoke-RestMethod @fparams
+            $requestSuccessful = $true
+        }
+        catch {
+            $httpException = $_.ErrorDetails | ConvertFrom-Json
+            if (($httpException.status -eq "403" -and $httpException.message -match "rate limit") -or $httpException.status -eq "429") {
+                Write-Warning "Rate limit hit when doing GraphQL call. Retry $($retryCount + 1)/3"
+                Write-Debug $_
+                Wait-GithubGraphQlRateLimit -Session $Session
+                $retryCount++
+            }
+            else {
+                throw $_
+            }
+        }
+    }
 
-    Invoke-RestMethod @fparams
+    if (-not $requestSuccessful) {
+        throw "Failed after 3 retry attempts due to rate limiting"
+    }
+
+    return $result
 }
 
+function Get-RateLimitInformation
+{
+    param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session
+    )
+    $rateLimitInfo = Invoke-GithubRestMethod -Session $Session -Path "rate_limit"
+    return $rateLimitInfo.resources
+    
+}
+
+function Wait-GithubRateLimitReached {
+    param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSObject]
+        $githubRateLimitInfo
+
+    )
+
+    $resetTime = $githubRateLimitInfo.reset
+    $timeNow = [DateTimeOffset]::Now.ToUnixTimeSeconds()
+    $timeToSleep = $resetTime - $timeNow
+    if ($githubRateLimitInfo.remaining -eq 0 -and $timeToSleep -gt 0)
+    {
+
+        Write-Host "Reached rate limit. Sleeping for $($timeToSleep) seconds. Tokens reset at unix time $($resetTime)"
+        Start-Sleep -Seconds $timeToSleep
+    }
+}
+
+function Wait-GithubRestRateLimit {
+    param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session
+    )
+    
+    Wait-GithubRateLimitReached -githubRateLimitInfo (Get-RateLimitInformation -Session $Session).core
+    
+}
+
+function Wait-GithubGraphQlRateLimit {
+    param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session
+    )
+    
+     Wait-GithubRateLimitReached -githubRateLimitInfo (Get-RateLimitInformation -Session $Session).graphql
+   
+}
 function New-GitHoundNode
 {
     Param(
@@ -1174,7 +1280,7 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
     $edges = New-Object System.Collections.ArrayList
 
     do{
-        $result = Invoke-GitHubGraphQL -Headers $Session.Headers -Query $Query -Variables $Variables
+        $result = Invoke-GitHubGraphQL -Headers $Session.Headers -Query $Query -Variables $Variables -Session $Session
 
         switch -Wildcard ($result.data.organization.samlIdentityProvider.issuer)
         {
