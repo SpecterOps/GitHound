@@ -55,6 +55,13 @@
         "name": "user-tie",
         "color": "#DEFEFA"
       }
+    },
+    "GHSecretScanningAlert": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "key",
+        "color": "#3C7A6E"
+      }
     }
   }
 }

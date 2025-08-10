@@ -159,7 +159,7 @@ function New-GitHoundNode
         $Id,
 
         [Parameter(Position = 1, Mandatory = $true)]
-        [String]
+        [String[]]
         $Kind,
 
         [Parameter(Position = 2, Mandatory = $true)]
@@ -190,14 +190,28 @@ function New-GitHoundEdge
         [Parameter(Position = 2, Mandatory = $true)]
         [PSObject]
         $EndId
+
+        <#
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('id', 'name')]
+        [String]
+        $StartMatchBy = 'id',
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('id', 'name')]
+        [String]
+        $EndMatchBy = 'id'
+        #>
     )
 
     $edge = [PSCustomObject]@{
         kind = $Kind
         start = [PSCustomObject]@{
+            #match_by = $StartMatchBy
             value = $StartId
         }
         end = [PSCustomObject]@{
+            #match_by = $EndMatchBy
             value = $EndId
         }
         properties = @{}
@@ -304,9 +318,27 @@ function Git-HoundUser
 
     $nodes = New-Object System.Collections.ArrayList
 
-    foreach($user in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/members"))
-    {
-        $user_details = Invoke-GithubRestMethod -Session $Session -Path "user/$($user.id)"
+    $normalize_null = ${function:Normalize-Null}.ToString()
+    $new_githoundnode = ${function:New-GitHoundNode}.ToString()
+    $invoke_githubrestmethod = ${function:Invoke-GithubRestMethod}.ToString()
+
+    Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/members" | ForEach-Object -Parallel {
+        
+        $nodes = $using:nodes
+        $Session = $using:Session
+        $Organization = $using:Organization
+        ${function:Normalize-Null} = $using:normalize_null
+        ${function:New-GitHoundNode} = $using:new_githoundnode
+        ${function:Invoke-GithubRestMethod} = $using:invoke_githubrestmethod
+
+        $user = $_
+        Write-Verbose "Fetching user details for $($user.login)"
+        try {
+            $user_details = Invoke-GithubRestMethod -Session $Session -Path "user/$($user.id)"
+        } catch {
+            Write-Verbose "User $($user.login) could not be found via api"
+            continue
+        }
 
         $properties = @{
             id                  = Normalize-Null $user.id
@@ -322,8 +354,9 @@ function Git-HoundUser
             type                = Normalize-Null $user.type
             site_admin          = Normalize-Null $user.site_admin
         }
+        
         $null = $nodes.Add((New-GitHoundNode -Id $user.node_id -Kind 'GHUser' -Properties $properties))
-    }
+    } -ThrottleLimit 25
 
     Write-Output $nodes
 }
@@ -373,8 +406,8 @@ function Git-HoundRepository
             default_branch              = Normalize-Null $repo.default_branch
             secret_scanning             = Normalize-Null $repo.security_and_analysis.secret_scanning.status
         }
-        $nodes.Add((New-GitHoundNode -Id $repo.node_id -Kind 'GHRepository' -Properties $properties)) | Out-Null
-        $edges.Add((New-GitHoundEdge -Kind 'GHOwns' -StartId $repo.owner.node_id -EndId $repo.node_id)) | Out-Null
+        $null = $nodes.Add((New-GitHoundNode -Id $repo.node_id -Kind 'GHRepository' -Properties $properties))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GHOwns' -StartId $repo.owner.node_id -EndId $repo.node_id))
     }
 
     $output = [PSCustomObject]@{
@@ -385,6 +418,7 @@ function Git-HoundRepository
     Write-Output $output
 }
 
+# I still don't like the way branch protections are handled here, but we sped up the collection
 function Git-HoundBranch
 {
         Param(
@@ -399,24 +433,46 @@ function Git-HoundBranch
     
     begin
     {
-        $list = [System.Collections.Generic.List[pscustomobject]]::new()
         $nodes = New-Object System.Collections.ArrayList
         $edges = New-Object System.Collections.ArrayList
+
+        $normalize_null = ${function:Normalize-Null}.ToString()
+        $new_githoundnode = ${function:New-GitHoundNode}.ToString()
+        $new_githoundedge = ${function:New-GitHoundEdge}.ToString()
+        $invoke_githubrestmethod = ${function:Invoke-GithubRestMethod}.ToString()
     }
 
     process
     {
-        foreach($repo in $Repository.nodes)
-        {
+        $Repository.nodes | ForEach-Object -Parallel {
+            $nodes = $using:nodes
+            $edges = $using:edges
+            $Session = $using:Session
+            ${function:Normalize-Null} = $using:normalize_null
+            ${function:New-GitHoundNode} = $using:new_githoundnode
+            ${function:New-GitHoundEdge} = $using:new_githoundedge
+            ${function:Invoke-GithubRestMethod} = $using:invoke_githubrestmethod
+            $repo = $_
+
+            Write-Verbose "Fetching branches for $($repo.properties.full_name)"
             foreach($branch in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/branches"))
-            {
-                $BranchProtections = [pscustomobject]@{}
+            {    
+                #$BranchProtections = [pscustomobject]@{}
                 $BranchProtectionProperties = [ordered]@{}
-                if ($branch.protection.enabled -and $branch.protection_url) {
+                
+                if ($branch.protection.enabled -and $branch.protection_url) 
+                {
                     $Protections = Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.Properties.full_name)/branches/$($branch.name)/protection"
 
-                    $BranchProtections | Add-Member -MemberType NoteProperty -Name "EnforceAdmins" -Value $Protections.enforce_admins.enabled
-                    $BranchProtections | Add-Member -MemberType NoteProperty -Name "LockBranch" -Value $Protections.lock_branch.enabled
+                    <#
+                    $protections = [pscustomobject]@{
+                        protection_enforce_admins = $Protections.enforce_admins.enabled
+                        protection_lock_branch = $Protections.lock_branch.enabled
+                    }
+                    #>
+
+                    #$BranchProtections | Add-Member -MemberType NoteProperty -Name "EnforceAdmins" -Value $Protections.enforce_admins.enabled
+                    #$BranchProtections | Add-Member -MemberType NoteProperty -Name "LockBranch" -Value $Protections.lock_branch.enabled
                     $BranchProtectionProperties["protection_enforce_admins"] = $Protections.enforce_admins.enabled
                     $BranchProtectionProperties["protection_lock_branch"] = $Protections.lock_branch.enabled
 
@@ -425,9 +481,9 @@ function Git-HoundBranch
 
                         $BranchProtectionProperties["protection_required_pull_request_reviews"] = $False
                         
-                        $BranchProtections | Add-Member -MemberType NoteProperty -Name "RequiredApprovingReviewCount" -Value $Protections.required_pull_request_reviews.required_approving_review_count
-                        $BranchProtections | Add-Member -MemberType NoteProperty -Name "RequireCodeOwnerReviews" -Value $Protections.required_pull_request_reviews.require_code_owner_reviews
-                        $BranchProtections | Add-Member -MemberType NoteProperty -Name "RequireLastPushApproval" -Value $Protections.required_pull_request_reviews.require_last_push_approval
+                        #$BranchProtections | Add-Member -MemberType NoteProperty -Name "RequiredApprovingReviewCount" -Value $Protections.required_pull_request_reviews.required_approving_review_count
+                        #$BranchProtections | Add-Member -MemberType NoteProperty -Name "RequireCodeOwnerReviews" -Value $Protections.required_pull_request_reviews.require_code_owner_reviews
+                        #$BranchProtections | Add-Member -MemberType NoteProperty -Name "RequireLastPushApproval" -Value $Protections.required_pull_request_reviews.require_last_push_approval
                         if ($Protections.required_pull_request_reviews.required_approving_review_count) {
                             $BranchProtectionProperties["protection_required_approving_review_count"] = $Protections.required_pull_request_reviews.required_approving_review_count
                             $BranchProtectionProperties["protection_required_pull_request_reviews"] = $True
@@ -454,28 +510,18 @@ function Git-HoundBranch
 
                         # We need an edge here
                         foreach($user in $Protections.required_pull_request_reviews.bypass_pull_request_allowances.users) {
-                            $principal = [pscustomobject]@{
-                                ObjectIdentifier = $user.node_id
-                                ObjectType = 'GHUser'
-                            }
-                            $BypassPrincipals.Add($principal)
                             $null = $edges.Add((New-GitHoundEdge -Kind GHBypassPullRequestAllowances -StartId $user.node_id -EndId $branch.commit.sha))
                         }
 
                         # We need an edge here
                         foreach($team in $Protections.required_pull_request_reviews.bypass_pull_request_allowances.teams) {
-                            $principal = [pscustomobject]@{
-                                ObjectIdentifier = $team.node_id
-                                ObjectType = 'GHTeam'
-                            }
-                            $BypassPrincipals.Add($principal)
                             $null = $edges.Add((New-GitHoundEdge -Kind GHBypassPullRequestAllowances -StartId $team.node_id -EndId $branch.commit.sha))
                         }
 
                         # TODO: handle apps?
 
                         if ($BypassPrincipals) {
-                            $BranchProtections | Add-Member -MemberType NoteProperty -Name "BypassPullRequestAllowances" -Value $BypassPrincipals
+                            #$BranchProtections | Add-Member -MemberType NoteProperty -Name "BypassPullRequestAllowances" -Value $BypassPrincipals
                             $BranchProtectionProperties["protection_bypass_pull_request_allowances"] = $BypassPrincipals.Count
                         }
                         else {
@@ -489,33 +535,28 @@ function Git-HoundBranch
                     if ($Protections.restrictions) {
                         $RestrictionPrincipals = [System.Collections.Generic.List[pscustomobject]]::new()
                         foreach($user in $Protections.restrictions.users) {
-                            $principal = [pscustomobject]@{
-                                ObjectIdentifier = $user.node_id
-                                ObjectType = 'GHUser'
-                            }
-                            $RestrictionPrincipals.Add($principal)
                             $null = $edges.Add((New-GitHoundEdge -Kind GHRestrictionsCanPush -StartId $user.node_id -EndId $branch.commit.sha))
                         }
 
                         foreach($team in $Protections.restrictions.team) {
-                            $principal = [pscustomobject]@{
-                                ObjectIdentifier = $team.node_id
-                                ObjectType = 'GHTeam'
-                            }
-                            $RestrictionPrincipals.Add($principal)
                             $null = $edges.Add((New-GitHoundEdge -Kind GHRestrictionsCanPush -StartId $team.node_id -EndId $branch.commit.sha))
                         }
 
                         # TODO: handle apps?
 
                         if ($RestrictionPrincipals) {
-                            $BranchProtections | Add-Member -MemberType NoteProperty -Name "Restrictions" -Value $RestrictionPrincipals
+                            #$BranchProtections | Add-Member -MemberType NoteProperty -Name "Restrictions" -Value $RestrictionPrincipals
                             $BranchProtectionProperties["protection_push_restrictions"] = $RestrictionPrincipals.Count
                         }
                     }
                     else {
                         $BranchProtectionProperties["protection_push_restrictions"] = 0
                     }
+                }
+                else 
+                {
+                    # Here we just set all of the protection properties to false
+
                 }
 
                 $props = [pscustomobject]@{
@@ -528,15 +569,18 @@ function Git-HoundBranch
                     protected       = Normalize-Null $branch.protected
                 }
 
-                foreach ($BranchProtectionProperty in $BranchProtectionProperties.GetEnumerator()) {
-                    $props | Add-Member -MemberType NoteProperty -Name $BranchProtectionProperty.Key -Value $BranchProtectionProperty.Value
-                }
+                #foreach ($BranchProtectionProperty in $BranchProtectionProperties.GetEnumerator()) {
+                #    $props | Add-Member -MemberType NoteProperty -Name $BranchProtectionProperty.Key -Value $BranchProtectionProperty.Value
+                #}
 
                 $null = $nodes.Add((New-GitHoundNode -Id $branch.commit.sha -Kind GHBranch -Properties $props))
                 $null = $edges.Add((New-GitHoundEdge -Kind GHHasBranch -StartId $repo.id -EndId $branch.commit.sha))
             }
-        }
+        } -ThrottleLimit 25
+    }
 
+    end
+    {
         $output = [PSCustomObject]@{
             Nodes = $nodes
             Edges = $edges
@@ -544,13 +588,9 @@ function Git-HoundBranch
     
         Write-Output $output
     }
-
-    end
-    {
-        Write-Output $list.ToArray()
-    }
 }
 
+# This is a second order data type after GHOrganization
 function Git-HoundOrganizationRole
 {
     Param(
@@ -566,12 +606,16 @@ function Git-HoundOrganizationRole
     $nodes = New-Object System.Collections.ArrayList
     $edges = New-Object System.Collections.ArrayList
 
+    $new_githoundedge = ${function:New-GitHoundEdge}.ToString()
+    $invoke_githubrestmethod = ${function:Invoke-GithubRestMethod}.ToString()
+
     $orgAllRepoReadId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_read"))
     $orgAllRepoTriageId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_triage"))
     $orgAllRepoWriteId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_write"))
     $orgAllRepoMaintainId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_maintain"))
     $orgAllRepoAdminId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_admin"))
 
+    # In general parallelizing this is a bad idea, because most organizations have a small number of custom roles
     foreach($customrole in (Invoke-GithubRestMethod -Session $session -Path "orgs/$($Organization.Properties.login)/organization-roles").roles)
     {
         $customRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_$($customrole.name)"))
@@ -583,16 +627,16 @@ function Git-HoundOrganizationRole
             short_name        = Normalize-Null $customrole.name
             type              = Normalize-Null 'organization'
         }
-        $nodes.Add((New-GitHoundNode -Id $customRoleId -Kind 'GHOrgRole' -Properties $customRoleProps)) | Out-Null
+        $null = $nodes.Add((New-GitHoundNode -Id $customRoleId -Kind 'GHOrgRole' -Properties $customRoleProps))
 
         foreach($team in (Invoke-GithubRestMethod -Session $session -Path "orgs/$($Organization.Properties.login)/organization-roles/$($customRole.id)/teams"))
         {
-            $edges.Add((New-GitHoundEdge -Kind GHHasRole -StartId $team.node_id -EndId $customRoleId)) | Out-Null
+            $null = $edges.Add((New-GitHoundEdge -Kind GHHasRole -StartId $team.node_id -EndId $customRoleId))
         }
 
         foreach($user in (Invoke-GithubRestMethod -Session $session -Path "orgs/$($Organization.Properties.login)/organization-roles/$($customRole.id)/users"))
         {
-            $edges.Add((New-GitHoundEdge -Kind GHHasRole -StartId $user.node_id -EndId $customRoleId)) | Out-Null
+            $null = $edges.Add((New-GitHoundEdge -Kind GHHasRole -StartId $user.node_id -EndId $customRoleId))
         }
 
         if($null -ne $customrole.base_role)
@@ -605,10 +649,48 @@ function Git-HoundOrganizationRole
                 'maintain' {$baseId = $orgAllRepoMaintainId}
                 'admin' {$baseId = $orgAllRepoAdminId}
             }
-            $edges.Add((New-GitHoundEdge -Kind 'GHHasBaseRole' -StartId $customRoleId -EndId $baseId))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasBaseRole' -StartId $customRoleId -EndId $baseId))
         }
 
         # Need to add support for custom permissions here
+        foreach($premission in $customrole.permissions)
+        {
+            switch($premission)
+            {
+                #'delete_alerts_code_scanning' {$kind = 'GHDeleteAlertCodeScanning'}
+                #'edit_org_custom_properties_values' {$kind = 'GHEditOrgCustomPropertiesValues'}
+                #'manage_org_custom_properties_definitions' {$kind = 'GHManageOrgCustomPropertiesDefinitions'}
+                #'manage_organization_oauth_application_policy' {$kind = 'GHManageOrganizationOAuthApplicationPolicy'}
+                #'manage_organization_ref_rules' {$kind = 'GHManageOrganizationRefRules'}
+                'manage_organization_webhooks' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHManageOrganizationWebhooks' -StartId $customRoleId -EndId $Organization.id)) }
+                'org_bypass_code_scanning_dismissal_requests' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHOrgBypassCodeScanningDismissalRequests' -StartId $customRoleId -EndId $Organization.id)) }
+                'org_bypass_secret_scanning_closure_requests' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHOrgBypassSecretScanningClosureRequests' -StartId $customRoleId -EndId $Organization.id)) }
+                'org_review_and_manage_secret_scanning_bypass_requests' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHOrgReviewAndManageSecretScanningBypassRequests' -StartId $customRoleId -EndId $Organization.id)) }
+                'org_review_and_manage_secret_scanning_closure_requests' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHOrgReviewAndManageSecretScanningClosureRequests' -StartId $customRoleId -EndId $Organization.id)) }
+                #'read_audit_logs' {$kind = 'GHReadAuditLogs'}
+                #'read_code_quality' {$kind = 'GHReadCodeQuality'}
+                #'read_code_scanning' {$kind = 'GHReadCodeScanning'}
+                'read_organization_actions_usage_metrics' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHReadOrganizationActionsUsageMetrics' -StartId $customRoleId -EndId $Organization.id)) }
+                'read_organization_custom_org_role' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHReadOrganizationCustomOrgRole' -StartId $customRoleId -EndId $Organization.id)) }
+                'read_organization_custom_repo_role' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHReadOrganizationCustomRepoRole' -StartId $customRoleId -EndId $Organization.id)) }
+                #'resolve_dependabot_alerts' {$kind = 'GHResolveDependabotAlerts'}
+                'resolve_secret_scanning_alerts' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHResolveSecretScanningAlerts' -StartId $customRoleId -EndId $Organization.id)) }
+                #'review_org_code_scanning_dismissal_requests' {$kind = 'GHReviewOrgCodeScanningDismissalRequests'}
+                #'view_dependabot_alerts' {$kind = 'GHViewDependabotAlerts'}
+                #'view_org_code_scanning_dismissal_requests' {$kind = 'GHViewOrgCodeScanningDismissalRequests'}
+                'view_secret_scanning_alerts' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHViewSecretScanningAlerts' -StartId $customRoleId -EndId $Organization.id)) }
+                'write_organization_actions_secrets' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHWriteOrganizationActionsSecrets' -StartId $customRoleId -EndId $Organization.id)) }
+                'write_organization_actions_settings' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHWriteOrganizationActionsSettings' -StartId $customRoleId -EndId $Organization.id)) }
+                #'write_organization_actions_variables' {$kind = 'GHWriteOrganizationActionsVariables'}
+                #'write_code_quality' {$kind = 'GHWriteCodeQuality'}
+                #'write_code_scanning' {$kind = 'GHWriteCodeScanning'}
+                'write_organization_custom_org_role' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHWriteOrganizationCustomOrgRole' -StartId $customRoleId -EndId $Organization.id)) }
+                'write_organization_custom_repo_role' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHWriteOrganizationCustomRepoRole' -StartId $customRoleId -EndId $Organization.id)) }
+                'write_organization_network_configurations' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHWriteOrganizationNetworkConfigurations' -StartId $customRoleId -EndId $Organization.id)) }
+                #'write_organization_runner_custom_images' {$kind = 'GHWriteOrganizationRunnerCustomImages'}
+                #'write_organization_runners_and_runner_groups' {$kind = 'GHWriteOrganizationRunnersAndRunnerGroups'}
+            }
+        }
     }
 
     $orgOwnersId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($organization.id)_owners"))
@@ -647,8 +729,18 @@ function Git-HoundOrganizationRole
     }
 
     # Need to add custom role membership here
-    foreach($user in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($organization.Properties.login)/members"))
-    {
+    # This is a great place to parallelize, because we must enumerate users and then check their memberships individually
+    Invoke-GithubRestMethod -Session $Session -Path "orgs/$($organization.Properties.login)/members" | ForEach-Object -Parallel {
+        
+        $edges = $using:edges
+        $Session = $using:Session
+        $Organization = $using:Organization
+        $orgOwnersId = $using:orgOwnersId
+        $orgMembersId = $using:orgMembersId
+        ${function:New-GitHoundEdge} = $using:new_githoundedge
+        ${function:Invoke-GithubRestMethod} = $using:invoke_githubrestmethod
+        $user = $_
+        
         switch((Invoke-GithubRestMethod -Session $Session -Path "orgs/$($organization.Properties.login)/memberships/$($user.login)").role)
         {
             'admin' { $destId = $orgOwnersId}
@@ -657,7 +749,7 @@ function Git-HoundOrganizationRole
             #'security admin' { $orgsecurityList.Add($m) }
         }
         $null = $edges.Add($(New-GitHoundEdge -Kind 'GHHasRole' -StartId $user.node_id -EndId $destId))
-    }
+    } -ThrottleLimit 25
 
     $output = [PSCustomObject]@{
         Nodes = $nodes
@@ -667,6 +759,7 @@ function Git-HoundOrganizationRole
     Write-Output $output
 }
 
+# This is a third order data type after GHOrganization and GHTeam
 function Git-HoundTeamRole
 {
     Param(
@@ -682,43 +775,57 @@ function Git-HoundTeamRole
     $nodes = New-Object System.Collections.ArrayList
     $edges = New-Object System.Collections.ArrayList
 
-    foreach($team in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/teams"))
-    {
-        $memberId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($team.node_id)_members"))
+    $normalize_null = ${function:Normalize-Null}.ToString()
+    $new_githoundnode = ${function:New-GitHoundNode}.ToString()
+    $new_githoundedge = ${function:New-GitHoundEdge}.ToString()
+    $invoke_githubrestmethod = ${function:Invoke-GithubRestMethod}.ToString()
+
+    Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/teams" | ForEach-Object -Parallel {
+        
+        $nodes = $using:nodes
+        $edges = $using:edges
+        $Session = $using:Session
+        $Organization = $using:Organization
+        ${function:Normalize-Null} = $using:normalize_null
+        ${function:New-GitHoundNode} = $using:new_githoundnode
+        ${function:New-GitHoundEdge} = $using:new_githoundedge
+        ${function:Invoke-GithubRestMethod} = $using:invoke_githubrestmethod
+
+        $memberId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($_.node_id)_members"))
         $memberProps = [pscustomobject]@{
             id                = Normalize-Null $memberId
             organization_name = Normalize-Null $Organization.properties.login
             organization_id   = Normalize-Null $Organization.properties.node_id
-            name              = Normalize-Null "$($Organization.Properties.login)/$($team.slug)/members"
+            name              = Normalize-Null "$($Organization.Properties.login)/$($_.slug)/members"
             short_name        = Normalize-Null 'members'
             type              = Normalize-Null 'team'
         }
         $null = $nodes.Add((New-GitHoundNode -Id $memberId -Kind 'GHTeamRole' -Properties $memberProps))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHMemberOf' -StartId $memberId -EndId $team.node_id))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GHMemberOf' -StartId $memberId -EndId $_.node_id))
 
-        $maintainerId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($team.node_id)_maintainers"))
+        $maintainerId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($_.node_id)_maintainers"))
         $maintainerProps = [pscustomobject]@{
             id                = Normalize-Null $maintainerId
             organization_name = Normalize-Null $Organization.properties.login
             organization_id   = Normalize-Null $Organization.properties.node_id
-            name              = Normalize-Null "$($Organization.Properties.login)/$($team.slug)/maintainers"
+            name              = Normalize-Null "$($Organization.Properties.login)/$($_.slug)/maintainers"
             short_name        = Normalize-Null 'maintainers'
             type              = Normalize-Null 'team'
         }
         $null = $nodes.Add((New-GitHoundNode -Id $maintainerId -Kind 'GHTeamRole' -Properties $maintainerProps))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHMemberOf' -StartId $maintainerId -EndId $team.node_id))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHAddMember' -StartId $maintainerId -EndId $team.node_id))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GHMemberOf' -StartId $maintainerId -EndId $_.node_id))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GHAddMember' -StartId $maintainerId -EndId $_.node_id))
 
-        foreach($member in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/teams/$($team.slug)/members"))
+        foreach($member in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/teams/$($_.slug)/members"))
         {
-            switch((Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/teams/$($team.slug)/memberships/$($member.login)").role)
+            switch((Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/teams/$($_.slug)/memberships/$($member.login)").role)
             {
                 'member' { $targetId = $memberId }
                 'maintainer' { $targetId = $maintainerId }
             }
             $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasRole' -StartId $member.node_id -EndId $targetId))
         }
-    }
+    } -ThrottleLimit 25
 
     $output = [PSCustomObject]@{
         Nodes = $nodes
@@ -728,6 +835,7 @@ function Git-HoundTeamRole
     Write-Output $output
 }
 
+# This is a third order data type after GHOrganization and GHRepository
 function Git-HoundRepositoryRole
 {
     [CmdletBinding()]
@@ -752,8 +860,29 @@ function Git-HoundRepositoryRole
 
     $customRepoRoles = (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/custom-repository-roles").custom_roles
 
-    foreach($repo in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.properties.login)/repos"))
-    {
+    $normalize_null = ${function:Normalize-Null}.ToString()
+    $new_githoundnode = ${function:New-GitHoundNode}.ToString()
+    $new_githoundedge = ${function:New-GitHoundEdge}.ToString()
+    $invoke_githubrestmethod = ${function:Invoke-GithubRestMethod}.ToString()
+
+    Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.properties.login)/repos" | ForEach-Object -Parallel{
+        
+        $nodes = $using:nodes
+        $edges = $using:edges
+        $Session = $using:Session
+        $Organization = $using:Organization
+        $orgAllRepoReadId = $using:orgAllRepoReadId
+        $orgAllRepoTriageId = $using:orgAllRepoTriageId
+        $orgAllRepoWriteId = $using:orgAllRepoWriteId
+        $orgAllRepoMaintainId = $using:orgAllRepoMaintainId
+        $orgAllRepoAdminId = $using:orgAllRepoAdminId
+        $customRepoRoles = $using:customRepoRoles
+        ${function:Normalize-Null} = $using:normalize_null
+        ${function:New-GitHoundNode} = $using:new_githoundnode
+        ${function:New-GitHoundEdge} = $using:new_githoundedge
+        ${function:Invoke-GithubRestMethod} = $using:invoke_githubrestmethod
+        $repo = $_
+
         # Create $repo Read Role
         $repoReadId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_read"))
         $repoReadProps = [pscustomobject]@{
@@ -848,20 +977,6 @@ function Git-HoundRepositoryRole
         $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasBaseRole' -StartId $repoMaintainId -EndId $repoWriteId))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasBaseRole' -StartId $orgAllRepoMaintainId -EndId $repoMaintainId))
 
-        # Custom Organization Roles (Setting Base Roles)
-        # I wonder if this should be adapted to point to the relevant all_repo_* org role
-        <#
-        foreach($customOrgRole in $customOrgRoles)
-        {
-            if($null -ne $customOrgRole.base_role)
-            {
-                $customOrgRoleStartId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_$($customOrgRole.name)"))
-                $customOrgRoleEndId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_$($customOrgRole.base_role)"))
-                $edges.Add((New-GitHoundEdge -Kind 'GHHasBaseRole' -StartId $customOrgRoleStartId -EndId $customOrgRoleEndId)) | Out-Null
-            }
-        }
-        #>
-
         # Custom Repository Roles
         foreach($customRepoRole in $customRepoRoles)
         {
@@ -886,16 +1001,16 @@ function Git-HoundRepositoryRole
             {
                 switch($permission)
                 {
-                    'manage_webhooks' {$edges.Add((New-GitHoundEdge -Kind GHManageWebhooks -StartId $customRepoRoleId -EndId $repo.node_id)) | Out-Null}
-                    'manage_deploy_keys' {$edges.Add((New-GitHoundEdge -Kind GHManageDeployKeys -StartId $customRepoRoleId -EndId $repo.node_id)) | Out-Null}
-                    'push_protected_branch' {$edges.Add((New-GitHoundEdge -Kind GHPushProtectedBranch -StartId $customRepoRoleId -EndId $repo.node_id)) | Out-Null}
-                    'delete_alerts_code_scanning' {$edges.Add((New-GitHoundEdge -Kind GHDeleteAlertsCodeScanning -StartId $customRepoRoleId -EndId $repo.node_id)) | Out-Null}
-                    'view_secret_scanning_alerts' {$edges.Add((New-GitHoundEdge -Kind GHViewSecretScanningAlerts -StartId $customRepoRoleId -EndId $repo.node_id)) | Out-Null}
-                    'bypass_branch_protection' {$edges.Add((New-GitHoundEdge -Kind GHBypassProtections -StartId $customRepoRoleId -EndId $repo.node_id)) | Out-Null}
-                    'edit_repo_protections' {$edges.Add((New-GitHoundEdge -Kind GHEditProtections -StartId $customRepoRoleId -EndId $repo.node_id)) | Out-Null}
-                    'jump_merge_queue' {$edges.Add((New-GitHoundEdge -Kind GHJumpMergeQueue -StartId $customRepoRoleId -EndId $repo.node_id)) | Out-Null}
-                    'create_solo_merge_queue_entry' {$edges.Add((New-GitHoundEdge -Kind GHCreateSoloMergeQueueEntry -StartId $customRepoRoleId -EndId $repo.node_id)) | Out-Null}
-                    'edit_repo_custom_properties_values' {$edges.Add((New-GitHoundEdge -Kind GHEditRepoCustomPropertiesValues -StartId $customRepoRoleId -EndId $repo.node_id)) | Out-Null}
+                    'manage_webhooks' {$null = $edges.Add((New-GitHoundEdge -Kind GHManageWebhooks -StartId $customRepoRoleId -EndId $repo.node_id))}
+                    'manage_deploy_keys' {$null = $edges.Add((New-GitHoundEdge -Kind GHManageDeployKeys -StartId $customRepoRoleId -EndId $repo.node_id))}
+                    'push_protected_branch' {$null = $edges.Add((New-GitHoundEdge -Kind GHPushProtectedBranch -StartId $customRepoRoleId -EndId $repo.node_id))}
+                    'delete_alerts_code_scanning' {$null = $edges.Add((New-GitHoundEdge -Kind GHDeleteAlertsCodeScanning -StartId $customRepoRoleId -EndId $repo.node_id))}
+                    'view_secret_scanning_alerts' {$null = $edges.Add((New-GitHoundEdge -Kind GHViewSecretScanningAlerts -StartId $customRepoRoleId -EndId $repo.node_id))}
+                    'bypass_branch_protection' {$null = $edges.Add((New-GitHoundEdge -Kind GHBypassProtections -StartId $customRepoRoleId -EndId $repo.node_id))}
+                    'edit_repo_protections' {$null = $edges.Add((New-GitHoundEdge -Kind GHEditProtections -StartId $customRepoRoleId -EndId $repo.node_id))}
+                    'jump_merge_queue' {$null = $edges.Add((New-GitHoundEdge -Kind GHJumpMergeQueue -StartId $customRepoRoleId -EndId $repo.node_id))}
+                    'create_solo_merge_queue_entry' {$null = $edges.Add((New-GitHoundEdge -Kind GHCreateSoloMergeQueueEntry -StartId $customRepoRoleId -EndId $repo.node_id))}
+                    'edit_repo_custom_properties_values' {$null = $edges.Add((New-GitHoundEdge -Kind GHEditRepoCustomPropertiesValues -StartId $customRepoRoleId -EndId $repo.node_id))}
                 }
             }
         }
@@ -930,6 +1045,56 @@ function Git-HoundRepositoryRole
             }
             $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasRole' -StartId $team.node_id -EndId $repoRoleId))
         }
+    } -ThrottleLimit 25
+
+    $output = [PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    }
+
+    Write-Output $output
+}
+
+# This is a second order data type after GHOrganization
+# Inspired by https://github.com/SpecterOps/GitHound/issues/3
+# The GHHasSecretScanningAlert edge is used to link the alert to the repository
+# However, that edge is not traversable because the GHReadSecretScanningAlerts permission is necessary to read the alerts and the GHReadRepositoryContents permission is necessary to read the repository
+function Git-HoundSecretScanningAlert
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session,
+
+        [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
+        [PSObject]
+        $Organization
+    )
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+
+    foreach($alert in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/secret-scanning/alerts"))
+    {
+        $alertId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("SSA_$($Organization.id)_$($alert.repository.node_id)_$($alert.number)"))
+        $properties = @{
+            id                       = Normalize-Null $alertId
+            name                     = Normalize-Null $alert.number
+            repository_name          = Normalize-Null $alert.repository.name
+            repository_id            = Normalize-Null $alert.repository.node_id
+            repository_url           = Normalize-Null $alert.repository.html_url
+            secret_type              = Normalize-Null $alert.secret_type
+            secret_type_display_name = Normalize-Null $alert.secret_type_display_name
+            validity                 = Normalize-Null $alert.validity
+            state                    = Normalize-Null $alert.state
+            created_at               = Normalize-Null $alert.created_at
+            updated_at               = Normalize-Null $alert.updated_at
+            url                      = Normalize-Null $alert.html_url
+        }
+
+        $null = $nodes.Add((New-GitHoundNode -Id $alertId -Kind 'GHSecretScanningAlert' -Properties $properties))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasSecretScanningAlert' -StartId $alert.repository.node_id -EndId $alertId))
     }
 
     $output = [PSCustomObject]@{
@@ -940,6 +1105,7 @@ function Git-HoundRepositoryRole
     Write-Output $output
 }
 
+# This is a second order data type after GHOrganization
 function Git-HoundGraphQlSamlProvider
 {
     Param(
@@ -1010,15 +1176,35 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
     do{
         $result = Invoke-GitHubGraphQL -Headers $Session.Headers -Query $Query -Variables $Variables
 
-        foreach($identity in $result.data.organization.samlIdentityProvider.externalIdentities.nodes)
+        switch -Wildcard ($result.data.organization.samlIdentityProvider.issuer)
         {
-            foreach($attribute in $identity.samlIdentity.attributes)
-            {
-                if($attribute.name -eq "http://schemas.microsoft.com/identity/claims/objectidentifier")
+            'https://auth.pingone.com/*' {
+                foreach($identity in $result.data.organization.samlIdentityProvider.externalIdentities.nodes)
                 {
-                    $null = $edges.Add((New-GitHoundEdge -Kind SyncedToGHUser -StartId $attribute.value -EndId $identity.user.id))
+                    foreach($attribute in $identity.samlIdentity.attributes)
+                    {
+                        if($attribute.name -eq 'NameID')
+                        {
+                            # I need to update New-GitHoundEdge to support MatchByName
+                            $null = $edges.Add((New-GitHoundEdge -Kind SyncedToGHUser -StartId $attribute.value -EndId $identity.user.id))
+                        }
+                    }
                 }
             }
+            'https://login.microsoftonline.com/*' {
+                # This is to catch the Entra SSO cases, I just currently don't have an example of the issuer string
+                foreach($identity in $result.data.organization.samlIdentityProvider.externalIdentities.nodes)
+                {
+                    foreach($attribute in $identity.samlIdentity.attributes)
+                    {
+                        if($attribute.name -eq 'http://schemas.microsoft.com/identity/claims/objectidentifier')
+                        {
+                            $null = $edges.Add((New-GitHoundEdge -Kind SyncedToGHUser -StartId $attribute.value -EndId $identity.user.id))
+                        }
+                    }
+                }
+            }
+            default { Write-Verbose "Issue: $($_)" }
         }
 
         $Variables['after'] = $result.data.organization.samlIdentityProvider.externalIdentities.pageInfo.endCursor
@@ -1040,39 +1226,54 @@ function Invoke-GitHound
     $edges = New-Object System.Collections.ArrayList
     $nodes = New-Object System.Collections.ArrayList
 
+    Write-Host "[*] Starting Git-Hound for $($Session.OrganizationName)"
     $org = Git-HoundOrganization -Session $Session
     $nodes.Add($org) | Out-Null
 
+    Write-Host "[*] Enumerating Organization Users"
     $users = $org | Git-HoundUser -Session $Session
     if($users) { $nodes.AddRange(@($users)) }
 
+    Write-Host "[*] Enumerating Organization Teams"
     $teams = $org | Git-HoundTeam -Session $Session
     if($teams.nodes) { $nodes.AddRange(@($teams.nodes)) }
     if($teams.edges) { $edges.AddRange(@($teams.edges)) }
 
+    Write-Host "[*] Enumerating Organization Repositories"
     $repos = $org | Git-HoundRepository -Session $Session
     if($repos.nodes) { $nodes.AddRange(@($repos.nodes)) }
     if($repos.edges) { $edges.AddRange(@($repos.edges)) }
 
+    Write-Host "[*] Enumerating Organization Branches"
     $branches = $repos | Git-HoundBranch -Session $Session
     if($branches.nodes) { $nodes.AddRange(@($branches.nodes)) }
     if($branches.edges) { $edges.AddRange(@($branches.edges)) }
 
+    Write-Host "[*] Enumerating Team Roles"
     $teamroles = $org | Git-HoundTeamRole -Session $Session
     if($teamroles.nodes) { $nodes.AddRange(@($teamroles.nodes)) }
     if($teamroles.edges) { $edges.AddRange(@($teamroles.edges)) }
 
+    Write-Host "[*] Enumerating Organization Roles"
     $orgroles = $org | Git-HoundOrganizationRole -Session $Session
     if($orgroles.nodes) { $nodes.AddRange(@($orgroles.nodes)) }
     if($orgroles.edges) { $edges.AddRange(@($orgroles.edges)) }
 
+    Write-Host "[*] Enumerating Repository Roles"
     $reporoles = $org | Git-HoundRepositoryRole -Session $Session
     if($reporoles.nodes) { $nodes.AddRange(@($reporoles.nodes)) }
     if($reporoles.edges) { $edges.AddRange(@($reporoles.edges)) }
+    
+    Write-Host "[*] Enumerating Secret Scanning Alerts"
+    $secretalerts = $org | Git-HoundSecretScanningAlert -Session $Session
+    if($secretalerts.nodes) { $nodes.AddRange(@($secretalerts.nodes)) }
+    if($secretalerts.edges) { $edges.AddRange(@($secretalerts.edges)) }
 
+    Write-Host "[*] Enumerating SAML Identity Provider"
     $saml = Git-HoundGraphQlSamlProvider -Session $Session
     if($saml) { $edges.AddRange(@($saml)) }
 
+    Write-Host "[*] Converting to OpenGraph JSON Payload"
     $payload = [PSCustomObject]@{
         metadata = [PSCustomObject]@{
             #source_kind = "GHBase"
