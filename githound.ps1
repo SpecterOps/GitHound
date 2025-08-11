@@ -96,6 +96,13 @@ function New-GithubAppSession {
     $presession = New-GithubSession -OrganizationName $OrganizationName -Token $jwt 
 
     $Installation = Invoke-GithubRestMethod -Session $presession -Path "app/installations" 
+    
+    if ($null -eq $Installation -or $Installation.Count -eq 0) {
+        throw "No installations found for the GitHub App in the organization '$OrganizationName'."
+    } elseif ($Installation.Count -gt 1) {
+        throw "Multiple installations found for the GitHub App in the organization '$OrganizationName'. Please specify a single installation."
+    }
+
     $AccessToken = Invoke-GithubRestMethod -Session $presession -Path "app/installations/$($Installation.id)/access_tokens" -Method 'POST'
 
     New-GithubSession -OrganizationName $OrganizationName -Token $AccessToken.token 
