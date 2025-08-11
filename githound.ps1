@@ -1318,7 +1318,7 @@ function Invoke-GitHound
     Write-Host "[*] Converting to OpenGraph JSON Payload"
     $payload = [PSCustomObject]@{
         metadata = [PSCustomObject]@{
-            #source_kind = "GHBase"
+            source_kind = "GHBase"
         }
         graph = [PSCustomObject]@{
             nodes = $nodes.ToArray()
