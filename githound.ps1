@@ -425,8 +425,8 @@ function Git-HoundTeam
         $Organization
     )
 
-    $nodes = New-Object System.Collections.ArrayList
-    $edges = New-Object System.Collections.ArrayList
+    $nodes = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
+    $edges = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
 
     foreach($team in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Session.OrganizationName)/teams"))
     {
@@ -450,8 +450,8 @@ function Git-HoundTeam
     }
 
     $output = [PSCustomObject]@{
-        Nodes = $nodes
-        Edges = $edges
+        Nodes = [System.Collections.ArrayList]$nodes.ToArray()
+        Edges = [System.Collections.ArrayList]$edges.ToArray()
     }
 
     Write-Output $output
@@ -469,8 +469,7 @@ function Git-HoundUser
         $Organization
     )
 
-    $nodes = New-Object System.Collections.ArrayList
-
+    $nodes = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
 
     Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/members" | ForEach-Object -Parallel {
         
@@ -509,8 +508,7 @@ function Git-HoundUser
         
         $null = $nodes.Add((New-GitHoundNode -Id $user.node_id -Kind 'GHUser' -Properties $properties))
     } -ThrottleLimit 25
-
-    Write-Output $nodes
+    Write-Output ([System.Collections.ArrayList]$nodes.ToArray())
 }
 
 function Git-HoundRepository
@@ -525,9 +523,8 @@ function Git-HoundRepository
         $Organization
     )
 
-    $nodes = New-Object System.Collections.ArrayList
-    $edges = New-Object System.Collections.ArrayList
-
+    $nodes = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
+    $edges = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
     foreach($repo in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/repos"))
     {
         $properties = @{
@@ -563,8 +560,8 @@ function Git-HoundRepository
     }
 
     $output = [PSCustomObject]@{
-        Nodes = $nodes
-        Edges = $edges
+        Nodes = [System.Collections.ArrayList]$nodes.ToArray()
+        Edges = [System.Collections.ArrayList]$edges.ToArray()
     }
 
     Write-Output $output
@@ -585,8 +582,8 @@ function Git-HoundBranch
     
     begin
     {
-        $nodes = New-Object System.Collections.ArrayList
-        $edges = New-Object System.Collections.ArrayList
+        $nodes = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
+        $edges = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
 
     }
 
@@ -741,8 +738,8 @@ function Git-HoundBranch
     end
     {
         $output = [PSCustomObject]@{
-            Nodes = $nodes
-            Edges = $edges
+            Nodes = [System.Collections.ArrayList]$nodes.ToArray()
+            Edges = [System.Collections.ArrayList]$edges.ToArray()
         }
     
         Write-Output $output
@@ -762,8 +759,8 @@ function Git-HoundOrganizationRole
         $Organization
     )
 
-    $nodes = New-Object System.Collections.ArrayList
-    $edges = New-Object System.Collections.ArrayList
+    $nodes = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
+    $edges = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
 
     $orgAllRepoReadId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_read"))
     $orgAllRepoTriageId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_triage"))
@@ -910,8 +907,8 @@ function Git-HoundOrganizationRole
     } -ThrottleLimit 25
 
     $output = [PSCustomObject]@{
-        Nodes = $nodes
-        Edges = $edges
+        Nodes = [System.Collections.ArrayList]$nodes.ToArray()
+        Edges = [System.Collections.ArrayList]$edges.ToArray()
     }
 
     Write-Output $output
@@ -930,8 +927,8 @@ function Git-HoundTeamRole
         $Organization
     )
 
-    $nodes = New-Object System.Collections.ArrayList
-    $edges = New-Object System.Collections.ArrayList
+    $nodes = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
+    $edges = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
 
     Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/teams" | ForEach-Object -Parallel {
         
@@ -982,8 +979,8 @@ function Git-HoundTeamRole
     } -ThrottleLimit 25
 
     $output = [PSCustomObject]@{
-        Nodes = $nodes
-        Edges = $edges
+        Nodes = [System.Collections.ArrayList]$nodes.ToArray()
+        Edges = [System.Collections.ArrayList]$edges.ToArray()
     }
 
     Write-Output $output
@@ -1003,8 +1000,8 @@ function Git-HoundRepositoryRole
         $Organization
     )
 
-    $nodes = New-Object System.Collections.ArrayList
-    $edges = New-Object System.Collections.ArrayList
+    $nodes = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
+    $edges = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
 
     $orgAllRepoReadId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_read"))
     $orgAllRepoTriageId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_triage"))
@@ -1199,8 +1196,8 @@ function Git-HoundRepositoryRole
     } -ThrottleLimit 25
 
     $output = [PSCustomObject]@{
-        Nodes = $nodes
-        Edges = $edges
+        Nodes = [System.Collections.ArrayList]$nodes.ToArray()
+        Edges = [System.Collections.ArrayList]$edges.ToArray()
     }
 
     Write-Output $output
@@ -1223,8 +1220,8 @@ function Git-HoundSecretScanningAlert
         $Organization
     )
 
-    $nodes = New-Object System.Collections.ArrayList
-    $edges = New-Object System.Collections.ArrayList
+    $nodes = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
+    $edges = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
 
     foreach($alert in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/secret-scanning/alerts"))
     {
@@ -1269,8 +1266,8 @@ function Git-HoundAppInstallation
         $Organization
     )
 
-    $nodes = New-Object System.Collections.ArrayList
-    $edges = New-Object System.Collections.ArrayList
+    $nodes = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
+    $edges = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
 
     foreach($app in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/installations").installations)
     {
@@ -1295,8 +1292,8 @@ function Git-HoundAppInstallation
     }
 
     Write-Output ([PSCustomObject]@{
-        Nodes = $nodes
-        Edges = $edges
+        Nodes = [System.Collections.ArrayList]$nodes.ToArray()
+        Edges = [System.Collections.ArrayList]$edges.ToArray()
     })
 }
 
