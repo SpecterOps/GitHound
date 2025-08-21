@@ -1387,7 +1387,6 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                 }
             }
             {$_ -like 'https://login.microsoftonline.com/*' -or $_ -like 'https://sts.windows.net/*'} {
-                # This is to catch the Entra SSO cases, I just currently don't have an example of the issuer string
                 foreach($identity in $result.data.organization.samlIdentityProvider.externalIdentities.nodes)
                 {
                     foreach($attribute in $identity.samlIdentity.attributes)
