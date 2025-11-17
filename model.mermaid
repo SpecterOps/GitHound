@@ -1,0 +1,101 @@
+---
+config:
+  layout: elk
+---
+flowchart TD
+    AWSRole[fa:fa-user-tag AWSRole]
+    AZUser[fa:fa-user AZUser]
+    GHBranch[fa:fa-code-branch GHBranch]
+    GHEnvironment[fa:fa-leaf GHEnvironment]
+    GHOrganization[fa:fa-building GHOrganization]
+    GHOrgRole[fa:fa-user-tie GHOrgRole]
+    GHRepository[fa:fa-box-archive GHRepository]
+    GHRepoRole[fa:fa-user-tie GHRepoRole]
+    GHSecretScanningAlert[fa:fa-key GHSecretScanningAlert]
+    GHTeam[fa:fa-user-group GHTeam]
+    GHTeamRole[fa:fa-user-tie GHTeamRole]
+    GHUser[fa:fa-user GHUser]
+    GHWorkflow[fa:fa-cogs GHWorkflow]
+    PingOneUser[fa:fa-user PingOneUser]
+
+    style AWSRole fill:#FF8E40
+    style AZUser fill:#FF80D2
+    style GHBranch fill:#FF80D2
+    style GHEnvironment fill:#D5F2C2
+    style GHOrganization fill:#5FED83
+    style GHOrgRole fill:#BFFFD1
+    style GHRepository fill:#9EECFF
+    style GHRepoRole fill:#DEFEFA
+    style GHSecretScanningAlert fill:#3C7A6E
+    style GHTeam fill:#C06EFF
+    style GHTeamRole fill:#D0B0FF
+    style GHUser fill:#FF8E40
+    style GHWorkflow fill:#FFE4A1
+    style PingOneUser fill:#FFE4A1
+    
+    GHTeam -->|GHMemberOf| GHTeam
+    GHOrganization -.->|GHOwns| GHRepository
+    GHUser -.->|GHBypassPullRequestAllowances| GHBranch
+    GHTeam -.->|GHBypassPullRequestAllowances| GHBranch
+    GHUser -.->|GHRestrictionsCanPush| GHBranch
+    GHTeam -.->|GHRestrictionsCanPush| GHBranch
+    GHRepository -.->|GHHasBranch| GHBranch
+    GHRepository -.->|GHHasWorkflow| GHWorkflow
+    GHRepository -.->|GHHasEnvironment| GHEnvironment
+    GHBranch -.->|GHHasEnvironment| GHEnvironment
+    GHTeam -->|GHHasRole| GHOrgRole
+    GHUser -->|GHHasRole| GHOrgRole
+    GHOrgRole -->|GHHasBaseRole| GHOrgRole
+    GHOrgRole -.->|GHManageOrganizationWebhooks| GHOrganization
+    GHOrgRole -.->|GHOrgBypassCodeScanningDismissalRequests| GHOrganization
+    GHOrgRole -.->|GHOrgBypassSecretScanningClosureRequests| GHOrganization
+    %%GHOrgRole -.->|GHOrgReviewAndManageSecretScanningBypassRequests| GHOrganization
+    %%GHOrgRole -.->|GHOrgReviewAndManageSecretScanningClosureRequests| GHOrganization
+    %%GHOrgRole -.->|GHReadOrganizationActionsUsageMetrics| GHOrganization
+    %%GHOrgRole -.->|GHReadOrganizationCustomOrgRole| GHOrganization
+    %%GHOrgRole -.->|GHReadOrganizationCustomRepoRole| GHOrganization
+    %%GHOrgRole -.->|GHResolveSecretScanningAlerts| GHOrganization
+    %%GHOrgRole -.->|GHViewSecretScanningAlerts| GHOrganization
+    %%GHOrgRole -.->|GHWriteOrganizationActionsSecrets| GHOrganization
+    %%GHOrgRole -.->|GHWriteOrganizationActionsSettings| GHOrganization
+    %%GHOrgRole -.->|GHWriteOrganizationCustomOrgRole| GHOrganization
+    %%GHOrgRole -.->|GHWriteOrganizationCustomRepoRole| GHOrganization
+    %%GHOrgRole -.->|GHWriteOrganizationNetworkConfigurations| GHOrganization
+    GHOrgRole -.->|GHCreateRepository| GHOrganization
+    GHOrgRole -.->|GHInviteMember| GHOrganization
+    GHOrgRole -.->|GHAddCollaborator| GHOrganization
+    GHOrgRole -.->|GHCreateTeam| GHOrganization
+    GHOrgRole -.->|GHTransferRepository| GHOrganization
+    GHOrgRole -->|GHHasBaseRole| GHOrganization
+    GHTeamRole -->|GHMemberOf| GHTeam
+    GHTeamRole -->|GHAddMember| GHTeam
+    GHUser -->|GHHasRole| GHTeamRole
+    GHRepoRole -.->|GHCanPull| GHRepository
+    GHRepoRole -.->|GHReadRepoContents| GHRepository
+    GHOrgRole -->|GHHasBaseRole| GHRepoRole
+    GHRepoRole -.->|GHCanPush| GHRepository
+    GHRepoRole -.->|GHWriteRepoContents| GHRepository
+    %%GHRepoRole -.->|GHWriteRepoPullRequests| GHRepository
+    GHRepoRole -->|GHAdminTo| GHRepository
+    %%GHRepoRole -.->|GHManageWebhooks| GHRepository
+    %%GHRepoRole -.->|GHManageDeployKeys| GHRepository
+    %%GHRepoRole -.->|GHPushProtectedBranch| GHRepository
+    %%GHRepoRole -.->|GHDeleteAlertsCodeScanning| GHRepository
+    GHRepoRole -.->|GHViewSecretScanningAlerts| GHRepository
+    %%GHRepoRole -.->|GHRunOrgMigration| GHRepository
+    GHRepoRole -.->|GHBypassProtections| GHRepository
+    %%GHRepoRole -.->|GHManageSecurityProducts| GHRepository
+    %%GHRepoRole -.->|GHManageRepoSecurityProducts| GHRepository
+    GHRepoRole -.->|GHEditProtections| GHRepository
+    %%GHRepoRole -.->|GHJumpMergeQueue| GHRepository
+    %%GHRepoRole -.->|GHCreateSoloMergeQueueEntry| GHRepository
+    %%GHRepoRole -.->|GHEditRepoCustomPropertiesValues| GHRepository
+    GHRepoRole -->|GHHasBaseRole| GHRepoRole
+    GHUser -->|GHHasRole| GHRepoRole
+    GHTeam -->|GHHasRole| GHRepoRole
+    GHRepository -.->|GHHasSecretScanningAlert| GHSecretScanningAlert
+    AZUser -->|SyncedToGHUser| GHUser
+    PingOneUser -->|SyncedToGHUser| GHUser
+    GHRepository -.->|GHCanAssumeAWSRole| AWSRole
+    GHBranch -.->|GHCanAssumeAWSRole| AWSRole
+    GHEnvironment -.->|GHCanAssumeAWSRole| AWSRole

@@ -14,6 +14,13 @@
         "color": "#FF80D2"
       }
     },
+    "GHEnvironment": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "leaf",
+        "color": "#D5F2C2"
+      }
+    },
     "GHOrganization": {
       "icon": {
         "type": "font-awesome",
@@ -68,6 +75,13 @@
         "type": "font-awesome",
         "name": "user",
         "color": "#FF8E40"
+      }
+    },
+    "GHWorkflow": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "cogs",
+        "color": "#FFE4A1"
       }
     }
   }
