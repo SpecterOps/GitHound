@@ -46,8 +46,28 @@ function New-GithubSession {
 
         [Parameter(Position=4, Mandatory = $false)]
         [HashTable]
-        $Headers = @{}
+        $Headers = @{},
+    
+        [Parameter(Position=5, Mandatory = $false)]
+        [string]
+        $GitHubAppId,
+
+        [Parameter(Position=6, Mandatory = $false)]
+        [string]
+        $PrivateKeyPath
     )
+
+    if ($Token -and ($GitHubAppId -or $PrivateKeyPath)) {
+        throw "Cannot specify both Token and GitHub App credentials (GitHubAppId/PrivateKeyPath)"
+    }
+
+    if (($GitHubAppId -and -not $PrivateKeyPath) -or (-not $GitHubAppId -and $PrivateKeyPath)) {
+        throw "Both GitHubAppId and PrivateKeyPath must be specified for GitHub App authentication"
+    }
+
+    if (-not $Token -and -not $GitHubAppId) {
+        throw "Either Token or GitHub App credentials (GitHubAppId and PrivateKeyPath) must be specified"
+    }
 
     if($Headers['Accept']) {
         throw "User-Agent header is specified in both the UserAgent and Headers parameter"
@@ -77,12 +97,124 @@ function New-GithubSession {
         }
     }
 
+    if ($GitHubAppId) {
+        if($Headers['Authorization']) {
+            throw "Authorization header cannot be set when using GitHub App authentication"
+        }
+        # Store App credentials in session for later JWT generation
+    }
 
     [PSCustomObject]@{
         PSTypeName = 'GitHound.Session'
         Uri = $ApiUri
         Headers = $Headers
         OrganizationName = $OrganizationName
+        GitHubAppId = $GitHubAppId
+        PrivateKeyPath = $PrivateKeyPath
+        InstallationToken = $null
+        TokenExpiry = $null
+    }
+}
+
+function New-GitHubAppJWT {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string]
+        $GitHubAppId,
+
+        [Parameter(Mandatory=$true)]
+        [string]
+        $PrivateKeyPath
+    )
+
+    # Read the private key
+    if (-not (Test-Path $PrivateKeyPath)) {
+        throw "Private key file not found at path: $PrivateKeyPath"
+    }
+
+    $privateKeyContent = Get-Content $PrivateKeyPath -Raw
+
+    # Create JWT payload
+    $now = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    $exp = $now + 600  # 10 minutes expiration
+
+    $payload = @{
+        iat = $now
+        exp = $exp
+        iss = $GitHubAppId
+    }
+
+    # Create JWT header
+    $header = @{
+        alg = "RS256"
+        typ = "JWT"
+    }
+
+    # Convert to Base64
+    $headerJson = $header | ConvertTo-Json -Compress
+    $payloadJson = $payload | ConvertTo-Json -Compress
+    
+    $headerB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($headerJson)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+    $payloadB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($payloadJson)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+
+    # Create signature using RSA-SHA256
+    $stringToSign = "$headerB64.$payloadB64"
+    
+    # Load private key and sign
+    try {
+        $rsa = [System.Security.Cryptography.RSA]::Create()
+        $rsa.ImportFromPem($privateKeyContent)
+        $signature = $rsa.SignData([System.Text.Encoding]::UTF8.GetBytes($stringToSign), [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+        $signatureB64 = [Convert]::ToBase64String($signature).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+    }
+    catch {
+        throw "Failed to create JWT signature: $($_.Exception.Message)"
+    }
+    finally {
+        if ($rsa) { $rsa.Dispose() }
+    }
+
+    return "$headerB64.$payloadB64.$signatureB64"
+}
+
+function Get-GitHubAppInstallationToken {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true)]
+        [PSTypeName('GitHound.Session')]
+        $Session
+    )
+
+    # Generate JWT for app authentication
+    $jwt = New-GitHubAppJWT -GitHubAppId $Session.GitHubAppId -PrivateKeyPath $Session.PrivateKeyPath
+
+    # Get installation ID for the organization
+    $appHeaders = @{
+        'Authorization' = "Bearer $jwt"
+        'Accept' = 'application/vnd.github+json'
+        'X-GitHub-Api-Version' = '2022-11-28'
+        'User-Agent' = $Session.Headers['User-Agent']
+    }
+
+    try {
+        $installations = Invoke-RestMethod -Uri "$($Session.Uri)app/installations" -Headers $appHeaders -Method GET
+        $installation = $installations | Where-Object { $_.account.login -eq $Session.OrganizationName }
+        
+        if (-not $installation) {
+            throw "GitHub App is not installed for organization: $($Session.OrganizationName)"
+        }
+
+        # Get installation access token
+        $tokenResponse = Invoke-RestMethod -Uri "$($Session.Uri)app/installations/$($installation.id)/access_tokens" -Headers $appHeaders -Method POST
+        
+        return @{
+            Token = $tokenResponse.token
+            ExpiresAt = [DateTime]::Parse($tokenResponse.expires_at)
+        }
+    }
+    catch {
+        throw "Failed to get installation token: $($_.Exception.Message)"
     }
 }
 
@@ -101,6 +233,19 @@ function Invoke-GithubRestMethod {
         [string]
         $Method = 'GET'
     )
+
+    if ($Session.GitHubAppId) {
+        # Check if we need to get or refresh the installation token
+        if (-not $Session.InstallationToken -or $Session.TokenExpiry -le [DateTime]::UtcNow.AddMinutes(5)) {
+            Write-Verbose "Getting new GitHub App installation token"
+            $tokenInfo = Get-GitHubAppInstallationToken -Session $Session
+            $Session.InstallationToken = $tokenInfo.Token
+            $Session.TokenExpiry = $tokenInfo.ExpiresAt
+            
+            # Update the session headers with the new token
+            $Session.Headers['Authorization'] = "Bearer $($Session.InstallationToken)"
+        }
+    }
 
     $LinkHeader = $Null;
     try {
@@ -190,6 +335,20 @@ function Invoke-GitHubGraphQL
         [hashtable]
         $Variables
     )
+
+    if ($Session.GitHubAppId) {
+        # Check if we need to get or refresh the installation token
+        if (-not $Session.InstallationToken -or $Session.TokenExpiry -le [DateTime]::UtcNow.AddMinutes(5)) {
+            Write-Verbose "Getting new GitHub App installation token for GraphQL"
+            $tokenInfo = Get-GitHubAppInstallationToken -Session $Session
+            $Session.InstallationToken = $tokenInfo.Token
+            $Session.TokenExpiry = $tokenInfo.ExpiresAt
+        }
+        
+        # Use the session headers with the installation token
+        $Headers = $Session.Headers.Clone()
+        $Headers['Authorization'] = "Bearer $($Session.InstallationToken)"
+    }
 
     $Body = @{
         query = $Query
