@@ -1,6 +1,6 @@
 # GitHound
 
-![](./images/github_bloodhound.png)
+![GitHound](./images/github_bloodhound.png)
 
 ## Overview
 
@@ -27,15 +27,15 @@ With GitHound, you get a clear, interactive graph of your GitHub permissions lan
 
 Settings -> Developer settings -> Personal access tokens -> Fine-grained tokens -> Generate new token
 
-* Repository access -> All repositories
+- Repository access -> All repositories
 
-* "Administrator" repository permissions (read)
-* "Contents" repository permissions (read)
-* "Metadata" repository permissions (read)
+- "Administrator" repository permissions (read)
+- "Contents" repository permissions (read)
+- "Metadata" repository permissions (read)
 
-* "Custom organization roles" organization permissions (read)
-* "Custom repository roles" organization permissions (read)
-* "Members" organization permissions (read)
+- "Custom organization roles" organization permissions (read)
+- "Custom repository roles" organization permissions (read)
+- "Members" organization permissions (read)
 
 ### Generate Fine-grained Personal Access Token (Detailed)
 
@@ -45,19 +45,19 @@ This walkthrough is for administrators to create the Fine-grained Personal Acces
 
 To generate a personal access token browse to your user settings as shown in the image below:
 
-![](./images/1_proile_settings.png)
+![Profile Settings](./images/1_proile_settings.png)
 
 In the settings menu, scroll to the bottom where you will see the "Developer settings" menu option. Click it.
 
-![](./images/2_developer_settings.png)
+![Developer Settings](./images/2_developer_settings.png)
 
 GitHub offers many options for programmatic access. GitHound, our collector, is built to work with Fine-grained Personal Access Tokens, so click on that menu item.
 
-![](./images/3_fine-grained_tokens.png)
+![Fine Grained Access Token](./images/3_fine-grained_tokens.png)
 
 After reaching the Fine-grained Personal Access Token page, you can click on the "Generate new token" button in the top right corner.
 
-![](./images/4_generate_token.png)
+![Generate Personal Access Token](./images/4_generate_token.png)
 
 #### Token Settings
 
@@ -65,21 +65,22 @@ Fine-grained Personal Access Tokens offer administrators the ability to specific
 
 It is possible to limit the set of repositories that a Fine-grained PAT can interact with. GitHound requires access to all repositories, so we will select the "All repositories" radio button.
 
-![](./images/5_all_repositories.png)
+![Setting All Repositories](./images/5_all_repositories.png)
 
 Next, we will define the specific repository and organization permissions that GitHound requires. GitHound is a read-only tool, so we will make sure to specify read-only access for each option as shown in the image below:
 
-![](./images/6_permissions.png)
+![Permissions](./images/6_permissions.png)
 
 The following permissions are required:
 
 | Target       | Permission                | Access    |
 |--------------|---------------------------|-----------|
-| Repository   | Administrator             | Read-only |
+| Repository   | Action                    | Read-only |
+| Repository   | Administration            | Read-only |
 | Repository   | Contents                  | Read-only |
 | Repository   | Metadata                  | Read-only |
 | Repository   | Secret scanning alerts    | Read-only |
-| Organization | Administrator             | Read-only |
+| Organization | Administration            | Read-only |
 | Organization | Custom organization roles | Read-only |
 | Organization | Custom repository roles   | Read-only |
 | Organization | Members                   | Read-only |
@@ -95,25 +96,25 @@ Once the PAT is created, GitHub will present it to you as shown below. You must 
 1. Open a PowerShell terminal
 2. Load `github.ps1` in your current PowerShell session:
 
- ```powershell
-  . ./github.ps1
- ```
+    ```powershell
+      . ./github.ps1
+    ```
 
 3. Create a GitHub Session using your Personal Access Token.
 
-```powershell
-$session = New-GitHubSession -OrganizationName <Name of your Organization> -Token (Get-Clipboard)
-```
+    ```powershell
+    $session = New-GitHubSession -OrganizationName <Name of your Organization> -Token (Get-Clipboard)
+    ```
 
-Note: You must specify the name of your GitHub organziation. For example, this repository is part of the `SpecterOps` organization, so I would specify `SpecterOps` as the argument for the OrganizationName parameter. Additionally, you must specify your Personal Access Token. I find that it is easiest to paste it directly from the clipboard as this is where it will be after you create it or if you save it in a password manager.
+    Note: You must specify the name of your GitHub organziation. For example, this repository is part of the `SpecterOps` organization, so I would specify `SpecterOps` as the argument for the OrganizationName parameter. Additionally, you must specify your Personal Access Token. I find that it is easiest to paste it directly from the clipboard as this is where it will be after you create it or if you save it in a password manager.
 
-4.  Run the collection on the specified organization:
+4. Run the collection on the specified organization:
 
-```powershell
-Invoke-GitHound -Session $session
-```
+    ```powershell
+    Invoke-GitHound -Session $session
+    ```
 
-This will output the payload to the current working directory as `githound_<your_org_identifier>.json`.
+    This will output the payload to the current working directory as `githound_<your_org_identifier>.json`.
 
 5. Upload the payload via the Ingest File page in BloodHound or via the API.
 
@@ -123,23 +124,223 @@ If you do not have a GitHub Enterprise environment or if you want to test out Gi
 
 ## Schema
 
-![](./images/githound_schema.png)
+![Mermaid Schema](./images/GitHound-Mermaid.png)
 
 ### Nodes
 
 Nodes correspond to each object type.
 
-| Node                                                                     | Description                                                                                    | Icon        | Color   |
-|--------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|-------------|---------|
-| <img src="./images/black_GHOrganization.png" width="30"/> GHOrganization | A GitHub Organization—top‑level container for repositories, teams, & settings.               | building    | #5FED83 |
-| <img src="./images/black_GHUser.png" width="30"/> GHUser                 | An individual GitHub user account.                                                             | user        | #FF8E40 |
-| <img src="./images/black_GHTeam.png" width="30"/> GHTeam                 | A team within an organization, grouping users for shared access and collaboration.             | user-group  | #C06EFF |
-| <img src="./images/black_GHRepository.png" width="30"/> GHRepository     | A code repository in an organization (or user account), containing files, issues, etc.         | box-archive | #9EECFF |
-| <img src="./images/black_GHBranch.png" width="30"/> GHBranch             | A named reference in a repository (e.g. `main`, `develop`) representing a line of development. | code-branch | #FF80D2 |
-| <img src="./images/black_GHOrgRole.png" width="30"/> GHOrgRole           | The role a user has at the organization level (e.g. `admin`, `member`).                        | user-tie    | #BFFFD1 |
-| <img src="./images/black_GHTeamRole.png" width="30"/> GHTeamRole         | The role a user has within a team (e.g. `maintainer`, `member`).                               | user-tie    | #D0B0FF |
-| <img src="./images/black_GHRepoRole.png" width="30"/> GHRepoRole         | The permission granted to a user or team on a repository (e.g. `admin`, `write`, `read`).      | user-tie    | #DEFEFA |
-| <img src="./images/black_GHSecretScanningAlert.png" width="30"/> GHSecretScanningAlert | A component of GitHub Advanced Security to notify organizations when a secret is accidentally included in a repo's contents | key | #3C7A6E |
+| Node                                                                                   | Icon        | Color     | Description                                                                                    |
+|----------------------------------------------------------------------------------------|-------------|-----------|------------------------------------------------------------------------------------------------|
+| <img src="./images/black_GHBranch.png" width="30"/> GHBranch                           | code-branch | #FF80D2 | A named reference in a repository (e.g. `main`, `develop`) representing a line of development. |
+| <img src="./images/black_GHEnvironment.png" width="30"/> GHEnvironment                 | leaf        | #D5F2C2 |                                                                                                |
+| <img src="./images/black_GHOrganization.png" width="30"/> GHOrganization               | building    | #5FED83 | A GitHub Organization—top‑level container for repositories, teams, & settings.                 |
+| <img src="./images/black_GHOrgRole.png" width="30"/> GHOrgRole                         | user-tie    | #BFFFD1 | The role a user has at the organization level (e.g. `admin`, `member`).                        |
+| <img src="./images/black_GHRepository.png" width="30"/> GHRepository                   | box-archive | #9EECFF | A code repository in an organization (or user account), containing files, issues, etc.         |
+| <img src="./images/black_GHRepoRole.png" width="30"/> GHRepoRole                       | user-tie    | #DEFEFA | The permission granted to a user or team on a repository (e.g. `admin`, `write`, `read`).      |
+| <img src="./images/black_GHSecretScanningAlert.png" width="30"/> GHSecretScanningAlert | key         | #3C7A6E | A component of GitHub Advanced Security to notify organizations when a secret is accidentally included in a repo's contents |
+| <img src="./images/black_GHTeam.png" width="30"/> GHTeam                               | user-group  | #C06EFF | A team within an organization, grouping users for shared access and collaboration.             |
+| <img src="./images/black_GHTeamRole.png" width="30"/> GHTeamRole                       | user-tie    | #D0B0FF | The role a user has within a team (e.g. `maintainer`, `member`).                               |
+| <img src="./images/black_GHUser.png" width="30"/> GHUser                               | user        | #FF8E40 | An individual GitHub user account.                                                             |
+| <img src="./images/black_GHWorkflow.png" width="30"/> GHWorkflow                       | cogs        | #FFE4A1 |                                                                                                |
+
+#### <img src="./images/black_GHBranch.png" width="30"/> GHBranch
+
+| Property Name                              | Display Name | Data Type | Sample Value              | Description |
+|--------------------------------------------|--------------|-----------|---------------------------|-------------|
+| objectid                                   | Id           | string    | | |
+| name                                       | Id           | string    | | |
+| short_name                                 | Id           | string    | | |
+| name                                       | Id           | string    | | |
+| id                                         | Id           | string    | | |
+| commit_hash                                | Id           | string    | | |
+| commit_url                                 | Id           | string    | | |
+| protected                                  | Id           | boolean   | | |
+| protection_enforce_admins                  | Id           | boolean   | | |
+| protection_lock_branch                     | Id           | boolean   | | |
+| protection_require_pull_request_reviews    | Id           | boolean   | | |
+| protection_required_approving_review_count | Id           | boolean   | | |
+| protection_require_code_owner_reviews      | Id           | boolean   | | |
+| protection_require_last_push_approval      | Id           | boolean   | | |
+| protection_push_restrictions               | Id           | boolean   | | |
+| organization                               | Id           | string    | | This field should be renamed as "organization_name" |
+| organization_id                            | Id           | string    | | |
+
+#### <img src="./images/black_GHEnvironment.png" width="30"/> GHEnvironment
+
+| Property Name     | Display Name | Data Type | Sample Value              | Description |
+|-------------------|--------------|-----------|---------------------------|-------------|
+| objectId          | Id           | string    |  | |
+| id                | Id           | integer   |  | |
+| short_name        | Id           | string    |  | |
+| name              | Id           | string    |  | |
+| node_id           | Id           | string    |  | * This can be deleted because it is used as the objectid, and is thus redundant |
+| can_admins_bypass | Id           | boolean   |  | |
+| organization      | Id           | string    |  | This field should be renamed as "organization_name" |
+| organization_id   | Id           | string    |  | |
+
+#### <img src="./images/black_GHOrganization.png" width="30"/> GHOrganization
+
+| Property Name | Display Name | Data Type | Sample Value              | Description |
+|---------------|--------------|-----------|---------------------------|-------------|
+| objectid                                       | Id           | string    | | |
+| id                                             | Id           | integer   | | |
+| name                                           | Id           | string    | | Currently this is set as a friendly name, but should it be changed to the login property value? |
+| login                                          | Id           | string    | | |
+| node_id                                        | Id           | string    | | * This can be deleted because it is used as the objectid, and is thus redundant |
+| blog                                           | Id           | string    | | |
+| is_verified                                    | Id           | boolean   | | |
+| public_repos                                   | Id           | integer   | | |
+| followers                                      | Id           | integer   | | |
+| html_url                                       | Id           | string    | | |
+| created_at                                     | Id           | datetime  | | |
+| updated_at                                     | Id           | datetime  | | |
+| total_private_repos                            | Id           | integer   | | |
+| owned_private_repos                            | Id           | integer   | | |
+| collaborators                                  | Id           | integer   | | |
+| default_repository_permission                  | Id           | string    | | This property is used to associate the members org role with the appropriate "all_repo_*" role. |
+| two_factor_requirement_enabled                 | Id           | boolean   | | |
+| advanced_security_enabled_for_new_repositories | Id           | boolean   | | |
+| actions_enabled_repositories                   | Id           | string    | | |
+| actions_allowed_actions                        | Id           | string    | | |
+| actions_sha_pinning_required                   | Id           | boolean   | | |
+
+#### <img src="./images/black_GHOrgRole.png" width="30"/> GHOrgRole
+
+| Property Name     | Display Name | Data Type | Sample Value              | Description |
+|-------------------|--------------|-----------|---------------------------|-------------|
+| objectId          | Id           | string    | | |
+| name              | Id           | string    | | |
+| id                | Id           | string    | | |
+| short_name        | Id           | string    | | |
+| type              | Id           | string    | `default` or `custom` | |
+| organization_name | Id           | string    | | |
+| organization_id   | Id           | string    | | |
+
+#### <img src="./images/black_GHRepository.png" width="30"/> GHRepository
+
+##### Properties
+
+| Property Name               | Display Name                | Data Type | Sample Value              | Description |
+|-----------------------------|-----------------------------|-----------|---------------------------|-------------|
+| objectId                    | ObjectId                    | string    | | |
+| name                        | Name                        | string    | | |
+| updated_at                  | Updated At                  | datetime  | | |
+| organization_id             | Organization Id             | string    | | |
+| visibility                  | Visibility                  | string    | | |
+| owner_name                  | Owner Name                  | string    | | |
+| organization_name           | Organization Name           | string    | | |
+| default_branch              | Default Branch              | string    | | |
+| open_issues                 | Open Issues                 | integer   | | |
+| html_url                    | Html Url                    | string    | | |
+| actions_enabled             | Actions Enabled             | boolean   | | |
+| owner_node_id               | Owner Node Id               | string    | | |
+| watchers                    | Watchers                    | integer   | | |
+| private                     | Private                     | boolean   | | |
+| full_name                   | Full Name                   | string    | | |
+| disabled                    | Disabled                    | boolean   | | |
+| secret_scanning             | Secret Scanning             | string    | | |
+| archived                    | Archived                    | boolean   | | |
+| forks                       | Forks                       | integer   | | |
+| web_commit_signoff_required | Web Commit Signoff Required | boolean   | | |
+| node_id                     | Node Id                     | string    | | * We can delete this field because it is being used as the objectId. |
+| pushed_at                   | Pushed At                   | datetime  | | |
+| open_issues_count           | Open Issues Count           | integer   | | |
+| allow_forking               | Allow Forking               | boolean   | | |
+| created_at                  | Created At                  | datetime  | | |
+| owner_id                    | Owner Id                    | integer   | | |
+| description                 | Description                 | string    | | |
+| id                          | Id                          | integer   | | |
+
+##### Built-in Queries
+
+###### Show the Repository's Branches
+
+###### Show the Repository's Roles and Users that are Directly Assigned
+
+###### Show Users that have Paths to the Repository
+
+#### <img src="./images/black_GHRepoRole.png" width="30"/> GHRepoRole
+
+| Property Name     | Display Name | Data Type | Sample Value              | Description |
+|-------------------|--------------|-----------|---------------------------|-------------|
+| objectId          | Id           | string    | | |
+| name              | Id           | string    | | |
+| id                | Id           | string    | | |
+| short_name        | Id           | string    | | |
+| type              | Id           | string    | `default` or `custom` | |
+| organization_name | Id           | string    | | |
+| organization_id   | Id           | string    | | |
+
+#### <img src="./images/black_GHSecretScanningAlert.png" width="30"/> GHSecretScanningAlert
+
+| Property Name | Display Name | Data Type | Sample Value              | Description |
+|---------------|--------------|-----------|---------------------------|-------------|
+
+#### <img src="./images/black_GHTeam.png" width="30"/> GHTeam
+
+Should this include a fully qualified name property? If so, what does the format look like?
+
+| Property Name | Display Name | Data Type | Sample Value              | Description |
+|---------------|--------------|-----------|---------------------------|-------------|
+| objectId          | Id           | string    | | |
+| name              | Id           | string    | | Derived from "slug" property. |
+| id                | Id           | string    | | |
+| node_id           | Id           | string    | | * We can delete this field because it is being used as the objectId. |
+| slug              | Id           | string    | | |
+| description       | Id           | string    | | |
+| privacy           | Id           | string    | | |
+| permission        | Id           | string    | | |
+| organization_name | Id           | string    | | |
+| organization_id   | Id           | string    | | |
+
+#### <img src="./images/black_GHTeamRole.png" width="30"/> GHTeamRole
+
+| Property Name     | Display Name | Data Type | Sample Value              | Description |
+|-------------------|--------------|-----------|---------------------------|-------------|
+| objectId          | Id           | string    | | |
+| name              | Id           | string    | | |
+| id                | Id           | string    | | |
+| short_name        | Id           | string    | | |
+| type              | Id           | string    | | |
+| organization_name | Id           | string    | | |
+| organization_id   | Id           | string    | | |
+
+#### <img src="./images/black_GHUser.png" width="30"/> GHUser
+
+| Property Name     | Display Name | Data Type | Sample Value              | Description |
+|-------------------|--------------|-----------|---------------------------|-------------|
+| objectid          | Object Id         | string    | | |
+| name              | Name              | string    | | I believe this is derived from the login property. |
+| login             | Login             | string    | | |
+| company           | Company           | string    | | |
+| email             | Email             | string    | | |
+| full_name         | Full Name         | string    | | |
+| type              | Type              | string    | | |
+| twitter_username  | Twitter Username  | string    | | |
+| site_admin        | Site Admin        | boolean   | | |
+| id                | Id                | integer   | | |
+| node_id           | Node Id           | string    | | * We can delete this field because it is being used as the objectId. |
+| organization_name | Organization Name | string    | | |
+| organization_id   | Organization Id   | string    | | |
+
+#### <img src="./images/black_GHWorkflow.png" width="30"/> GHWorkflow
+
+For this, we found that it was useful to include the name of the repository in the "name" property because it is possible to have several workflows with the same name because they are in different repositories.
+I wonder if it may be worth considering whether we should include the containing repository name and id in the property list?
+
+| Property Name     | Display Name | Data Type | Sample Value              | Description |
+|-------------------|--------------|-----------|---------------------------|-------------|
+| objectid          | Object Id         | string    | | This is derived from the node_id property to uniquely identify the Workflow. |
+| name              | Name              | string    | | |
+| short_name        | Short Name        | string    | | |
+| id                | Id                | integer   | | |
+| node_id           | Node Id           | string    | | * We can delete this field because it is being used as the objectId. |
+| path              | Path              | string    | | |
+| state             | State             | string    | | |
+| url               | Url               | string    | | |
+| organization_name | Organization Name | string    | | |
+| organization_id   | Organization Id   | string    | | |
 
 ### Edges
 
@@ -178,8 +379,8 @@ Nodes correspond to each object type.
 | `GHWriteOrganizationCustomRepoRole`                 | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
 | `GHWriteOrganizationNetworkConfigurations`          | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
 | `GHOwns`                                            | `GHOrganization` | `GHRepository`          | y          | n/a    |
-| `GHBypassPullRequestAllowances`                     | `GHTeam`         | `GHBranch`              | n          | n/a    |
-| `GHBypassPullRequestAllowances`                     | `GHUser`         | `GHBranch`              | n          | n/a    |
+| `GHBypassRequiredPullRequest`                       | `GHTeam`         | `GHBranch`              | n          | n/a    |
+| `GHBypassRequiredPullRequest`                       | `GHUser`         | `GHBranch`              | n          | n/a    |
 | `GHRestrictionsCanPush`                             | `GHTeam`         | `GHBranch`              | n          | n/a    |
 | `GHRestrictionsCanPush`                             | `GHUser`         | `GHBranch`              | n          | n/a    |
 | `GHHasBranch`                                       | `GHRepository`   | `GHBranch`              | n          | n/a    |
@@ -199,13 +400,31 @@ Nodes correspond to each object type.
 | `GHDeleteAlertsCodeScanning`                        | `GHRepoRole`     | `GHRepository`          | n          | y      |
 | `GHViewSecretScanningAlerts`                        | `GHRepoRole`     | `GHRepository`          | n          | y      |
 | `GHRunOrgMigration`                                 | `GHRepoRole`     | `GHRepository`          | n          | n      |
-| `GHBypassProtections`                               | `GHRepoRole`     | `GHRepository`          | n          | y      |
+| `GHBypassBranchProtection`                          | `GHRepoRole`     | `GHRepository`          | n          | y      |
 | `GHManageSecurityProducts`                          | `GHRepoRole`     | `GHRepository`          | n          | n      |
 | `GHManageRepoSecurityProducts`                      | `GHRepoRole`     | `GHRepository`          | n          | n      |
-| `GHEditProtections`                                 | `GHRepoRole`     | `GHRepository`          | n          | y      |
+| `GHEditRepoProtections`                             | `GHRepoRole`     | `GHRepository`          | n          | y      |
 | `GHJumpMergeQueue`                                  | `GHRepoRole`     | `GHRepository`          | n          | y      |
-| `GHCreateSoloMergeQueue`                           | `GHRepoRole`     | `GHRepository`          | n          | y      |
+| `GHCreateSoloMergeQueue`                            | `GHRepoRole`     | `GHRepository`          | n          | y      |
 | `GHEditRepoCustomPropertiesValue`                   | `GHRepoRole`     | `GHRepository`          | n          | y      |
+| `GHHasWorkflow`                                     | `GHRepository`   | `GHWorkflow`            | n          | n/a    |
+| `GHHasEnvironment`                                  | `GHRepository`   | `GHEnvironment`         | n          | n/a    |
+| `GHHasEnvironment`                                  | `GHBranch`       | `GHEnvironment`         | n          | n/a    |
+
+#### Structural Edges
+
+This section should describe the edges that can be used to understand which prinicipals have which permissions.
+It's going to be something like this `(adminUsers:GHUser)-[:GHMemberOf|GHHasRole|GHHasBaseRole|GHOwns|GHAddMember*1..3]->(:GHRepoRole)-[:GHAdminTo]->(:GHRepository)`
+
+#### Hybrid Edges
+
+| Edge Type                                           | Source           | Target                  | Travesable | Custom |
+|-----------------------------------------------------|------------------|-------------------------|------------|--------|
+| `SyncedToGHUser`                                    | `AZUser`         | `GHUser`                | y          | n/a    |
+| `SyncedToGHUser`                                    | `PingOnUser`     | `GHUser`                | y          | n/a    |
+| `GHCanAssumeAWSRole`                                | `GHBranch`       | `AWSRole`               | y          | n/a    |
+| `GHCanAssumeAWSRole`                                | `GHEnvironment`  | `AWSRole`               | y          | n/a    |
+| `GHCanAssumeAWSRole`                                | `GHRepository`   | `AWSRole`               | y          | n/a    |
 
 ## Usage Examples
 
@@ -229,7 +448,7 @@ MATCH p = (:GHUser {objectid:"<object_id>"})-[:GHMemberOf|GHAddMember|GHHasRole|
 RETURN p
 ```
 
-![](./images/user-repo.png)
+![User to Repos](./images/user-repo.png)
 
 ### Who has Write Access to a Repo?
 
@@ -247,7 +466,7 @@ MATCH p = (:GHUser)-[:GHMemberOf|GHHasRole|GHHasBaseRole|GHOwns|GHAddMember*1..]
 RETURN p
 ```
 
-![](./images/who-repo.png)
+![Repo to Users](./images/who-repo.png)
 
 ### Members of the Organization Admins (Domain Admin equivalent)?
 
@@ -256,7 +475,7 @@ MATCH p = (:GHUser)-[:GHHasRole|GHHasBaseRole]->(:GHOrgRole {short_name: "owners
 RETURN p
 ```
 
-![](./images/org-admins.png)
+![Org Admins](./images/org-admins.png)
 
 ### Users that are managed via SSO (Entra-only)
 
@@ -265,7 +484,7 @@ MATCH p = (:AZUser)-[:SyncedToGHUser]->(:GHUser)
 RETURN p
 ```
 
-![](./images/sso-users.png)
+![SSO Users](./images/sso-users.png)
 
 ## Contributing
 
@@ -277,6 +496,7 @@ We welcome and appreciate your contributions! To make the process smooth and eff
 2. **Fork & Create a Branch**  
    - Fork this repository to your own account.  
    - Create a topic branch for your work:
+
      ```bash
      git checkout -b feat/my-new-feature
      ```
@@ -285,15 +505,18 @@ We welcome and appreciate your contributions! To make the process smooth and eff
    - Follow the existing style and patterns in the repo.  
    - Add or update any tests/examples to cover your changes.  
    - Verify your code runs as expected:
+
      ```bash
      # e.g. dot-source the collector and run it, or load the model.json in BloodHound
      ```
 
 4. **Submit a Pull Request**  
    - Push your branch to your fork:
+
      ```bash
      git push origin feat/my-new-feature
      ```  
+
    - Open a Pull Request against the `main` branch of this repository.  
    - In your PR description, please include:
      - **What** you’ve changed and **why**.  
@@ -307,7 +530,7 @@ Thank you for helping improve this extension! 🎉
 
 ## Licensing
 
-```
+```text
 Copyright 2025 Jared Atkinson
 
 Licensed under the Apache License, Version 2.0
