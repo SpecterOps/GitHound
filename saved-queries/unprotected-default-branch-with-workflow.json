@@ -1,0 +1,5 @@
+{
+  "name": "Repositories with Workflows and Unprotected Default Branch",
+  "query": "MATCH p=(repo:GHRepository)-[:GHHasWorkflow]->(:GHWorkflow) MATCH p1=(repo)-[:GHHasBranch]->(branch:GHBranch) WHERE repo.default_branch = branch.short_name RETURN p1",
+  "description": "Returns all repositories that have GitHub Actions workflows and an unprotected default branch. This means that users with GHWriteRepoContents to the Repository can overwrite or change the workflow."
+}
