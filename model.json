@@ -21,6 +21,20 @@
         "color": "#D5F2C2"
       }
     },
+    "GHEnvironmentSecret": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "lock",
+        "color": "#6FB94A"
+      }
+    },
+    "GHExternalIdentity": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "arrows-left-right",
+        "color": "#8A8F98"
+      }
+    },
     "GHOrganization": {
       "icon": {
         "type": "font-awesome",
@@ -35,6 +49,13 @@
         "color": "#BFFFD1"
       }
     },
+    "GHOrgSecret": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "lock",
+        "color": "#1FB65A"
+      }
+    },
     "GHRepository": {
       "icon": {
         "type": "font-awesome",
@@ -47,6 +68,20 @@
         "type": "font-awesome",
         "name": "user-tie",
         "color": "#DEFEFA"
+      }
+    },
+    "GHRepoSecret": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "lock",
+        "color": "#32BEE6"
+      }
+    },
+    "GHSamlIdentityProvider": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "id-badge",
+        "color": "#5A6C8F"
       }
     },
     "GHSecretScanningAlert": {

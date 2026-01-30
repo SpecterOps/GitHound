@@ -78,12 +78,15 @@ The following permissions are required:
 | Repository   | Action                    | Read-only |
 | Repository   | Administration            | Read-only |
 | Repository   | Contents                  | Read-only |
+| Repository   | Environments              | Read-only |
 | Repository   | Metadata                  | Read-only |
 | Repository   | Secret scanning alerts    | Read-only |
+| Repository   | Secrets                   | Read-only |
 | Organization | Administration            | Read-only |
 | Organization | Custom organization roles | Read-only |
 | Organization | Custom repository roles   | Read-only |
 | Organization | Members                   | Read-only |
+| Organization | Secrets                   | Read-only |
 
 #### Save Personal Access Token
 
@@ -130,19 +133,24 @@ If you do not have a GitHub Enterprise environment or if you want to test out Gi
 
 Nodes correspond to each object type.
 
-| Node                                                                                   | Icon        | Color     | Description                                                                                    |
-|----------------------------------------------------------------------------------------|-------------|-----------|------------------------------------------------------------------------------------------------|
-| <img src="./images/black_GHBranch.png" width="30"/> GHBranch                           | code-branch | #FF80D2 | A named reference in a repository (e.g. `main`, `develop`) representing a line of development. |
-| <img src="./images/black_GHEnvironment.png" width="30"/> GHEnvironment                 | leaf        | #D5F2C2 |                                                                                                |
-| <img src="./images/black_GHOrganization.png" width="30"/> GHOrganization               | building    | #5FED83 | A GitHub Organization—top‑level container for repositories, teams, & settings.                 |
-| <img src="./images/black_GHOrgRole.png" width="30"/> GHOrgRole                         | user-tie    | #BFFFD1 | The role a user has at the organization level (e.g. `admin`, `member`).                        |
-| <img src="./images/black_GHRepository.png" width="30"/> GHRepository                   | box-archive | #9EECFF | A code repository in an organization (or user account), containing files, issues, etc.         |
-| <img src="./images/black_GHRepoRole.png" width="30"/> GHRepoRole                       | user-tie    | #DEFEFA | The permission granted to a user or team on a repository (e.g. `admin`, `write`, `read`).      |
-| <img src="./images/black_GHSecretScanningAlert.png" width="30"/> GHSecretScanningAlert | key         | #3C7A6E | A component of GitHub Advanced Security to notify organizations when a secret is accidentally included in a repo's contents |
-| <img src="./images/black_GHTeam.png" width="30"/> GHTeam                               | user-group  | #C06EFF | A team within an organization, grouping users for shared access and collaboration.             |
-| <img src="./images/black_GHTeamRole.png" width="30"/> GHTeamRole                       | user-tie    | #D0B0FF | The role a user has within a team (e.g. `maintainer`, `member`).                               |
-| <img src="./images/black_GHUser.png" width="30"/> GHUser                               | user        | #FF8E40 | An individual GitHub user account.                                                             |
-| <img src="./images/black_GHWorkflow.png" width="30"/> GHWorkflow                       | cogs        | #FFE4A1 |                                                                                                |
+| Node                                                                                      | Icon              | Color     | Description                                                                                    |
+|-------------------------------------------------------------------------------------------|-------------------|-----------|------------------------------------------------------------------------------------------------|
+| <img src="./images/black_GHBranch.png" width="30"/> GHBranch                              | code-branch       | #FF80D2 | A named reference in a repository (e.g. `main`, `develop`) representing a line of development. |
+| <img src="./images/black_GHEnvironment.png" width="30"/> GHEnvironment                    | leaf              | #D5F2C2 |                                                                                                |
+| <img src="./images/black_GHEnvironmentSecret.png" width="30"/> GHEnvironmentSecret        | lock              | #6FB94A |                                                                                                |
+| <img src="./images/black_GHExternalIdentity.png" width="30"/> GHExternalIdentity          | arrows-left-right | #8A8F98 |                                                                                                |
+| <img src="./images/black_GHOrganization.png" width="30"/> GHOrganization                  | building          | #5FED83 | A GitHub Organization—top‑level container for repositories, teams, & settings.                 |
+| <img src="./images/black_GHOrgRole.png" width="30"/> GHOrgRole                            | user-tie          | #BFFFD1 | The role a user has at the organization level (e.g. `admin`, `member`).                        |
+| <img src="./images/black_GHOrgSecret.png" width="30"/> GHOrgSecret                        | lock              | #1FB65A |                                                                                                |
+| <img src="./images/black_GHRepository.png" width="30"/> GHRepository                      | box-archive       | #9EECFF | A code repository in an organization (or user account), containing files, issues, etc.         |
+| <img src="./images/black_GHRepoRole.png" width="30"/> GHRepoRole                          | user-tie          | #DEFEFA | The permission granted to a user or team on a repository (e.g. `admin`, `write`, `read`).      |
+| <img src="./images/black_GHRepoSecret.png" width="30"/> GHRepoSecret                      | lock              | #32BEE6 |                                                                                                |
+|  <img src="./images/black_GHSamlIdentityProvider.png" width="30"/> GHSamlIdentityProvider | id-badge          | #5A6C8F |                                                                                                |
+| <img src="./images/black_GHSecretScanningAlert.png" width="30"/> GHSecretScanningAlert    | key               | #3C7A6E | A component of GitHub Advanced Security to notify organizations when a secret is accidentally included in a repo's contents |
+| <img src="./images/black_GHTeam.png" width="30"/> GHTeam                                  | user-group        | #C06EFF | A team within an organization, grouping users for shared access and collaboration.             |
+| <img src="./images/black_GHTeamRole.png" width="30"/> GHTeamRole                          | user-tie          | #D0B0FF | The role a user has within a team (e.g. `maintainer`, `member`).                               |
+| <img src="./images/black_GHUser.png" width="30"/> GHUser                                  | user              | #FF8E40 | An individual GitHub user account.                                                             |
+| <img src="./images/black_GHWorkflow.png" width="30"/> GHWorkflow                          | cogs              | #FFE4A1 |                                                                                                |
 
 #### <img src="./images/black_GHBranch.png" width="30"/> GHBranch
 

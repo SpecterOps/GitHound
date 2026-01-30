@@ -432,6 +432,9 @@ function Git-HoundOrganization
         $Session
     )
 
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+
     $org = Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Session.OrganizationName)"
     $actions = Invoke-GithubRestMethod -Session $session -Path "orgs/$($Session.OrganizationName)/actions/permissions"
 
@@ -465,7 +468,38 @@ function Git-HoundOrganization
         query_repositories                             = "MATCH (n:GHRepository {organization_id:'$($org.node_id)}) RETURN n"
     }
 
-    Write-Output (New-GitHoundNode -Id $org.node_id -Kind 'GHOrganization' -Properties $properties)
+    $null = $nodes.Add((New-GitHoundNode -Id $org.node_id -Kind 'GHOrganization' -Properties $properties))
+
+    # List organization secrets
+    # https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-organization-secrets
+    # "Secrets" organization permissions (read)
+    foreach($secret in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($org.login)/actions/secrets").secrets)
+    {
+        $secretId = "GHOrgSecret_$($org.node_id)_$($secret.name)"
+        $properties = @{
+            # Common Properties
+            id                   = Normalize-Null $secretId
+            name                 = Normalize-Null $secret.name
+            # Relational Properties
+            organization_name    = Normalize-Null $org.login
+            organization_id      = Normalize-Null $org.node_id
+            # Node Specific Properties
+            created_at           = Normalize-Null $secret.created_at
+            updated_at           = Normalize-Null $secret.updated_at
+            visibility           = Normalize-Null $secret.visibility
+            # Accordion Panel Queries
+        }
+
+        $null = $nodes.Add((New-GitHoundNode -Id $secretId -Kind 'GHOrgSecret' -Properties $properties))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GHContains' -StartId $org.node_id -EndId $secretId -Properties @{ traversable = $false }))
+    }
+
+    $output = [PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    }
+
+    Write-Output $output
 }
 
 function Git-HoundTeam
@@ -660,6 +694,42 @@ function Git-HoundRepository
         }
         $null = $nodes.Add((New-GitHoundNode -Id $repo.node_id -Kind 'GHRepository' -Properties $properties))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GHOwns' -StartId $repo.owner.node_id -EndId $repo.node_id -Properties @{ traversable = $true }))
+
+        # List repository organization secrets
+        # https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-repository-organization-secrets
+        # "Secrets" repository permissions (read)
+        foreach($secret in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.full_name)/actions/organization-secrets").secrets)
+        {
+            $secretId = "GHOrgSecret_$($Organization.Properties.node_id)_$($secret.name)"
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasSecret' -StartId $repo.node_id -EndId $secretId -Properties @{ traversable = $false }))
+        }
+
+        # List repository secrets
+        # https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-repository-secrets
+        # "Secrets" repository permissions (read)
+        foreach($secret in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.full_name)/actions/secrets").secrets)
+        {
+            $secretId = "GHSecret_$($repo.node_id)_$($secret.name)"
+            $properties = @{
+                # Common Properties
+                id                   = Normalize-Null $secretId
+                name                 = Normalize-Null $secret.name
+                # Relational Properties
+                organization_name    = Normalize-Null $Organization.Properties.login
+                organization_id      = Normalize-Null $Organization.Properties.node_id
+                repository_name      = Normalize-Null $repo.name
+                repository_id        = Normalize-Null $repo.node_id
+                # Node Specific Properties
+                created_at           = Normalize-Null $secret.created_at
+                updated_at           = Normalize-Null $secret.updated_at
+                visibility           = Normalize-Null $secret.visibility
+                # Accordion Panel Queries
+            }
+
+            $null = $nodes.Add((New-GitHoundNode -Id $secretId -Kind 'GHRepoSecret' -Properties $properties))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GHContains' -StartId $repo.node_id -EndId $secretId -Properties @{ traversable = $false }))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasSecret' -StartId $repo.node_id -EndId $secretId -Properties @{ traversable = $false }))
+        }
     }
 
     $output = [PSCustomObject]@{
@@ -690,7 +760,7 @@ function Git-HoundBranch
 
     process
     {
-        $Repository.nodes | ForEach-Object -Parallel {
+        $Repository.nodes | Where-Object {$_.kinds -eq 'GHRepository'} | ForEach-Object -Parallel {
             $nodes = $using:nodes
             $edges = $using:edges
             $Session = $using:Session
@@ -888,7 +958,7 @@ function Git-HoundWorkflow
 
     process
     {
-        $Repository.nodes | ForEach-Object -Parallel {
+        $Repository.nodes | Where-Object {$_.kinds -eq 'GHRepository'} | ForEach-Object -Parallel {
             $nodes = $using:nodes
             $edges = $using:edges
             $Session = $using:Session
@@ -912,7 +982,7 @@ function Git-HoundWorkflow
                     organization_name = Normalize-Null $repo.properties.organization_name
                     organization_id   = Normalize-Null $repo.properties.organization_id
                     repository_name   = Normalize-Null $repo.properties.full_name
-                    repository_id     = Normalize-Null $repo.properties.id
+                    repository_id     = Normalize-Null $repo.properties.node_id
                     # Node Specific Properties
                     short_name        = Normalize-Null $workflow.name
                     path              = Normalize-Null $workflow.path
@@ -981,7 +1051,7 @@ function Git-HoundEnvironment
 
     process
     {
-        $Repository.nodes | ForEach-Object -Parallel {
+        $Repository.nodes | Where-Object {$_.kinds -eq 'GHRepository'} | ForEach-Object -Parallel {
             $nodes = $using:nodes
             $edges = $using:edges
             $Session = $using:Session
@@ -992,6 +1062,9 @@ function Git-HoundEnvironment
             $repo = $_
 
             Write-Verbose "Fetching environments for $($repo.properties.full_name)"
+            # List environments
+            # https://docs.github.com/en/rest/deployments/environments?apiVersion=2022-11-28&versionId=free-pro-team%40latest&category=repos&subcategory=repos#list-environments
+            # "Actions" repository permissions (read)
             foreach($environment in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/environments").environments)
             {
                 $props = [pscustomobject]@{
@@ -1002,6 +1075,8 @@ function Git-HoundEnvironment
                     # Relational Properties
                     organization      = Normalize-Null $repo.properties.organization_name
                     organization_id   = Normalize-Null $repo.properties.organization_id
+                    repository_name   = Normalize-Null $repo.properties.full_name
+                    repository_id     = Normalize-Null $repo.properties.id
                     # Node Specific Properties
                     short_name        = Normalize-Null $environment.name
                     can_admins_bypass = Normalize-Null $environment.can_admins_bypass
@@ -1021,6 +1096,32 @@ function Git-HoundEnvironment
                 else 
                 {
                     $null = $edges.Add((New-GitHoundEdge -Kind GHHasEnvironment -StartId $repo.Properties.node_id -EndId $environment.node_id -Properties @{ traversable = $true }))
+                }
+
+                # List environment secrets
+                # https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-environment-secrets
+                # "Environments" repository permissions (read)
+                foreach($secret in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/environments/$($environment.name)/secrets").secrets)
+                {
+                    $secretId = "GHEnvironmentSecret_$($environment.node_id)_$($secret.name)"
+                    $properties = @{
+                        # Common Properties
+                        id                   = Normalize-Null $secretId
+                        name                 = Normalize-Null $secret.name
+                        # Relational Properties
+                        organization_name    = Normalize-Null $Organization.Properties.login
+                        organization_id      = Normalize-Null $Organization.Properties.node_id
+                        environment_name     = Normalize-Null $environment.name
+                        environment_id       = Normalize-Null $environment.node_id
+                        # Node Specific Properties
+                        created_at           = Normalize-Null $secret.created_at
+                        updated_at           = Normalize-Null $secret.updated_at
+                        # Accordion Panel Queries
+                    }
+
+                    $null = $nodes.Add((New-GitHoundNode -Id $secretId -Kind 'GHEnvironmentSecret' -Properties $properties))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GHContains' -StartId $environment.node_id -EndId $secretId -Properties @{ traversable = $false }))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasSecret' -StartId $environment.node_id -EndId $secretId -Properties @{ traversable = $false }))
                 }
             }
         } -ThrottleLimit 25
@@ -1934,23 +2035,28 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                 default { Write-Verbose "Issuer: $($_)"; break }
             }
 
-            # Create the GHSamlIdentityProvider Node and GHHasSamlIdentityProvider Edge
-            $props = [pscustomobject]@{
+            # Add the identity provider node and associate it with the organization
+            # This helps to easily identify the active SAML identity provider for the organization and its associated external identities
+            $identityProviderProps = [pscustomobject]@{
                 # Common Properties
-                name                      = Normalize-Null $result.data.organization.samlIdentityProvider.id
+                name                      = $result.data.organization.samlIdentityProvider.id
+                node_id                   = $result.data.organization.samlIdentityProvider.id
                 # Relational Properties
-                organization_id           = Normalize-Null $result.data.organization.id
+                organization_name         = $result.data.organization.name
+                organization_id           = $result.data.organization.id
                 # Node Specific Properties
-                ##idpCertificate          = Normalize-Null $result.data.organization.samlIdentityProvider.idpCertificate
-                issuer                    = Normalize-Null $result.data.organization.samlIdentityProvider.issuer
-                signatureMethod           = Normalize-Null $result.data.organization.samlIdentityProvider.signatureMethod
-                ssoUrl                    = Normalize-Null $result.data.organization.samlIdentityProvider.ssoUrl
+                digest_method             = $result.data.organization.samlIdentityProvider.digestMethod
+                idp_certificate           = $result.data.organization.samlIdentityProvider.idpCertificate
+                issuer                    = $result.data.organization.samlIdentityProvider.issuer
+                signature_method          = $result.data.organization.samlIdentityProvider.signatureMethod
+                sso_url                   = $result.data.organization.samlIdentityProvider.ssoUrl
                 # Accordion Panel Queries
                 query_environments        = "MATCH p=(:GHSamlIdentityProvider {objectid: '$($result.data.organization.samlIdentityProvider.id.ToUpper())'})-[:GHSyncedToEnvironment]->() RETURN p"
                 query_external_identities = "MATCH p=(:GHSamlIdentityProvider {objectid: '$($result.data.organization.samlIdentityProvider.id.ToUpper())'})-[:GHHasExternalIdentity]->() RETURN p"
             }
-            #$null = $nodes.Add((New-GitHoundNode -Id $result.data.organization.samlIdentityProvider.id -Kind GHSamlIdentityProvider -Properties $props))
-            #$null = $edges.Add((New-GitHoundEdge -Kind GHSyncedToEnvironment -StartId $result.data.organization.samlIdentityProvider.id -EndId $result.data.organization.id -Properties @{traversable=$false}))
+
+            $null = $nodes.Add((New-GitHoundNode -Id $result.data.organization.samlIdentityProvider.id -Kind 'GHSamlIdentityProvider' -Properties $identityProviderProps))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasSamlIdentityProvider' -StartId $result.data.organization.id -EndId $result.data.organization.samlIdentityProvider.id -Properties @{traversable=$false}))
 
             # Iterate through each External Identity and create GHExternalIdentity Nodes and relevant Edges
             foreach($identity in $result.data.organization.samlIdentityProvider.externalIdentities.nodes)
@@ -1969,14 +2075,15 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                     # Accordion Panel Queries
                     query_mapped_users = "MATCH p=(:GHExternalIdentity {objectid: '$($identity.id.ToUpper())'})-[:GHMapsToUser]->() RETURN p"
                 }
-                #$null = $nodes.Add((New-GitHoundNode -Id $identity.id -Kind GHExternalIdentity -Properties $EIprops))
-                #$null = $edges.Add((New-GitHoundEdge -Kind GHHasExternalIdentity -StartId $result.data.organization.samlIdentityProvider.id -EndId $identity.id -Properties @{traversable=$false}))
-                #$null = $edges.Add((New-GitHoundEdge -Kind GHMapsToUser -StartId $identity.id -StartKind GHExternalIdentity -EndId $identity.user.id -EndKind GHUser -Properties @{traversable=$false}))
-                #$null = $edges.Add((New-GitHoundEdge -Kind GHMapsToUser -StartId $identity.id -StartKind GHExternalIdentity -EndId $identity.samlIdentity.username -EndKind $ForeignUserNodeKind -EndMatchBy name -Properties @{traversable=$false}))
+
+                $null = $nodes.Add((New-GitHoundNode -Id $identity.id -Kind 'GHExternalIdentity' -Properties $EIprops))
+                $null = $edges.Add((New-GitHoundEdge -Kind GHHasExternalIdentity -StartId $result.data.organization.samlIdentityProvider.id -EndId $identity.id -Properties @{traversable=$false}))
+                $null = $edges.Add((New-GitHoundEdge -Kind GHMapsToUser -StartId $identity.id -EndId $identity.user.id -Properties @{traversable=$false}))
+                $null = $edges.Add((New-GitHoundEdge -Kind GHMapsToUser -StartId $identity.id -EndId $identity.samlIdentity.username -EndKind $ForeignUserNodeKind -EndMatchBy name -Properties @{traversable=$false}))
 
                 # Create SyncedToGHUser Edge from Foreign Identity to GHUser
                 # This might need to be something that happens during post-processing since we do not control whether the foreign user node already exists in the graph
-                $null = $edges.Add((New-GitHoundEdge -Kind SyncedToGHUser -StartId $identity.samlIdentity.username -StartKind $ForeignUserNodeKind -StartMatchBy name -EndId $identity.user.id -EndKind GHUser -Properties @{traversable=$true}))#; composition="MATCH p=()<-[:GHSyncedToEnvironment]-(:GHSamlIdentityProvider)-[:GHHasExternalIdentity]->(:GHExternalIdentity)-[:GHMapsToUser]->(n) WHERE n.objectid = '$($identity.user.id.ToUpper())' OR n.name = '$($identity.samlIdentity.username.ToUpper())' RETURN p"}))
+                $null = $edges.Add((New-GitHoundEdge -Kind SyncedToGHUser -StartId $identity.samlIdentity.username -StartKind $ForeignUserNodeKind -StartMatchBy name -EndId $identity.user.id -EndKind GHUser -Properties @{traversable=$true; composition="MATCH p=()<-[:GHSyncedToEnvironment]-(:GHSamlIdentityProvider)-[:GHHasExternalIdentity]->(:GHExternalIdentity)-[:GHMapsToUser]->(n) WHERE n.objectid = '$($identity.user.id.ToUpper())' OR n.name = '$($identity.samlIdentity.username.ToUpper())' RETURN p"}))
             }
         }
 
@@ -2008,19 +2115,20 @@ function Invoke-GitHound
 
     Write-Host "[*] Starting GitHound for $($Session.OrganizationName)"
     $org = Git-HoundOrganization -Session $Session
-    $nodes.Add($org) | Out-Null
+    if($org.nodes) { $nodes.AddRange(@($org.nodes)) }
+    if($org.edges) { $edges.AddRange(@($org.edges)) }
 
     Write-Host "[*] Enumerating Organization Users"
-    $users = $org | Git-HoundUser -Session $Session
+    $users = $org.nodes[0] | Git-HoundUser -Session $Session
     if($users) { $nodes.AddRange(@($users)) }
 
     Write-Host "[*] Enumerating Organization Teams"
-    $teams = $org | Git-HoundTeam -Session $Session
+    $teams = $org.nodes[0] | Git-HoundTeam -Session $Session
     if($teams.nodes) { $nodes.AddRange(@($teams.nodes)) }
     if($teams.edges) { $edges.AddRange(@($teams.edges)) }
 
     Write-Host "[*] Enumerating Organization Repositories"
-    $repos = $org | Git-HoundRepository -Session $Session
+    $repos = $org.nodes[0] | Git-HoundRepository -Session $Session
     if($repos.nodes) { $nodes.AddRange(@($repos.nodes)) }
     if($repos.edges) { $edges.AddRange(@($repos.edges)) }
 
@@ -2040,27 +2148,27 @@ function Invoke-GitHound
     if($environments.edges) { $edges.AddRange(@($environments.edges)) }
 
     Write-Host "[*] Enumerating Team Roles"
-    $teamroles = $org | Git-HoundTeamRole -Session $Session
+    $teamroles = $org.nodes[0] | Git-HoundTeamRole -Session $Session
     if($teamroles.nodes) { $nodes.AddRange(@($teamroles.nodes)) }
     if($teamroles.edges) { $edges.AddRange(@($teamroles.edges)) }
 
     Write-Host "[*] Enumerating Organization Roles"
-    $orgroles = $org | Git-HoundOrganizationRole -Session $Session
+    $orgroles = $org.nodes[0] | Git-HoundOrganizationRole -Session $Session
     if($orgroles.nodes) { $nodes.AddRange(@($orgroles.nodes)) }
     if($orgroles.edges) { $edges.AddRange(@($orgroles.edges)) }
 
     Write-Host "[*] Enumerating Repository Roles"
-    $reporoles = $org | Git-HoundRepositoryRole -Session $Session
+    $reporoles = $org.nodes[0] | Git-HoundRepositoryRole -Session $Session
     if($reporoles.nodes) { $nodes.AddRange(@($reporoles.nodes)) }
     if($reporoles.edges) { $edges.AddRange(@($reporoles.edges)) }
     
     Write-Host "[*] Enumerating Secret Scanning Alerts"
-    $secretalerts = $org | Git-HoundSecretScanningAlert -Session $Session
+    $secretalerts = $org.nodes[0] | Git-HoundSecretScanningAlert -Session $Session
     if($secretalerts.nodes) { $nodes.AddRange(@($secretalerts.nodes)) }
     if($secretalerts.edges) { $edges.AddRange(@($secretalerts.edges)) }
 
     Write-Host "[*] Enumerating App Installations"
-    $appInstallations = $org | Git-HoundAppInstallation -Session $Session
+    $appInstallations = $org.nodes[0] | Git-HoundAppInstallation -Session $Session
     if($appInstallations.nodes) { $nodes.AddRange(@($appInstallations.nodes)) }
     if($appInstallations.edges) { $edges.AddRange(@($appInstallations.edges)) }
 
@@ -2073,7 +2181,7 @@ function Invoke-GitHound
             nodes = $nodes.ToArray()
             edges = $edges.ToArray()
         }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_$($org.id).json"
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_$($org.nodes[0].id).json"
 
 
     Write-Host "[*] Enumerating SAML Identity Provider"
@@ -2088,7 +2196,7 @@ function Invoke-GitHound
             nodes = $samlNodes.ToArray()
             edges = $samlEdges.ToArray()
         }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_saml_$($org.id).json"
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_saml_$($org.nodes[0].id).json"
 
     #$payload | BHDataUploadJSON
 }

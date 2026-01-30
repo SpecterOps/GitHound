@@ -7,10 +7,15 @@ flowchart TD
     AZUser[fa:fa-user AZUser]
     GHBranch[fa:fa-code-branch GHBranch]
     GHEnvironment[fa:fa-leaf GHEnvironment]
+    GHEnvironmentSecret[fa:fa-lock GHEnvironmentSecret]
+    GHExternalIdentity[fa:fa-arrows-left-right GHExternalIdentity]
     GHOrganization[fa:fa-building GHOrganization]
     GHOrgRole[fa:fa-user-tie GHOrgRole]
+    GHOrgSecret[fa:fa-lock GHOrgSecret]
     GHRepository[fa:fa-box-archive GHRepository]
     GHRepoRole[fa:fa-user-tie GHRepoRole]
+    GHRepoSecret[fa:fa-lock GHRepoSecret]
+    GHSamlIdentityProvider[fa:fa-id-badge GHSamlIdentityProvider]
     GHSecretScanningAlert[fa:fa-key GHSecretScanningAlert]
     GHTeam[fa:fa-user-group GHTeam]
     GHTeamRole[fa:fa-user-tie GHTeamRole]
@@ -22,10 +27,15 @@ flowchart TD
     style AZUser fill:#FF80D2
     style GHBranch fill:#FF80D2
     style GHEnvironment fill:#D5F2C2
+    style GHEnvironmentSecret fill:#6FB94A
+    style GHExternalIdentity fill:#8A8F98
     style GHOrganization fill:#5FED83
     style GHOrgRole fill:#BFFFD1
+    style GHOrgSecret fill:#1FB65A
     style GHRepository fill:#9EECFF
     style GHRepoRole fill:#DEFEFA
+    style GHRepoSecret fill:#32BEE6
+    style GHSamlIdentityProvider fill:#5A6C8F
     style GHSecretScanningAlert fill:#3C7A6E
     style GHTeam fill:#C06EFF
     style GHTeamRole fill:#D0B0FF
@@ -35,6 +45,7 @@ flowchart TD
     
     GHTeam -->|GHMemberOf| GHTeam
     GHOrganization -.->|GHOwns| GHRepository
+    GHOrganization -.->|GHContains| GHOrgSecret
     GHUser -.->|GHBypassPullRequestAllowances| GHBranch
     GHTeam -.->|GHBypassPullRequestAllowances| GHBranch
     GHUser -.->|GHRestrictionsCanPush| GHBranch
@@ -93,7 +104,18 @@ flowchart TD
     GHRepoRole -->|GHHasBaseRole| GHRepoRole
     GHUser -->|GHHasRole| GHRepoRole
     GHTeam -->|GHHasRole| GHRepoRole
+    GHRepository -.->|GHHasSecret| GHOrgSecret
+    GHRepository -.->|GHContains| GHRepoSecret
+    GHRepository -.->|GHHasSecret| GHRepoSecret
     GHRepository -.->|GHHasSecretScanningAlert| GHSecretScanningAlert
+    GHEnvironment -.->|GHContains| GHEnvironmentSecret
+    GHEnvironment -.->|GHHasSecret| GHEnvironmentSecret
+
+    GHOrganization -.->|GHHasSamlIdentityProvider| GHSamlIdentityProvider
+    GHSamlIdentityProvider -.->|GHHasExternalIdentity| GHExternalIdentity
+    GHExternalIdentity -.->|GHMapsToUser| GHUser
+    GHExternalIdentity -.->|GHMapsToUser| AZUser
+    GHExternalIdentity -.->|GHMapsToUser| PingOneUser
     AZUser -->|SyncedToGHUser| GHUser
     PingOneUser -->|SyncedToGHUser| GHUser
     GHRepository -.->|GHCanAssumeAWSRole| AWSRole
