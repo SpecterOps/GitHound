@@ -1,0 +1,5 @@
+{
+  "name": "Team Membership Admins",
+  "query": "MATCH p=(:GHUser)-[:GHHasRole]->(:GHTeamRole)-[:GHAddMember]->(team:GHTeam) MATCH p1=(team)<-[:GHMemberOf]-(:GHTeam)<-[:GHAddMember]-(:GHTeamRole)<-[:GHHasRole]-(:GHUser) RETURN p,p1",
+  "description": "Returns all users who hold the maintainer role over a team, this also represents team nesting."
+}

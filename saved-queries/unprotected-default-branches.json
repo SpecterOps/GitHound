@@ -1,0 +1,5 @@
+{
+  "name": "Unprotected Default Branches",
+  "query": "MATCH p=(repo:GHRepository)-[:GHHasBranch]-(branch:GHBranch {protected: false}) WHERE repo.default_branch = branch.short_name RETURN p",
+  "description": "Returns all default branches in repositories that are not protected."
+}

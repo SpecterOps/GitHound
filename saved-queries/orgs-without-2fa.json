@@ -1,0 +1,5 @@
+{
+  "name": "Organizations without 2FA",
+  "query": "MATCH (o:GHOrganization) WHERE o.two_factor_requirement_enabled = false RETURN o",
+  "description": "Returns organizations that do not require two-factor authentication."
+}

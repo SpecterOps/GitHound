@@ -1,0 +1,5 @@
+{
+  "name": "Privileged Custom Org Roles",
+  "query": "MATCH p=(role:GHOrgRole {type:'custom'})-[r]->(dest) WHERE dest:GHOrganization OR dest:GHOrgRole RETURN p",
+  "description": "Returns all custom organization roles that are privileged (i.e., have permissions that are not default)"
+}

@@ -1,0 +1,5 @@
+{
+  "name": "Public Repositories",
+  "query": "MATCH (repo:GHRepository {private: false}) RETURN repo",
+  "description": "Returns all public repositories."
+}

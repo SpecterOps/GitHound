@@ -1,0 +1,5 @@
+{
+  "name": "Organizations with default repository permission",
+  "query": "MATCH (o:GHOrganization) WHERE o.default_repository_permission <> 'none' RETURN o",
+  "description": "Returns organizations that have a default repository permission other than 'none'."
+}

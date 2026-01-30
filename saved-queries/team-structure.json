@@ -1,0 +1,5 @@
+{
+  "name": "Team Structure",
+  "query": "MATCH p=(:GHUser)-[:GHHasRole]->(:GHTeamRole)-[:GHMemberOf*1..]->(:GHTeam) RETURN p",
+  "description": "Returns the structure of teams within organizations, including team roles and their members."
+}
