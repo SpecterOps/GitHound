@@ -1,0 +1,5 @@
+{
+  "name": "Dangerous Branch Permissions",
+  "query": "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHRepoRole)-[:GHPushProtectedBranch|GHBypassBranchProtection]-(r:GHRepository) MATCH p1=(:GHUser)-[:GHRestrictionsCanPush|GHBypassRequiredPullRequest]->(b:GHBranch) RETURN p,p1",
+  "description": "Identifies users with dangerous branch permissions in a GitHub organization."
+}

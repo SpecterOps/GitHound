@@ -11,3 +11,5 @@ Thumbs.db
 # 1PassHound Output Files #
 ###########################
 githound_*.json
+samples/oidc/*
+samples/sso/*
