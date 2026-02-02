@@ -707,6 +707,7 @@ function Git-HoundUser
         
 
         $user = $_
+        <#
         Write-Verbose "Fetching user details for $($user.login)"
         try {
             $user_details = Invoke-GithubRestMethod -Session $Session -Path "user/$($user.id)"
@@ -714,6 +715,7 @@ function Git-HoundUser
             Write-Verbose "User $($user.login) could not be found via api"
             continue
         }
+        #>
 
         $properties = @{
             # Common Properties
@@ -725,10 +727,10 @@ function Git-HoundUser
             organization_id     = Normalize-Null $Organization.properties.node_id
             # Node Specific Properties
             login               = Normalize-Null $user.login
-            full_name           = Normalize-Null $user_details.name
-            company             = Normalize-Null $user_details.company
-            email               = Normalize-Null $user_details.email
-            twitter_username    = Normalize-Null $user_details.twitter_username
+            #full_name           = Normalize-Null $user_details.name
+            #company             = Normalize-Null $user_details.company
+            #email               = Normalize-Null $user_details.email
+            #twitter_username    = Normalize-Null $user_details.twitter_username
             type                = Normalize-Null $user.type
             site_admin          = Normalize-Null $user.site_admin
             # Accordion Panel Queries
@@ -2322,6 +2324,10 @@ function Git-HoundAppInstallation
 function Git-HoundScimUser
 {
     <#
+    .SYNOPSIS
+
+    .DESCRIPTION
+
     #>
 
     [CmdletBinding()]
@@ -2335,23 +2341,42 @@ function Git-HoundScimUser
         $Organization
     )
 
+    $startIndex = 1
+
+    do
+    {
+        $result = [System.Text.Encoding]::ASCII.GetString((Invoke-GithubRestMethod -Session $Session -Path "scim/v2/organizations/$($Session.OrganizationName)/Users?startIndex=$($startIndex)")) | ConvertFrom-Json
+        foreach($scimIdentity in $result.Resources)
+        {
+            Write-Output $scimIdentity
+            <#
+            $props = [pscustomobject]@{
+                active = Normalize-Null $scimIdentity.active
+                external_id = Normalize-Null $scimIdentity.externalId
+                family_name = Normalize-Null $scimIdentity.name.familyName
+                given_name = Normalize-Null $scimIdentity.name.givenName
+                username = Normalize-Null $scimIdentity.username
+                schemas = Normalize-Null $scimIdentity.schemas
+                id = Normalize-Null $scimIdentity.id
+                resource_type = Normalize-Null $scimIdentity.meta.resourceType
+                #created_date = Normalize-Null $scimIdentity.meta.created
+                #last_modified_date = Normalize-Null $scimIdentity.meta.lastModified
+                scim_location = Normalize-Null $scimIdentity.meta.location
+            }
+
+            Write-Output $props
+            #>
+        }
+        $startIndex = $result.startIndex + $result.itemsPerPage
+    } while($startIndex -lt $result.totalResults)
+    
+    
+    <#
     foreach($scimIdentity in ([System.Text.Encoding]::ASCII.GetString((Invoke-GithubRestMethod -Session $Session -Path "scim/v2/organizations/$($Session.OrganizationName)/Users")) | ConvertFrom-Json).Resources)
     {
-        $props = [pscustomobject]@{
-            active = Normalize-Null $scimIdentity.active
-            external_id = Normalize-Null $scimIdentity.externalId
-            family_name = Normalize-Null $scimIdentity.name.familyName
-            given_name = Normalize-Null $scimIdentity.name.givenName
-            username = Normalize-Null $scimIdentity.username
-            id = Normalize-Null $scimIdentity.id
-            resource_type = Normalize-Null $scimIdentity.meta.resourceType
-            #created_date = Normalize-Null $scimIdentity.meta.created
-            #last_modified_date = Normalize-Null $scimIdentity.meta.lastModified
-            scim_location = Normalize-Null $scimIdentity.meta.location
-        }
 
-        Write-Output $props
     }
+    #>
 }
 
 # This is a second order data type after GHOrganization
@@ -2508,6 +2533,7 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                 $EIprops = [pscustomobject]@{
                     # Common Properties
                     name                      = Normalize-Null $identity.id
+                    guid                      = Normalize-Null $identity.guid
                     # Relational Properties
                     organization_id           = Normalize-Null $result.data.organization.id
                     organization_name         = Normalize-Null $result.data.organization.name
@@ -2637,6 +2663,231 @@ function Invoke-GitHound
     $appInstallations = $org.nodes[0] | Git-HoundAppInstallation -Session $Session
     if($appInstallations.nodes) { $nodes.AddRange(@($appInstallations.nodes)) }
     if($appInstallations.edges) { $edges.AddRange(@($appInstallations.edges)) }
+
+    Write-Host "[*] Converting to OpenGraph JSON Payload"
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $nodes.ToArray()
+            edges = $edges.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_$($org.nodes[0].id).json"
+
+
+    Write-Host "[*] Enumerating SAML Identity Provider"
+    $samlNodes = New-Object System.Collections.ArrayList
+    $samlEdges = New-Object System.Collections.ArrayList
+    $saml = Git-HoundGraphQlSamlProvider -Session $Session
+    if($saml.nodes) { $samlNodes.AddRange(@($saml.nodes)) }
+    if($saml.edges) { $samlEdges.AddRange(@($saml.edges)) }
+
+    $payload = [PSCustomObject]@{
+        graph = [PSCustomObject]@{
+            nodes = $samlNodes.ToArray()
+            edges = $samlEdges.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_saml_$($org.nodes[0].id).json"
+}
+
+function Invoke-GitHoundIndependent
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session
+    )
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+    
+    $Global:GitHoundFunctionBundle = Get-GitHoundFunctionBundle
+
+    Write-Host "[*] Starting GitHound for $($Session.OrganizationName)"
+    $org = Git-HoundOrganization -Session $Session
+    if($org.nodes) { $nodes.AddRange(@($org.nodes)) }
+    if($org.edges) { $edges.AddRange(@($org.edges)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $org.Nodes.ToArray()
+            edges = $org.Nodes.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Organization_$($org.nodes[0].id).json"
+
+    Write-Host "[*] Enumerating Organization Users"
+    $users = $org.nodes[0] | Git-HoundUser -Session $Session
+    if($users) { $nodes.AddRange(@($users)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $users
+            edges = $null
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_User_$($org.nodes[0].id).json"
+
+    Write-Host "[*] Enumerating Organization Teams"
+    $teams = $org.nodes[0] | Git-HoundTeam -Session $Session
+    if($teams.nodes) { $nodes.AddRange(@($teams.nodes)) }
+    if($teams.edges) { $edges.AddRange(@($teams.edges)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $teams.Nodes.ToArray()
+            edges = $teams.Nodes.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Team_$($org.nodes[0].id).json"
+
+    Write-Host "[*] Enumerating Organization Repositories"
+    $repos = $org.nodes[0] | Git-HoundRepository -Session $Session
+    if($repos.nodes) { $nodes.AddRange(@($repos.nodes)) }
+    if($repos.edges) { $edges.AddRange(@($repos.edges)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $repos.Nodes.ToArray()
+            edges = $repos.Nodes.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Repository_$($org.nodes[0].id).json"
+
+    Write-Host "[*] Enumerating Organization Branches"
+    $branches = $repos | Git-HoundBranch -Session $Session
+    if($branches.nodes) { $nodes.AddRange(@($branches.nodes)) }
+    if($branches.edges) { $edges.AddRange(@($branches.edges)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $branches.Nodes.ToArray()
+            edges = $branches.Nodes.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Branch_$($org.nodes[0].id).json"
+
+    Write-Host "[*] Enumerating Organization Workflows"
+    $workflows = $repos | Git-HoundWorkflow -Session $Session
+    if($workflows.nodes) { $nodes.AddRange(@($workflows.nodes)) }
+    if($workflows.edges) { $edges.AddRange(@($workflows.edges)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $workflows.Nodes.ToArray()
+            edges = $workflows.Nodes.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Workflow_$($org.nodes[0].id).json"
+
+    Write-Host "[*] Enumerating Organization Environments"
+    $environments = $repos | Git-HoundEnvironment -Session $Session
+    if($environments.nodes) { $nodes.AddRange(@($environments.nodes)) }
+    if($environments.edges) { $edges.AddRange(@($environments.edges)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $environments.Nodes.ToArray()
+            edges = $environments.Nodes.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Environment_$($org.nodes[0].id).json"
+
+    Write-Host "[*] Enumerating Organization Secrets"
+    $secrets = $repos | Git-HoundSecret -Session $Session
+    if($secrets.nodes) { $nodes.AddRange(@($secrets.nodes)) }
+    if($secrets.edges) { $edges.AddRange(@($secrets.edges)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $secrets.Nodes.ToArray()
+            edges = $secrets.Nodes.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Secret_$($org.nodes[0].id).json"
+
+    Write-Host "[*] Enumerating Team Roles"
+    $teamroles = $org.nodes[0] | Git-HoundTeamRole -Session $Session
+    if($teamroles.nodes) { $nodes.AddRange(@($teamroles.nodes)) }
+    if($teamroles.edges) { $edges.AddRange(@($teamroles.edges)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $branches.Nodes.ToArray()
+            edges = $branches.Nodes.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_TeamRoles_$($org.nodes[0].id).json"
+
+    Write-Host "[*] Enumerating Organization Roles"
+    $orgroles = $org.nodes[0] | Git-HoundOrganizationRole -Session $Session
+    if($orgroles.nodes) { $nodes.AddRange(@($orgroles.nodes)) }
+    if($orgroles.edges) { $edges.AddRange(@($orgroles.edges)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $orgroles.Nodes.ToArray()
+            edges = $orgroles.Nodes.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_OrgRole_$($org.nodes[0].id).json"
+
+    Write-Host "[*] Enumerating Repository Roles"
+    $reporoles = $org.nodes[0] | Git-HoundRepositoryRole -Session $Session
+    if($reporoles.nodes) { $nodes.AddRange(@($reporoles.nodes)) }
+    if($reporoles.edges) { $edges.AddRange(@($reporoles.edges)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $reporoles.Nodes.ToArray()
+            edges = $reporoles.Nodes.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_RepoRole_$($org.nodes[0].id).json"
+    
+    Write-Host "[*] Enumerating Secret Scanning Alerts"
+    $secretalerts = $org.nodes[0] | Git-HoundSecretScanningAlert -Session $Session
+    if($secretalerts.nodes) { $nodes.AddRange(@($secretalerts.nodes)) }
+    if($secretalerts.edges) { $edges.AddRange(@($secretalerts.edges)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $secretalerts.Nodes.ToArray()
+            edges = $secretalerts.Nodes.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_SecretAlerts_$($org.nodes[0].id).json"
+
+    #Write-Host "[*] Enumerating App Installations"
+    #$appInstallations = $org.nodes[0] | Git-HoundAppInstallation -Session $Session
+    #if($appInstallations.nodes) { $nodes.AddRange(@($appInstallations.nodes)) }
+    #if($appInstallations.edges) { $edges.AddRange(@($appInstallations.edges)) }
 
     Write-Host "[*] Converting to OpenGraph JSON Payload"
     $payload = [PSCustomObject]@{
