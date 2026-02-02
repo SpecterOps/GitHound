@@ -73,20 +73,20 @@ Next, we will define the specific repository and organization permissions that G
 
 The following permissions are required:
 
-| Target       | Permission                | Access    |
-|--------------|---------------------------|-----------|
-| Repository   | Action                    | Read-only |
-| Repository   | Administration            | Read-only |
-| Repository   | Contents                  | Read-only |
-| Repository   | Environments              | Read-only |
-| Repository   | Metadata                  | Read-only |
-| Repository   | Secret scanning alerts    | Read-only |
-| Repository   | Secrets                   | Read-only |
-| Organization | Administration            | Read-only |
-| Organization | Custom organization roles | Read-only |
-| Organization | Custom repository roles   | Read-only |
-| Organization | Members                   | Read-only |
-| Organization | Secrets                   | Read-only |
+| Target       | Permission                | Access    | Functions |
+|--------------|---------------------------|-----------|-----------|
+| Repository   | Action                    | Read-only | Git-HoundWorkflow, Git-HoundEnvironment |
+| Repository   | Administration            | Read-only | Git-HoundBranch, Git-HoundRepositoryRole |
+| Repository   | Contents                  | Read-only | Git-HoundBranch |
+| Repository   | Environments              | Read-only | Git-HoundEnvironment |
+| Repository   | Metadata                  | Read-only | Git-HoundRepository, Git-HoundRepositoryRole |
+| Repository   | Secret scanning alerts    | Read-only | Git-HoundSecretScanningAlert |
+| Repository   | Secrets                   | Read-only | Git-HoundSecret |
+| Organization | Administration            | Read-only | Git-HoundOrganization, Git-HoundRepository, Git-HoundRepositoryRole, Git-HoundAppInstallation |
+| Organization | Custom organization roles | Read-only | Git-HoundOrganizationRole |
+| Organization | Custom repository roles   | Read-only | Git-HoundRepositoryRole |
+| Organization | Members                   | Read-only | Git-HoundTeam, Git-HoundUser, Git-HoundOrganizationRole, Git-HoundTeamRole |
+| Organization | Secrets                   | Read-only | Git-HoundSecret |
 
 #### Save Personal Access Token
 

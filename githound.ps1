@@ -286,6 +286,28 @@ function Wait-GithubGraphQlRateLimit {
 
 function New-GitHoundNode
 {
+    <#
+    .SYNOPSIS
+        Creates a new GitHound node object.
+
+    .DESCRIPTION
+        This function constructs a GitHound node object with specified properties, including the node's identifier, kinds, and additional properties.
+
+    .PARAMETER Id
+        The unique identifier for the node.
+    
+    .PARAMETER Kind
+        The type(s) of the node.
+
+    .PARAMETER Properties
+        A hashtable of additional properties to associate with the node.
+
+    .EXAMPLE
+        $node = New-GitHoundNode -Id 'node123' -Kind @('GHUser', 'GHAdmin') -Properties @{ name = 'John Doe'; email = 'john.doe@example.com' }
+
+        This example creates a new node with the identifier 'node123', of kinds 'GHUser' and 'GHAdmin', and includes additional properties for name and email.
+    #>
+
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [String]
@@ -311,6 +333,43 @@ function New-GitHoundNode
 
 function New-GitHoundEdge
 {
+    <#
+    .SYNOPSIS
+        Creates a new GitHound edge object.
+
+    .DESCRIPTION
+        This function constructs a GitHound edge object with specified properties, including the kind of edge, start and end nodes, and any additional properties.
+
+    .PARAMETER Kind
+        The type of edge to create.
+
+    .PARAMETER StartId
+        The identifier of the start node.
+
+    .PARAMETER EndId
+        The identifier of the end node.
+
+    .PARAMETER StartKind
+        (Optional) The kind of the start node.
+
+    .PARAMETER StartMatchBy
+        (Optional) The method to match the start node, either by 'id' or 'name'. Default is 'id'.
+
+    .PARAMETER EndKind
+        (Optional) The kind of the end node.
+
+    .PARAMETER EndMatchBy
+        (Optional) The method to match the end node, either by 'id' or 'name'. Default is 'id'.
+
+    .PARAMETER Properties
+        (Optional) A hashtable of additional properties to associate with the edge.
+
+    .EXAMPLE
+
+        $edge = New-GitHoundEdge -Kind 'GHOwns' -StartId 'user123' -EndId 'repo456' -StartKind 'GHUser' -EndKind 'GHRepository' -Properties @{ traversable = $true }
+
+        This example creates a new edge of kind 'GHOwns' from a user node to a repository node with additional properties.
+    #>
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [String]
@@ -380,31 +439,57 @@ function New-GitHoundEdge
 
 function Normalize-Null
 {
-    param($Value)
-    if ($null -eq $Value) { return "" }
-    return $Value
+    <#
+    .SYNOPSIS
+        Normalizes null values to empty strings.
+
+    .DESCRIPTION
+        This function checks if the provided value is null. If it is, it returns an empty string; otherwise, it returns the original value.
+
+    .PARAMETER Value
+        The value to be normalized.
+
+    .EXAMPLE
+        $normalizedValue = Normalize-Null $someValue
+
+        This example normalizes the variable $someValue, converting it to an empty string if it is null.
+    #>
+    param(
+        $Value
+    )
+    
+    if ($null -eq $Value) 
+    {
+        return ""
+    }
+    else 
+    {
+       return $Value
+    }
+    
+    
 }
 
 function ConvertTo-PascalCase
 {
     <#
     .SYNOPSIS
-    Converts a given string to PascalCase format.
+        Converts a given string to PascalCase format.
 
     .DESCRIPTION
-    Author: Jared Atkinson (@cobbler) at SpecterOps
+        Author: Jared Atkinson (@cobbler) at SpecterOps
 
-    This function takes a string input and converts it to PascalCase format, where the first letter of each word is capitalized and all words are concatenated without spaces or delimiters.
+        This function takes a string input and converts it to PascalCase format, where the first letter of each word is capitalized and all words are concatenated without spaces or delimiters.
 
-    This function is used in 1PassHound to standardize permission names when creating edges in the graph structure.
+        This function is used in 1PassHound to standardize permission names when creating edges in the graph structure.
 
     .PARAMETER String
-    The input string to be converted to PascalCase.
+        The input string to be converted to PascalCase.
 
     .EXAMPLE
-    $pascalCaseString = ConvertTo-PascalCase -String "example_string-to_convert"
+        $pascalCaseString = ConvertTo-PascalCase -String "example_string-to_convert"
 
-    This example converts the input string "example_string-to_convert" to "ExampleStringToConvert".
+        This example converts the input string "example_string-to_convert" to "ExampleStringToConvert".
     #>
     param (
         [string]$String
@@ -426,6 +511,27 @@ function ConvertTo-PascalCase
 
 function Git-HoundOrganization
 {
+    <#
+    .SYNOPSIS
+        Fetches and processes GitHub Organizations.
+
+    .DESCRIPTION
+        This function retrieves organization details for the organization specified in the GitHound.Session object. It creates a node representing the organization.
+
+        API Reference: 
+        - Get an organization: https://docs.github.com/en/rest/orgs/orgs?apiVersion=2022-11-28#get-an-organization
+        - Get GitHub Actions permissions for an organization: https://docs.github.com/en/rest/actions/permissions?apiVersion=2022-11-28#get-github-actions-permissions-for-an-organization
+
+        Fine Grained Permissions Reference:
+        - "Administration" organization permissions (read)
+
+    .PARAMETER Session
+        A GitHound.Session object used for authentication and API requests.
+
+    .EXAMPLE
+        $organization = New-GithubSession -OrganizationName "my-org" | Git-HoundOrganization
+    #>
+
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [PSTypeName('GitHound.Session')]
@@ -480,6 +586,29 @@ function Git-HoundOrganization
 
 function Git-HoundTeam
 {
+    <#
+    .SYNOPSIS
+        Fetches and processes GitHub Teams for an organization.
+
+    .DESCRIPTION
+        This function retrieves teams for each organization provided in the pipeline. It creates nodes representing the teams and their relationships to the organization.
+
+        API Reference: 
+        - List teams: https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#list-teams
+
+        Fine Grained Permissions Reference:
+        - "Members" organization permissions (read)
+
+    .PARAMETER Session
+        A GitHound.Session object used for authentication and API requests.
+
+    .PARAMETER Organization
+        A GitHound.Organization object representing the organization for which teams are to be fetched.
+
+    .EXAMPLE
+        $teams = Git-HoundOrganization | Git-HoundTeam
+    #>
+
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [PSTypeName('GitHound.Session')]
@@ -530,6 +659,29 @@ function Git-HoundTeam
 
 function Git-HoundUser
 {
+    <#
+    .SYNOPSIS
+        Fetches and processes GitHub Users for an organization.
+
+    .DESCRIPTION
+        This function retrieves users for each organization provided in the pipeline. It creates nodes representing the users and their relationships to the organization.
+
+        API Reference: 
+        - List organization members: https://docs.github.com/en/rest/orgs/members?apiVersion=2022-11-28#list-organization-members
+        - Get a user: https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user
+
+        Fine Grained Permissions Reference:
+        - "Members" organization permissions (read)
+
+    .PARAMETER Session
+        A GitHound.Session object used for authentication and API requests.
+
+    .PARAMETER Organization
+        A GitHound.Organization object representing the organization for which users are to be fetched.
+
+    .EXAMPLE
+        $users = Git-HoundOrganization | Git-HoundUser
+    #>
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [PSTypeName('GitHound.Session')]
@@ -594,6 +746,32 @@ function Git-HoundUser
 
 function Git-HoundRepository
 {
+    <#
+    .SYNOPSIS
+        Fetches and processes GitHub Repositories for an organization. 
+
+    .DESCRIPTION
+        This function retrieves repositories for each organization provided in the pipeline. It creates nodes and edges representing the repositories and their relationships to the organization.
+
+        API Reference: 
+        - Get GitHub Actions permissions for an organization: https://docs.github.com/en/rest/actions/permissions?apiVersion=2022-11-28#get-github-actions-permissions-for-an-organization
+        - List selected repositories enabled for GitHub Actions in an organization: https://docs.github.com/en/rest/actions/permissions?apiVersion=2022-11-28#list-github-actions-enabled-repositories-for-an-organization
+        - List organization repositories: https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#list-organization-repositories
+
+        Fine Grained Permissions Reference:
+        - "Administration" organization permissions (read)
+        - "Metadata" repository permissions (read)
+
+    .PARAMETER Session
+        A GitHound.Session object used for authentication and API requests.
+
+    .PARAMETER Organization
+        A GitHound.Organization object representing the organization for which repositories are to be fetched.
+
+    .EXAMPLE
+        $repositories = Git-HoundOrganization | Git-HoundRepository
+    #>
+    
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [PSTypeName('GitHound.Session')]
@@ -682,6 +860,30 @@ function Git-HoundRepository
 
 function Git-HoundBranch
 {
+    <#
+    .SYNOPSIS
+        Retrieves branches for GitHub repositories and creates nodes and edges representing branch protections.
+    
+    .DESCRIPTION
+        This function processes GitHub repositories to fetch their branches and associated protection settings. It creates nodes for each branch and edges to represent relationships such as bypass permissions and push restrictions.
+
+        API Reference:
+        - Get a branch: https://docs.github.com/en/rest/branches/branches?apiVersion=2022-11-28#get-a-branch
+        - Get branch protection: https://docs.github.com/en/rest/branches/branch-protection?apiVersion=2022-11-28#get-branch-protection
+
+        Fine Grained Permissions Reference:
+        - "Contents" repository permissions (read)
+        - "Administration" repository permissions (read)
+
+    .PARAMETER Session
+        A GitHound.Session object used for authentication and API requests.
+
+    .PARAMETER Repository
+        A GitHound.Repository object representing the repository for which branches are to be fetched.
+
+    .EXAMPLE
+        $branches = Git-HoundRepository | Git-HoundBranch
+    #>
         Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [PSTypeName('GitHound.Session')]
@@ -864,9 +1066,11 @@ function Git-HoundWorkflow
     .DESCRIPTION
         This function retrieves workflows for each repository provided in the pipeline. It creates nodes and edges representing the workflows and their relationships to repositories.
 
-        API Reference: https://docs.github.com/en/rest/actions/workflows?apiVersion=2022-11-28#list-repository-workflows
+        API Reference: 
+        - List repository workflows: https://docs.github.com/en/rest/actions/workflows?apiVersion=2022-11-28#list-repository-workflows
 
-        Fine Grained Permissions Reference: "Actions" repository permissions (read)
+        Fine Grained Permissions Reference: 
+        - "Actions" repository permissions (read)
 
     .PARAMETER Session
         A GitHound.Session object used for authentication and API requests.
@@ -957,9 +1161,14 @@ function Git-HoundEnvironment
     .DESCRIPTION
         This function retrieves environments for each repository provided in the pipeline. It creates nodes and edges representing the environments and their relationships to repositories. If a repository has custom branch policies for deployments, edges are created from the branch policies to the environment; otherwise, an edge is created directly from the repository to the environment.
 
-        API Reference: https://docs.github.com/en/rest/deployments/environments?apiVersion=2022-11-28#list-environments
+        API Reference: 
+        - List environments: https://docs.github.com/en/rest/deployments/environments?apiVersion=2022-11-28#list-environments
+        - List deployment branch policies: https://docs.github.com/en/rest/deployments/branch-policies?apiVersion=2022-11-28#list-deployment-branch-policies
+        - List environment secrets: https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-environment-secrets
 
-        Fine Grained Permissions Reference: "Actions" repository permissions (read)
+        Fine Grained Permissions Reference:
+        - "Actions" repository permissions (read)
+        - "Environments" repository permissions (read)
 
     .PARAMETER Session
         A GitHound.Session object used for authentication and API requests.
@@ -1082,10 +1291,19 @@ function Git-HoundSecret
 {
     <#
     .SYNOPSIS
-
+        Fetches and processes GitHub Secrets for organizations and repositories.
 
     .DESCRIPTION
+        This function retrieves organization and repository secrets. It creates nodes and edges representing the secrets and their relationships to organizations and repositories.
 
+        API Reference: 
+        - List organization secrets: https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-organization-secrets
+        - List repository organization secrets: https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-repository-organization-secrets
+        - List repository secrets: https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-repository-secrets
+
+        Fine Grained Permissions Reference: 
+        - "Secrets" organization permissions (read)
+        - "Secrets" repository permissions (read)
 
     .PARAMETER Session
         A GitHound.Session object used for authentication and API requests.
@@ -1097,6 +1315,7 @@ function Git-HoundSecret
         A PSObject containing arrays of nodes and edges representing the environments and their relationships.
 
     .EXAMPLE
+        $secrets = Git-HoundRepository | Git-HoundSecret
 
     #>
         Param(
@@ -1204,6 +1423,36 @@ function Git-HoundSecret
 
 function Git-HoundOrganizationRole
 {
+    <#
+    .SYNOPSIS
+        Fetches and processes GitHub Organization Roles for an organization.
+
+    .DESCRIPTION
+        This function retrieves custom organization roles for a given organization. It creates nodes and edges representing the roles and their relationships to users and teams.
+
+        API Reference:
+        - Get all organization roles for an organization: https://docs.github.com/en/rest/orgs/organization-roles?apiVersion=2022-11-28#get-all-organization-roles-for-an-organization
+        - List teams that are assigned to an organization role: https://docs.github.com/en/rest/orgs/organization-roles?apiVersion=2022-11-28#list-teams-that-are-assigned-to-an-organization-role
+        - List users that are assigned to an organization role: https://docs.github.com/en/rest/orgs/organization-roles?apiVersion=2022-11-28#list-users-that-are-assigned-to-an-organization-role
+        - List organization members: https://docs.github.com/en/rest/orgs/members?apiVersion=2022-11-28#list-organization-members
+        - Get organization membership for a user: https://docs.github.com/en/rest/orgs/members?apiVersion=2022-11-28#get-organization-membership-for-a-user
+
+        Fine Grained Permissions Reference:
+        - "Custom organization roles" organization permissions (read)
+        - "Members" organization permissions (read)
+
+    .PARAMETER Session
+        A GitHound.Session object used for authentication and API requests.
+
+    .PARAMETER Organization
+        An organization object to process.
+
+    .OUTPUTS
+        A PSObject containing arrays of nodes and edges representing the organization roles and their relationships.
+
+    .EXAMPLE
+        $orgRoles = Git-HoundOrganization | Git-HoundOrganizationRole
+    #>
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [PSTypeName('GitHound.Session')]
@@ -1396,6 +1645,33 @@ function Git-HoundOrganizationRole
 # The question is whether this hinders its standalone nature, of course we can evaluate whether the input is provided from the pipeline or not
 function Git-HoundTeamRole
 {
+    <#
+    .SYNOPSIS
+        Fetches and processes GitHub Team Roles for a given organization.
+
+    .DESCRIPTION
+        This function retrieves team roles for a given organization. It creates nodes and edges representing the roles and their relationships to users and teams.
+
+        API Reference: 
+        - List teams: https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#list-teams
+        - List team members: https://docs.github.com/en/rest/teams/members?apiVersion=2022-11-28#list-team-members
+        - Get team membership for a user: https://docs.github.com/en/rest/teams/members?apiVersion=2022-11-28#get-team-membership-for-a-user
+
+        Fine Grained Permissions Reference:
+        - "Members" organization permissions (read)
+
+    .PARAMETER Session
+        A GitHound.Session object used for authentication and API requests.
+
+    .PARAMETER Organization
+        An organization object to process.
+
+    .OUTPUTS
+        A PSObject containing arrays of nodes and edges representing the team roles and their relationships.
+
+    .EXAMPLE
+        $teamRoles = Git-HoundOrganization | Git-HoundTeamRole
+    #>
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [PSTypeName('GitHound.Session')]
@@ -1485,6 +1761,37 @@ function Git-HoundTeamRole
 # This is a third order data type after GHOrganization and GHRepository
 function Git-HoundRepositoryRole
 {
+    <#
+    .SYNOPSIS
+        Fetches and processes GitHub Repository Roles for a given organization.
+
+    .DESCRIPTION
+        This function retrieves custom repository roles for a given organization. It creates nodes and edges representing the roles and their relationships to users and teams.
+
+        API Reference:
+        - List custom repository roles in an organization: https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/custom-roles?apiVersion=2022-11-28#list-custom-repository-roles-in-an-organization
+        - List organization repositories: https://docs.github.com/en/enterprise-cloud@latest/rest/repos/repos?apiVersion=2022-11-28#list-organization-repositories
+        - List repository collaborators: https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#list-repository-collaborators
+        - List repository teams: https://docs.github.com/en/enterprise-cloud@latest/rest/repos/repos?apiVersion=2022-11-28#list-repository-teams
+
+        Fine Grained Permissions Reference:
+        - "Custom repository roles" organization permissions (read)
+        - "Administration" organization permissions (read)
+        - "Metadata" repository permissions (read)
+        - "Administration" repository permissions (read)
+
+    .PARAMETER Session
+        A GitHound.Session object used for authentication and API requests.
+
+    .PARAMETER Organization
+        An organization object to process.
+
+    .OUTPUTS
+        A PSObject containing arrays of nodes and edges representing the repository roles and their relationships.
+
+    .EXAMPLE
+        $repoRoles = Git-HoundOrganization | Git-HoundRepositoryRole
+    #>
     [CmdletBinding()]
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
@@ -1869,9 +2176,11 @@ function Git-HoundSecretScanningAlert
 
         Requires the GitHub API permission: GHReadSecretScanningAlerts on the organization and GHReadRepositoryContents on the repository.
 
-        API Reference: https://docs.github.com/en/rest/secret-scanning/secret-scanning?apiVersion=2022-11-28#list-secret-scanning-alerts-for-an-organization
+        API Reference: 
+        - List secret scanning alerts for an organization: https://docs.github.com/en/rest/secret-scanning/secret-scanning?apiVersion=2022-11-28#list-secret-scanning-alerts-for-an-organization
 
-        Fine Grained Permissions Reference: "Secret scanning alerts" repository permission (read)
+        Fine Grained Permissions Reference:
+        - "Secret scanning alerts" repository permissions (read)
 
     .PARAMETER Session
         A GitHound session object used to authenticate and interact with the GitHub API.
@@ -1937,6 +2246,33 @@ function Git-HoundSecretScanningAlert
 
 function Git-HoundAppInstallation
 {
+    <#
+    .SYNOPSIS
+        Retrieves repositories for a given GitHub App installation.
+    
+    .DESCRIPTION
+        This function fetches GitHub App installations for the specified organization using the provided GitHound session and constructs nodes representing the installations.
+
+        API Reference:
+        - List app installations for an organization: https://docs.github.com/en/rest/orgs/orgs?apiVersion=2022-11-28#list-app-installations-for-an-organization
+
+        Fine Grained Permissions Reference:
+        - "Administration" organization permissions (read)
+
+    .PARAMETER Session
+        A GitHound session object used to authenticate and interact with the GitHub API.
+
+    .PARAMETER Organization
+        A PSObject representing the GitHub organization for which to retrieve GitHub App installations.
+
+    .OUTPUTS
+        A PSObject containing two properties: Nodes and Edges. Nodes is an array of GHAppInstallation nodes, and Edges is an array of edges (currently empty).
+    
+    .EXAMPLE
+        $session = New-GitHoundSession -Token "your_github_token"
+        $organization = Get-GitHoundOrganization -Session $session -Login "your_org_login"
+        $appInstallations = $organization | Git-HoundAppInstallation -Session $session
+    #>
     [CmdletBinding()]
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
@@ -1983,9 +2319,47 @@ function Git-HoundAppInstallation
     })
 }
 
+function Git-HoundScimUser
+{
+    <#
+    #>
+
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session,
+
+        [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
+        [PSObject]
+        $Organization
+    )
+
+    foreach($scimIdentity in ([System.Text.Encoding]::ASCII.GetString((Invoke-GithubRestMethod -Session $Session -Path "scim/v2/organizations/$($Session.OrganizationName)/Users")) | ConvertFrom-Json).Resources)
+    {
+        $props = [pscustomobject]@{
+            active = Normalize-Null $scimIdentity.active
+            external_id = Normalize-Null $scimIdentity.externalId
+            family_name = Normalize-Null $scimIdentity.name.familyName
+            given_name = Normalize-Null $scimIdentity.name.givenName
+            username = Normalize-Null $scimIdentity.username
+            id = Normalize-Null $scimIdentity.id
+            resource_type = Normalize-Null $scimIdentity.meta.resourceType
+            #created_date = Normalize-Null $scimIdentity.meta.created
+            #last_modified_date = Normalize-Null $scimIdentity.meta.lastModified
+            scim_location = Normalize-Null $scimIdentity.meta.location
+        }
+
+        Write-Output $props
+    }
+}
+
 # This is a second order data type after GHOrganization
 function Git-HoundGraphQlSamlProvider
 {
+    <#
+    
+    #>
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [PSTypeName('GitHound.Session')]
@@ -2080,11 +2454,13 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                 'https://auth.pingone.com/*' {
                     $ForeignUserNodeKind = 'PingOneUser'
                     $ForeginEnvironmentNodeKind = 'PingOneOrganization'
+                    $ForeignEnvironmentId = $result.data.organization.samlIdentityProvider.issuer.Split('/')[3]
                 }
                 # The identity provider is Entra ID
                 'https://sts.windows.net/*' {
                     $ForeignUserNodeKind = 'AZUser'
                     $ForeginEnvironmentNodeKind = 'AZTenant'
+                    $ForeignEnvironmentId = $result.data.organization.samlIdentityProvider.issuer.Split('/')[3]
                 }
                 # The identity provider is Okta
                 # This is particularly tested with SAML SSO from Okta to GitHub Organization only (GitHub Enterprise Cloud - Organization)
@@ -2093,7 +2469,7 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                 {
                     $ForeignUserNodeKind = 'OktaUser'
                     $ForeginEnvironmentNodeKind = 'OktaOrganization'
-                    $ForeignEnvironmentName = $result.data.organization.samlIdentityProvider.ssoUrl.Split('/')[2]
+                    $ForeignEnvironmentId = $result.data.organization.samlIdentityProvider.ssoUrl.Split('/')[2]
                     #$null = $edges.Add((New-GitHoundEdge -Kind 'GHSyncedToEnvironment' -StartId $result.data.organization.samlIdentityProvider.id -EndId $ForeignEnvironmentName -EndKind $ForeginEnvironmentNodeKind -EndMatchBy name -Properties @{traversable=$false}))
                 }
                 default { Write-Verbose "Issuer: $($_)"; break }
@@ -2108,6 +2484,7 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                 # Relational Properties
                 organization_name         = $result.data.organization.name
                 organization_id           = $result.data.organization.id
+                foreign_environment_id   = $ForeignEnvironmentId
                 # Node Specific Properties
                 digest_method             = $result.data.organization.samlIdentityProvider.digestMethod
                 idp_certificate           = $result.data.organization.samlIdentityProvider.idpCertificate
@@ -2127,34 +2504,23 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
             {
                 # Create GHExternalIdentity Node and Connect it to GHSamlIdentityProvider Node via GHHasExternalIdentity Edge
                 # We may discover in the future that we need to capture more properties from the external identity
-                if($identity.scimIdentity.username -ne $null)
-                {
-                    $scimUsername = $identity.scimIdentity.username
-                }
-                else
-                {
-                    $scimUsername = $null
-                }
-                
-                if($identity.samlIdentity.username -ne $null)
-                {
-                    $samlUsername = $identity.samlIdentity.username
-                }
-                else
-                {
-                    $samlUsername = $null
-                }
 
                 $EIprops = [pscustomobject]@{
                     # Common Properties
-                    name              = Normalize-Null $identity.id
+                    name                      = Normalize-Null $identity.id
                     # Relational Properties
-                    organization_id   = Normalize-Null $result.data.organization.id
-                    scim_username     = Normalize-Null $scimUsername
-                    saml_username     = Normalize-Null $samlUsername
-                    github_username   = Normalize-Null $identity.user.login
-                    github_user_id    = Normalize-Null $identity.user.id
+                    organization_id           = Normalize-Null $result.data.organization.id
+                    organization_name         = Normalize-Null $result.data.organization.name
                     # Node Specific Properties
+                    saml_identity_family_name = Normalize-Null $identity.samlIdentity.familyName
+                    saml_identity_given_name  = Normalize-Null $identity.samlIdentity.givenName
+                    saml_identity_name_id     = Normalize-Null $identity.samlIdentity.nameId
+                    saml_identity_username    = Normalize-Null $identity.samlIdentity.username
+                    scim_identity_family_name = Normalize-Null $identity.scimIdentity.familyName
+                    scim_identity_given_name  = Normalize-Null $identity.scimIdentity.givenName
+                    scim_identity_username    = Normalize-Null $identity.scimIdentity.username
+                    github_username           = Normalize-Null $identity.user.login
+                    github_user_id            = Normalize-Null $identity.user.id
                     # Accordion Panel Queries
                     query_mapped_users = "MATCH p=(:GHExternalIdentity {objectid: '$($identity.id.ToUpper())'})-[:GHMapsToUser]->() RETURN p"
                 }
@@ -2162,21 +2528,22 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                 $null = $nodes.Add((New-GitHoundNode -Id $identity.id -Kind 'GHExternalIdentity' -Properties $EIprops))
                 $null = $edges.Add((New-GitHoundEdge -Kind GHHasExternalIdentity -StartId $result.data.organization.samlIdentityProvider.id -EndId $identity.id -Properties @{traversable=$false}))
                 
-                if($samlUsername -ne $null)
+                if($identity.samlIdentity.username -ne $null)
                 {
-                    $null = $edges.Add((New-GitHoundEdge -Kind GHMapsToUser -StartId $identity.id -EndId $samlUsername -EndKind $ForeignUserNodeKind -EndMatchBy name -Properties @{traversable=$false}))
+                    $null = $edges.Add((New-GitHoundEdge -Kind GHMapsToUser -StartId $identity.id -EndId $identity.samlIdentity.username -EndKind $ForeignUserNodeKind -EndMatchBy name -Properties @{traversable=$false}))
                 }
-                elseif($scimUsername -ne $null)
+                elseif($identity.scimIdentity.username -ne $null)
                 {
-                    $null = $edges.Add((New-GitHoundEdge -Kind GHMapsToUser -StartId $identity.id -EndId $scimUsername -EndKind $ForeignUserNodeKind -EndMatchBy name -Properties @{traversable=$false}))
+                    $null = $edges.Add((New-GitHoundEdge -Kind GHMapsToUser -StartId $identity.id -EndId $identity.scimIdentity.username -EndKind $ForeignUserNodeKind -EndMatchBy name -Properties @{traversable=$false}))
                 }
 
                 if($identity.user.id -ne $null)
                 {
                     $null = $edges.Add((New-GitHoundEdge -Kind GHMapsToUser -StartId $identity.id -EndId $identity.user.id -Properties @{traversable=$false}))
+                    
                     # Create SyncedToGHUser Edge from Foreign Identity to GHUser
                     # This might need to be something that happens during post-processing since we do not control whether the foreign user node already exists in the graph
-                    $null = $edges.Add((New-GitHoundEdge -Kind SyncedToGHUser -StartId $samlUsername -StartKind $ForeignUserNodeKind -StartMatchBy name -EndId $identity.user.id -Properties @{traversable=$true; composition="MATCH p=()<-[:GHSyncedToEnvironment]-(:GHSamlIdentityProvider)-[:GHHasExternalIdentity]->(:GHExternalIdentity)-[:GHMapsToUser]->(n) WHERE n.objectid = '$($identity.user.id.ToUpper())' OR n.name = '$($identity.samlIdentity.username.ToUpper())' RETURN p"}))
+                    $null = $edges.Add((New-GitHoundEdge -Kind SyncedToGHUser -StartId $identity.samlIdentity.username -StartKind $ForeignUserNodeKind -StartMatchBy name -EndId $identity.user.id -Properties @{traversable=$true; composition="MATCH p=()<-[:GHSyncedToEnvironment]-(:GHSamlIdentityProvider)-[:GHHasExternalIdentity]->(:GHExternalIdentity)-[:GHMapsToUser]->(n) WHERE n.objectid = '$($identity.user.id.ToUpper())' OR n.name = '$($identity.samlIdentity.username.ToUpper())' RETURN p"}))
                 }
             }
         }
