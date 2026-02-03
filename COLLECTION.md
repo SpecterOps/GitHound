@@ -252,8 +252,8 @@ GitHub Personal Access Tokens have a [rate limit](https://docs.github.com/en/res
             source_kind = "GitHub"
         }
         graph = [PSCustomObject]@{
-            nodes = $branches.Nodes.ToArray()
-            edges = $branches.Edges.ToArray()
+            nodes = $teamroles.Nodes.ToArray()
+            edges = $teamroles.Edges.ToArray()
         }
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_TeamRoles_$($org.nodes[0].id).json"
     ```

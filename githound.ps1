@@ -1792,6 +1792,7 @@ function Git-HoundTeamRole
 
         foreach($member in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($team.properties.organization_name)/teams/$($team.properties.slug)/members?role=member"))
         {
+            # By removing this step I saved exponential API Requests, but the new approach returns nested role membership as if it is direct
             <#
             switch((Invoke-GithubRestMethod -Session $Session -Path "orgs/$($team.properties.organization_name)/teams/$($team.properties.slug)/memberships/$($member.login)").role)
             {
