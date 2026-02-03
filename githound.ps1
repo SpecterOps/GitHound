@@ -1790,14 +1790,22 @@ function Git-HoundTeamRole
         $null = $edges.Add((New-GitHoundEdge -Kind 'GHMemberOf' -StartId $maintainerId -EndId $team.id -Properties @{traversable=$true}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GHAddMember' -StartId $maintainerId -EndId $team.id -Properties @{traversable=$true}))
 
-        foreach($member in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($team.properties.organization_name)/teams/$($team.properties.slug)/members"))
+        foreach($member in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($team.properties.organization_name)/teams/$($team.properties.slug)/members?role=member"))
         {
+            <#
             switch((Invoke-GithubRestMethod -Session $Session -Path "orgs/$($team.properties.organization_name)/teams/$($team.properties.slug)/memberships/$($member.login)").role)
             {
                 'member' { $targetId = $memberId }
                 'maintainer' { $targetId = $maintainerId }
             }
-            $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasRole' -StartId $member.node_id -EndId $targetId -Properties @{traversable=$true}))
+            #>
+
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasRole' -StartId $member.node_id -EndId $memberId -Properties @{traversable=$true}))
+        }
+
+        foreach($maintainer in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($team.properties.organization_name)/teams/$($team.properties.slug)/members?role=maintainer"))
+        {
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasRole' -StartId $maintainer.node_id -EndId $maintainerId -Properties @{traversable=$true}))
         }
     } -ThrottleLimit 25
 
@@ -2762,7 +2770,7 @@ function Invoke-GitHoundIndependent
         }
         graph = [PSCustomObject]@{
             nodes = $org.Nodes.ToArray()
-            edges = $org.Nodes.ToArray()
+            edges = $org.Edges.ToArray()
         }
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Organization_$($org.nodes[0].id).json"
 
@@ -2791,7 +2799,7 @@ function Invoke-GitHoundIndependent
         }
         graph = [PSCustomObject]@{
             nodes = $teams.Nodes.ToArray()
-            edges = $teams.Nodes.ToArray()
+            edges = $teams.Edges.ToArray()
         }
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Team_$($org.nodes[0].id).json"
 
@@ -2806,7 +2814,7 @@ function Invoke-GitHoundIndependent
         }
         graph = [PSCustomObject]@{
             nodes = $repos.Nodes.ToArray()
-            edges = $repos.Nodes.ToArray()
+            edges = $repos.Edges.ToArray()
         }
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Repository_$($org.nodes[0].id).json"
 
@@ -2821,7 +2829,7 @@ function Invoke-GitHoundIndependent
         }
         graph = [PSCustomObject]@{
             nodes = $orgroles.Nodes.ToArray()
-            edges = $orgroles.Nodes.ToArray()
+            edges = $orgroles.Edges.ToArray()
         }
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_OrgRole_$($org.nodes[0].id).json"
 
@@ -2836,7 +2844,7 @@ function Invoke-GitHoundIndependent
         }
         graph = [PSCustomObject]@{
             nodes = $branches.Nodes.ToArray()
-            edges = $branches.Nodes.ToArray()
+            edges = $branches.Edges.ToArray()
         }
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_TeamRoles_$($org.nodes[0].id).json"
 
@@ -2851,7 +2859,7 @@ function Invoke-GitHoundIndependent
         }
         graph = [PSCustomObject]@{
             nodes = $reporoles.Nodes.ToArray()
-            edges = $reporoles.Nodes.ToArray()
+            edges = $reporoles.Edges.ToArray()
         }
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_RepoRole_$($org.nodes[0].id).json"
 
@@ -2866,7 +2874,7 @@ function Invoke-GitHoundIndependent
         }
         graph = [PSCustomObject]@{
             nodes = $branches.Nodes.ToArray()
-            edges = $branches.Nodes.ToArray()
+            edges = $branches.Edges.ToArray()
         }
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Branch_$($org.nodes[0].id).json"
 
@@ -2881,7 +2889,7 @@ function Invoke-GitHoundIndependent
         }
         graph = [PSCustomObject]@{
             nodes = $workflows.Nodes.ToArray()
-            edges = $workflows.Nodes.ToArray()
+            edges = $workflows.Edges.ToArray()
         }
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Workflow_$($org.nodes[0].id).json"
 
@@ -2896,7 +2904,7 @@ function Invoke-GitHoundIndependent
         }
         graph = [PSCustomObject]@{
             nodes = $environments.Nodes.ToArray()
-            edges = $environments.Nodes.ToArray()
+            edges = $environments.Edges.ToArray()
         }
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Environment_$($org.nodes[0].id).json"
 
@@ -2911,7 +2919,7 @@ function Invoke-GitHoundIndependent
         }
         graph = [PSCustomObject]@{
             nodes = $secrets.Nodes.ToArray()
-            edges = $secrets.Nodes.ToArray()
+            edges = $secrets.Edges.ToArray()
         }
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Secret_$($org.nodes[0].id).json"
     
@@ -2926,7 +2934,7 @@ function Invoke-GitHoundIndependent
         }
         graph = [PSCustomObject]@{
             nodes = $secretalerts.Nodes.ToArray()
-            edges = $secretalerts.Nodes.ToArray()
+            edges = $secretalerts.Edges.ToArray()
         }
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_SecretAlerts_$($org.nodes[0].id).json"
 

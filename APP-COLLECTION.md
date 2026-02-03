@@ -28,8 +28,8 @@ The step by step instructions for generating an installation access token can be
 
 Use the `New-GitHubJwtSession` function to generate a JWT for the App Installation. This function requires both the Client ID, from the previous step, and the private key that you generated when you installed the App.
 
-    ```powershell
-    $jwt = New-GitHubJwtSession -OrganizationName SpecterTst -ClientId Iv23liPgjiu18oXLM2q7 -PrivateKeyPath ~/Downloads/githound-specterops.2026-02-02.private-key.pem -AppId 107643946
-    ```
+```powershell
+$jwt = New-GitHubJwtSession -OrganizationName SpecterTst -ClientId Iv23liPgjiu18oXLM2q7 -PrivateKeyPath ~/Downloads/githound-specterops.2026-02-02.private-key.pem -AppId 107643946
+```
 
 You now have a GitHub Session that is ready to use with the rest of the application.
