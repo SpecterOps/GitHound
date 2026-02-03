@@ -86,6 +86,55 @@ function New-GithubSession {
     }
 }
 
+# Reference: https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-json-web-token-jwt-for-a-github-app#example-using-powershell-to-generate-a-jwt
+function New-GitHubJwtSession
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position=0, Mandatory = $true)]
+        [string]
+        $OrganizationName,
+        
+        [Parameter(Position=1, Mandatory = $true)]
+        [string]
+        $ClientId,
+
+        [Parameter(Position=2, Mandatory = $true)]
+        [string]
+        $PrivateKeyPath,
+
+        [Parameter(Position=3, Mandatory = $true)]
+        [string]
+        $AppId
+    )
+
+    $header = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject @{
+    alg = "RS256"
+    typ = "JWT"
+    }))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+    $payload = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject @{
+    iat = [System.DateTimeOffset]::UtcNow.AddSeconds(-10).ToUnixTimeSeconds()
+    exp = [System.DateTimeOffset]::UtcNow.AddMinutes(10).ToUnixTimeSeconds()
+    iss = $ClientId
+    }))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+    $rsa = [System.Security.Cryptography.RSA]::Create()
+    $rsa.ImportFromPem((Get-Content $PrivateKeyPath -Raw))
+
+    $signature = [Convert]::ToBase64String($rsa.SignData([System.Text.Encoding]::UTF8.GetBytes("$header.$payload"), [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+    
+    $jwt = "$header.$payload.$signature"
+    
+    $jwtsession = New-GithubSession -OrganizationName $OrganizationName -Token $jwt
+
+    $result = Invoke-GithubrestMethod -Session $jwtsession -Path "app/installations/$($AppId)/access_tokens" -Method POST 
+
+    $session = New-GitHubSession -OrganizationName $OrganizationName -Token $result.token
+    
+    Write-Output $session
+}
+
 function Invoke-GithubRestMethod {
     [CmdletBinding()]
     Param(
@@ -1680,35 +1729,35 @@ function Git-HoundTeamRole
         $Session,
 
         [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
-        [PSObject]
-        $Organization
+        [PSObject[]]
+        $Team
     )
 
     $nodes = New-Object System.Collections.ArrayList
     $edges = New-Object System.Collections.ArrayList
 
-    Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/teams" | ForEach-Object -Parallel {
+    $Team.Nodes | ForEach-Object -Parallel {
         
         $nodes = $using:nodes
         $edges = $using:edges
         $Session = $using:Session
-        $Organization = $using:Organization
 
         $functionBundle = $using:GitHoundFunctionBundle
         foreach($funcName in $functionBundle.Keys) {
             Set-Item -Path "function:$funcName" -Value ([scriptblock]::Create($functionBundle[$funcName]))
         }
+        $team = $_
 
-        $memberId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($_.node_id)_members"))
+        $memberId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($team.id)_members"))
         $memberProps = [pscustomobject]@{
             # Common Properties
             id                 = Normalize-Null $memberId
-            name               = Normalize-Null "$($Organization.Properties.login)/$($_.slug)/members"
+            name               = Normalize-Null "$($team.properties.organization_name)/$($team.properties.slug)/members"
             # Relational Properties
-            organization_name  = Normalize-Null $Organization.properties.login
-            organization_id    = Normalize-Null $Organization.properties.node_id
-            team_name          = Normalize-Null $_.name
-            team_id            = Normalize-Null $_.node_id
+            organization_name  = Normalize-Null $team.properties.organization_name
+            organization_id    = Normalize-Null $team.properties.organization_id
+            team_name          = Normalize-Null $team.properties.name
+            team_id            = Normalize-Null $team.id
             # Node Specific Properties
             short_name         = Normalize-Null 'members'
             type               = Normalize-Null 'team'
@@ -1717,18 +1766,18 @@ function Git-HoundTeamRole
             query_repositories = "MATCH p=(:GHTeamRole {id:'$($memberId)'})-[*]->(:GHRepository) RETURN p"
         }
         $null = $nodes.Add((New-GitHoundNode -Id $memberId -Kind 'GHTeamRole','GHRole' -Properties $memberProps))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHMemberOf' -StartId $memberId -EndId $_.node_id -Properties @{traversable=$true}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GHMemberOf' -StartId $memberId -EndId $team.id -Properties @{traversable=$true}))
 
-        $maintainerId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($_.node_id)_maintainers"))
+        $maintainerId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($team.id)_maintainers"))
         $maintainerProps = [pscustomobject]@{
             # Common Properties
             id                 = Normalize-Null $maintainerId
-            name               = Normalize-Null "$($Organization.Properties.login)/$($_.slug)/maintainers"
+            name               = Normalize-Null "$($team.properties.organization_name)/$($team.properties.slug)/maintainers"
             # Relational Properties
-            organization_name  = Normalize-Null $Organization.properties.login
-            organization_id    = Normalize-Null $Organization.properties.node_id
-            team_name          = Normalize-Null $_.name
-            team_id            = Normalize-Null $_.node_id
+            organization_name  = Normalize-Null $team.properties.organization_name
+            organization_id    = Normalize-Null $team.properties.organization_id
+            team_name          = Normalize-Null $team.properties.name
+            team_id            = Normalize-Null $team.id
             # Node Specific Properties
             short_name         = Normalize-Null 'maintainers'
             type               = Normalize-Null 'team'
@@ -1738,12 +1787,12 @@ function Git-HoundTeamRole
         }
         $null = $nodes.Add((New-GitHoundNode -Id $maintainerId -Kind 'GHTeamRole','GHRole' -Properties $maintainerProps))
 
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHMemberOf' -StartId $maintainerId -EndId $_.node_id -Properties @{traversable=$true}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHAddMember' -StartId $maintainerId -EndId $_.node_id -Properties @{traversable=$true}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GHMemberOf' -StartId $maintainerId -EndId $team.id -Properties @{traversable=$true}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GHAddMember' -StartId $maintainerId -EndId $team.id -Properties @{traversable=$true}))
 
-        foreach($member in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/teams/$($_.slug)/members"))
+        foreach($member in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($team.properties.organization_name)/teams/$($team.properties.slug)/members"))
         {
-            switch((Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/teams/$($_.slug)/memberships/$($member.login)").role)
+            switch((Invoke-GithubRestMethod -Session $Session -Path "orgs/$($team.properties.organization_name)/teams/$($team.properties.slug)/memberships/$($member.login)").role)
             {
                 'member' { $targetId = $memberId }
                 'maintainer' { $targetId = $maintainerId }
@@ -2334,12 +2383,11 @@ function Git-HoundScimUser
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [PSTypeName('GitHound.Session')]
-        $Session,
-
-        [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
-        [PSObject]
-        $Organization
+        $Session
     )
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
 
     $startIndex = 1
 
@@ -2348,8 +2396,6 @@ function Git-HoundScimUser
         $result = [System.Text.Encoding]::ASCII.GetString((Invoke-GithubRestMethod -Session $Session -Path "scim/v2/organizations/$($Session.OrganizationName)/Users?startIndex=$($startIndex)")) | ConvertFrom-Json
         foreach($scimIdentity in $result.Resources)
         {
-            Write-Output $scimIdentity
-            <#
             $props = [pscustomobject]@{
                 active = Normalize-Null $scimIdentity.active
                 external_id = Normalize-Null $scimIdentity.externalId
@@ -2363,20 +2409,20 @@ function Git-HoundScimUser
                 #last_modified_date = Normalize-Null $scimIdentity.meta.lastModified
                 scim_location = Normalize-Null $scimIdentity.meta.location
             }
-
-            Write-Output $props
-            #>
+            
+            $null = $nodes.Add((New-GitHoundNode -Kind SCIMUser -Id $scimIdentity.externalId -Properties $props))
+            $null = $edges.Add((New-GitHoundEdge -Kind SCIMProvisioned -StartId $scimIdentity.externalId -EndId $scimIdentity.id -Properties @{ traversable = $true }))
         }
+
         $startIndex = $result.startIndex + $result.itemsPerPage
     } while($startIndex -lt $result.totalResults)
     
-    
-    <#
-    foreach($scimIdentity in ([System.Text.Encoding]::ASCII.GetString((Invoke-GithubRestMethod -Session $Session -Path "scim/v2/organizations/$($Session.OrganizationName)/Users")) | ConvertFrom-Json).Resources)
-    {
-
+    $output = [PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
     }
-    #>
+
+    Write-Output $output
 }
 
 # This is a second order data type after GHOrganization
@@ -2730,7 +2776,7 @@ function Invoke-GitHoundIndependent
         }
         graph = [PSCustomObject]@{
             nodes = $users
-            edges = $null
+            edges = @()
         }
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_User_$($org.nodes[0].id).json"
 
@@ -2763,6 +2809,51 @@ function Invoke-GitHoundIndependent
             edges = $repos.Nodes.ToArray()
         }
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Repository_$($org.nodes[0].id).json"
+
+    Write-Host "[*] Enumerating Organization Roles"
+    $orgroles = $org.nodes[0] | Git-HoundOrganizationRole -Session $Session
+    if($orgroles.nodes) { $nodes.AddRange(@($orgroles.nodes)) }
+    if($orgroles.edges) { $edges.AddRange(@($orgroles.edges)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $orgroles.Nodes.ToArray()
+            edges = $orgroles.Nodes.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_OrgRole_$($org.nodes[0].id).json"
+
+    Write-Host "[*] Enumerating Team Roles"
+    $teamroles = $teams | Git-HoundTeamRole -Session $Session
+    if($teamroles.nodes) { $nodes.AddRange(@($teamroles.nodes)) }
+    if($teamroles.edges) { $edges.AddRange(@($teamroles.edges)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $branches.Nodes.ToArray()
+            edges = $branches.Nodes.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_TeamRoles_$($org.nodes[0].id).json"
+
+    Write-Host "[*] Enumerating Repository Roles"
+    $reporoles = $org.nodes[0] | Git-HoundRepositoryRole -Session $Session
+    if($reporoles.nodes) { $nodes.AddRange(@($reporoles.nodes)) }
+    if($reporoles.edges) { $edges.AddRange(@($reporoles.edges)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $reporoles.Nodes.ToArray()
+            edges = $reporoles.Nodes.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_RepoRole_$($org.nodes[0].id).json"
 
     Write-Host "[*] Enumerating Organization Branches"
     $branches = $repos | Git-HoundBranch -Session $Session
@@ -2823,51 +2914,6 @@ function Invoke-GitHoundIndependent
             edges = $secrets.Nodes.ToArray()
         }
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Secret_$($org.nodes[0].id).json"
-
-    Write-Host "[*] Enumerating Team Roles"
-    $teamroles = $org.nodes[0] | Git-HoundTeamRole -Session $Session
-    if($teamroles.nodes) { $nodes.AddRange(@($teamroles.nodes)) }
-    if($teamroles.edges) { $edges.AddRange(@($teamroles.edges)) }
-
-    $payload = [PSCustomObject]@{
-        metadata = [PSCustomObject]@{
-            source_kind = "GitHub"
-        }
-        graph = [PSCustomObject]@{
-            nodes = $branches.Nodes.ToArray()
-            edges = $branches.Nodes.ToArray()
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_TeamRoles_$($org.nodes[0].id).json"
-
-    Write-Host "[*] Enumerating Organization Roles"
-    $orgroles = $org.nodes[0] | Git-HoundOrganizationRole -Session $Session
-    if($orgroles.nodes) { $nodes.AddRange(@($orgroles.nodes)) }
-    if($orgroles.edges) { $edges.AddRange(@($orgroles.edges)) }
-
-    $payload = [PSCustomObject]@{
-        metadata = [PSCustomObject]@{
-            source_kind = "GitHub"
-        }
-        graph = [PSCustomObject]@{
-            nodes = $orgroles.Nodes.ToArray()
-            edges = $orgroles.Nodes.ToArray()
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_OrgRole_$($org.nodes[0].id).json"
-
-    Write-Host "[*] Enumerating Repository Roles"
-    $reporoles = $org.nodes[0] | Git-HoundRepositoryRole -Session $Session
-    if($reporoles.nodes) { $nodes.AddRange(@($reporoles.nodes)) }
-    if($reporoles.edges) { $edges.AddRange(@($reporoles.edges)) }
-
-    $payload = [PSCustomObject]@{
-        metadata = [PSCustomObject]@{
-            source_kind = "GitHub"
-        }
-        graph = [PSCustomObject]@{
-            nodes = $reporoles.Nodes.ToArray()
-            edges = $reporoles.Nodes.ToArray()
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_RepoRole_$($org.nodes[0].id).json"
     
     Write-Host "[*] Enumerating Secret Scanning Alerts"
     $secretalerts = $org.nodes[0] | Git-HoundSecretScanningAlert -Session $Session
