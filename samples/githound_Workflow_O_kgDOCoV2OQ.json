@@ -1,0 +1,383 @@
+{
+  "metadata": {
+    "source_kind": "GitHub"
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "W_kwDOP-0TlM4Ls5V0",
+        "kinds": [
+          "GHWorkflow"
+        ],
+        "properties": {
+          "name": "policy-bot-testing\\CI Build",
+          "id": 196318580,
+          "node_id": "W_kwDOP-0TlM4Ls5V0",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "repository_name": "SpecterTst/policy-bot-testing",
+          "repository_id": "R_kgDOP-0TlA",
+          "short_name": "CI Build",
+          "path": ".github/workflows/ci-build.yml",
+          "state": "active",
+          "url": "https://api.github.com/repos/SpecterTst/policy-bot-testing/actions/workflows/196318580"
+        }
+      },
+      {
+        "id": "W_kwDOP-0TlM4Ls5V1",
+        "kinds": [
+          "GHWorkflow"
+        ],
+        "properties": {
+          "name": "policy-bot-testing\\Security Scan",
+          "id": 196318581,
+          "node_id": "W_kwDOP-0TlM4Ls5V1",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "repository_name": "SpecterTst/policy-bot-testing",
+          "repository_id": "R_kgDOP-0TlA",
+          "short_name": "Security Scan",
+          "path": ".github/workflows/security-scan.yml",
+          "state": "active",
+          "url": "https://api.github.com/repos/SpecterTst/policy-bot-testing/actions/workflows/196318581"
+        }
+      },
+      {
+        "id": "W_kwDOP-0TlM4Ls5V2",
+        "kinds": [
+          "GHWorkflow"
+        ],
+        "properties": {
+          "name": "policy-bot-testing\\Test Suite",
+          "id": 196318582,
+          "node_id": "W_kwDOP-0TlM4Ls5V2",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "repository_name": "SpecterTst/policy-bot-testing",
+          "repository_id": "R_kgDOP-0TlA",
+          "short_name": "Test Suite",
+          "path": ".github/workflows/test-suite.yml",
+          "state": "active",
+          "url": "https://api.github.com/repos/SpecterTst/policy-bot-testing/actions/workflows/196318582"
+        }
+      },
+      {
+        "id": "W_kwDOQMZ5PM4M6pJN",
+        "kinds": [
+          "GHWorkflow"
+        ],
+        "properties": {
+          "name": "oidc-actions-test-2\\Hardcoded Entra Client Secret",
+          "id": 216699469,
+          "node_id": "W_kwDOQMZ5PM4M6pJN",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "repository_name": "SpecterTst/oidc-actions-test-2",
+          "repository_id": "R_kgDOQMZ5PA",
+          "short_name": "Hardcoded Entra Client Secret",
+          "path": ".github/workflows/creds-hardcoded.yml",
+          "state": "active",
+          "url": "https://api.github.com/repos/SpecterTst/oidc-actions-test-2/actions/workflows/216699469"
+        }
+      },
+      {
+        "id": "W_kwDOQMZ5PM4M6pJO",
+        "kinds": [
+          "GHWorkflow"
+        ],
+        "properties": {
+          "name": "oidc-actions-test-2\\Entra Client Secret from GitHub Repository Secrets",
+          "id": 216699470,
+          "node_id": "W_kwDOQMZ5PM4M6pJO",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "repository_name": "SpecterTst/oidc-actions-test-2",
+          "repository_id": "R_kgDOQMZ5PA",
+          "short_name": "Entra Client Secret from GitHub Repository Secrets",
+          "path": ".github/workflows/creds-secret.yml",
+          "state": "active",
+          "url": "https://api.github.com/repos/SpecterTst/oidc-actions-test-2/actions/workflows/216699470"
+        }
+      },
+      {
+        "id": "W_kwDOQMZ5PM4M6pJP",
+        "kinds": [
+          "GHWorkflow"
+        ],
+        "properties": {
+          "name": "oidc-actions-test-2\\Entra Client Secret from GitHub Repository Variables",
+          "id": 216699471,
+          "node_id": "W_kwDOQMZ5PM4M6pJP",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "repository_name": "SpecterTst/oidc-actions-test-2",
+          "repository_id": "R_kgDOQMZ5PA",
+          "short_name": "Entra Client Secret from GitHub Repository Variables",
+          "path": ".github/workflows/creds-variable.yml",
+          "state": "active",
+          "url": "https://api.github.com/repos/SpecterTst/oidc-actions-test-2/actions/workflows/216699471"
+        }
+      },
+      {
+        "id": "W_kwDOQMZ5PM4M6pJQ",
+        "kinds": [
+          "GHWorkflow"
+        ],
+        "properties": {
+          "name": "oidc-actions-test-2\\Hardcoded Entra OIDC Federation",
+          "id": 216699472,
+          "node_id": "W_kwDOQMZ5PM4M6pJQ",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "repository_name": "SpecterTst/oidc-actions-test-2",
+          "repository_id": "R_kgDOQMZ5PA",
+          "short_name": "Hardcoded Entra OIDC Federation",
+          "path": ".github/workflows/oidc-hardcoded.yml",
+          "state": "active",
+          "url": "https://api.github.com/repos/SpecterTst/oidc-actions-test-2/actions/workflows/216699472"
+        }
+      },
+      {
+        "id": "W_kwDOQMZ5PM4M6pJR",
+        "kinds": [
+          "GHWorkflow"
+        ],
+        "properties": {
+          "name": "oidc-actions-test-2\\Entra OIDC Federation from GitHub Repository Secrets",
+          "id": 216699473,
+          "node_id": "W_kwDOQMZ5PM4M6pJR",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "repository_name": "SpecterTst/oidc-actions-test-2",
+          "repository_id": "R_kgDOQMZ5PA",
+          "short_name": "Entra OIDC Federation from GitHub Repository Secrets",
+          "path": ".github/workflows/oidc-secret.yml",
+          "state": "active",
+          "url": "https://api.github.com/repos/SpecterTst/oidc-actions-test-2/actions/workflows/216699473"
+        }
+      },
+      {
+        "id": "W_kwDOQMZ5PM4M6pJS",
+        "kinds": [
+          "GHWorkflow"
+        ],
+        "properties": {
+          "name": "oidc-actions-test-2\\Entra OIDC Federation from GitHub Repository Variables",
+          "id": 216699474,
+          "node_id": "W_kwDOQMZ5PM4M6pJS",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "repository_name": "SpecterTst/oidc-actions-test-2",
+          "repository_id": "R_kgDOQMZ5PA",
+          "short_name": "Entra OIDC Federation from GitHub Repository Variables",
+          "path": ".github/workflows/oidc-variable.yml",
+          "state": "active",
+          "url": "https://api.github.com/repos/SpecterTst/oidc-actions-test-2/actions/workflows/216699474"
+        }
+      },
+      {
+        "id": "W_kwDOQKVZE84MAU1I",
+        "kinds": [
+          "GHWorkflow"
+        ],
+        "properties": {
+          "name": "oidc-actions-test-1\\AWS Role Assumption Test - Prod Branch & Environment Prod - Required",
+          "id": 201411912,
+          "node_id": "W_kwDOQKVZE84MAU1I",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "repository_name": "SpecterTst/oidc-actions-test-1",
+          "repository_id": "R_kgDOQKVZEw",
+          "short_name": "AWS Role Assumption Test - Prod Branch & Environment Prod - Required",
+          "path": ".github/workflows/prod-branch-environment-protected.yml",
+          "state": "active",
+          "url": "https://api.github.com/repos/SpecterTst/oidc-actions-test-1/actions/workflows/201411912"
+        }
+      },
+      {
+        "id": "W_kwDOQKVZE84MAU1J",
+        "kinds": [
+          "GHWorkflow"
+        ],
+        "properties": {
+          "name": "oidc-actions-test-1\\AWS Role Assumption Test - Prod Branch - Required",
+          "id": 201411913,
+          "node_id": "W_kwDOQKVZE84MAU1J",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "repository_name": "SpecterTst/oidc-actions-test-1",
+          "repository_id": "R_kgDOQKVZEw",
+          "short_name": "AWS Role Assumption Test - Prod Branch - Required",
+          "path": ".github/workflows/prod-branch-protected.yml",
+          "state": "active",
+          "url": "https://api.github.com/repos/SpecterTst/oidc-actions-test-1/actions/workflows/201411913"
+        }
+      },
+      {
+        "id": "W_kwDOQKVZE84MAU1L",
+        "kinds": [
+          "GHWorkflow"
+        ],
+        "properties": {
+          "name": "oidc-actions-test-1\\AWS Role Assumption Test - WildCard",
+          "id": 201411915,
+          "node_id": "W_kwDOQKVZE84MAU1L",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "repository_name": "SpecterTst/oidc-actions-test-1",
+          "repository_id": "R_kgDOQKVZEw",
+          "short_name": "AWS Role Assumption Test - WildCard",
+          "path": ".github/workflows/wildcard-repo.yml",
+          "state": "active",
+          "url": "https://api.github.com/repos/SpecterTst/oidc-actions-test-1/actions/workflows/201411915"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "kind": "GHHasWorkflow",
+        "start": {
+          "value": "R_kgDOP-0TlA"
+        },
+        "end": {
+          "value": "W_kwDOP-0TlM4Ls5V0"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasWorkflow",
+        "start": {
+          "value": "R_kgDOP-0TlA"
+        },
+        "end": {
+          "value": "W_kwDOP-0TlM4Ls5V1"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasWorkflow",
+        "start": {
+          "value": "R_kgDOP-0TlA"
+        },
+        "end": {
+          "value": "W_kwDOP-0TlM4Ls5V2"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasWorkflow",
+        "start": {
+          "value": "R_kgDOQMZ5PA"
+        },
+        "end": {
+          "value": "W_kwDOQMZ5PM4M6pJN"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasWorkflow",
+        "start": {
+          "value": "R_kgDOQMZ5PA"
+        },
+        "end": {
+          "value": "W_kwDOQMZ5PM4M6pJO"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasWorkflow",
+        "start": {
+          "value": "R_kgDOQMZ5PA"
+        },
+        "end": {
+          "value": "W_kwDOQMZ5PM4M6pJP"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasWorkflow",
+        "start": {
+          "value": "R_kgDOQMZ5PA"
+        },
+        "end": {
+          "value": "W_kwDOQMZ5PM4M6pJQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasWorkflow",
+        "start": {
+          "value": "R_kgDOQMZ5PA"
+        },
+        "end": {
+          "value": "W_kwDOQMZ5PM4M6pJR"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasWorkflow",
+        "start": {
+          "value": "R_kgDOQMZ5PA"
+        },
+        "end": {
+          "value": "W_kwDOQMZ5PM4M6pJS"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasWorkflow",
+        "start": {
+          "value": "R_kgDOQKVZEw"
+        },
+        "end": {
+          "value": "W_kwDOQKVZE84MAU1I"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasWorkflow",
+        "start": {
+          "value": "R_kgDOQKVZEw"
+        },
+        "end": {
+          "value": "W_kwDOQKVZE84MAU1J"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasWorkflow",
+        "start": {
+          "value": "R_kgDOQKVZEw"
+        },
+        "end": {
+          "value": "W_kwDOQKVZE84MAU1L"
+        },
+        "properties": {
+          "traversable": false
+        }
+      }
+    ]
+  }
+}

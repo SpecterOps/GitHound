@@ -1,0 +1,109 @@
+{
+  "metadata": {
+    "source_kind": "GitHub"
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "EN_kwDOQKVZE88AAAACOk0Y3Q",
+        "kinds": [
+          "GHEnvironment"
+        ],
+        "properties": {
+          "name": "oidc-actions-test-1\\github-pages",
+          "id": 9568065757,
+          "node_id": "EN_kwDOQKVZE88AAAACOk0Y3Q",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "repository_name": "SpecterTst/oidc-actions-test-1",
+          "repository_id": 1084578067,
+          "short_name": "github-pages",
+          "can_admins_bypass": true
+        }
+      },
+      {
+        "id": "EN_kwDOQKVZE88AAAACOlhGJw",
+        "kinds": [
+          "GHEnvironment"
+        ],
+        "properties": {
+          "name": "oidc-actions-test-1\\prod",
+          "id": 9568798247,
+          "node_id": "EN_kwDOQKVZE88AAAACOlhGJw",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "repository_name": "SpecterTst/oidc-actions-test-1",
+          "repository_id": 1084578067,
+          "short_name": "prod",
+          "can_admins_bypass": true
+        }
+      },
+      {
+        "id": "GHEnvironmentSecret_EN_kwDOQKVZE88AAAACOlhGJw_TESTSECRET",
+        "kinds": [
+          "GHEnvironmentSecret"
+        ],
+        "properties": {
+          "environment_name": "prod",
+          "environment_id": "EN_kwDOQKVZE88AAAACOlhGJw",
+          "organization_id": "",
+          "organization_name": "",
+          "id": "GHEnvironmentSecret_EN_kwDOQKVZE88AAAACOlhGJw_TESTSECRET",
+          "name": "TESTSECRET",
+          "created_at": "2025-10-27T22:34:37Z",
+          "updated_at": "2025-10-27T22:34:37Z"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "kind": "GHHasEnvironment",
+        "start": {
+          "value": "4D30EF22AE6E0A6962BBBC41916294B1"
+        },
+        "end": {
+          "value": "EN_kwDOQKVZE88AAAACOk0Y3Q"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasEnvironment",
+        "start": {
+          "value": "D1B8D1241EEFC632BA41A4D00E777F11"
+        },
+        "end": {
+          "value": "EN_kwDOQKVZE88AAAACOlhGJw"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHContains",
+        "start": {
+          "value": "EN_kwDOQKVZE88AAAACOlhGJw"
+        },
+        "end": {
+          "value": "GHEnvironmentSecret_EN_kwDOQKVZE88AAAACOlhGJw_TESTSECRET"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasSecret",
+        "start": {
+          "value": "EN_kwDOQKVZE88AAAACOlhGJw"
+        },
+        "end": {
+          "value": "GHEnvironmentSecret_EN_kwDOQKVZE88AAAACOlhGJw_TESTSECRET"
+        },
+        "properties": {
+          "traversable": false
+        }
+      }
+    ]
+  }
+}

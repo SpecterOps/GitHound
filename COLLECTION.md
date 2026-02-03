@@ -243,7 +243,7 @@ GitHub Personal Access Tokens have a [rate limit](https://docs.github.com/en/res
 
     ```powershell
     Write-Host "[*] Enumerating Team Roles"
-    $teamroles = $org.nodes[0] | Git-HoundTeamRole -Session $Session
+    $teamroles = $teams | Git-HoundTeamRole -Session $Session
     if($teamroles.nodes) { $nodes.AddRange(@($teamroles.nodes)) }
     if($teamroles.edges) { $edges.AddRange(@($teamroles.edges)) }
 

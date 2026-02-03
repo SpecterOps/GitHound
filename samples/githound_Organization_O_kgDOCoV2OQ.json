@@ -1,0 +1,41 @@
+{
+  "metadata": {
+    "source_kind": "GitHub"
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "O_kgDOCoV2OQ",
+        "kinds": [
+          "GHOrganization"
+        ],
+        "properties": {
+          "id": 176518713,
+          "node_id": "O_kgDOCoV2OQ",
+          "name": "SpecterOps Testing",
+          "login": "SpecterTst",
+          "blog": "https://specterops.io",
+          "is_verified": true,
+          "public_repos": 0,
+          "followers": 0,
+          "html_url": "https://github.com/SpecterTst",
+          "created_at": "2024-07-24T16:55:58Z",
+          "updated_at": "2026-01-28T19:08:50Z",
+          "total_private_repos": 0,
+          "owned_private_repos": 8,
+          "collaborators": 7,
+          "default_repository_permission": "none",
+          "two_factor_requirement_enabled": true,
+          "advanced_security_enabled_for_new_repositories": false,
+          "actions_enabled_repositories": "selected",
+          "actions_allowed_actions": "all",
+          "actions_sha_pinning_required": false,
+          "query_users": "MATCH (n:GHUser {organization_id:'O_kgDOCoV2OQ}) RETURN n",
+          "query_teams": "MATCH (n:GHTeam {organization_id:'O_kgDOCoV2OQ}) RETURN n",
+          "query_repositories": "MATCH (n:GHRepository {organization_id:'O_kgDOCoV2OQ}) RETURN n"
+        }
+      }
+    ],
+    "edges": []
+  }
+}

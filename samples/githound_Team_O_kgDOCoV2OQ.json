@@ -1,0 +1,156 @@
+{
+  "metadata": {
+    "source_kind": "GitHub"
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "T_kwDOCoV2Oc4AokLZ",
+        "kinds": [
+          "GHTeam"
+        ],
+        "properties": {
+          "id": 10633945,
+          "node_id": "T_kwDOCoV2Oc4AokLZ",
+          "name": "Admins",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "slug": "admins",
+          "description": "",
+          "privacy": "closed",
+          "permission": "pull",
+          "query_first_degree_members": "MATCH p=(:GHUser)-[:GHHasRole]->(t:GHTeamRole)-[:GHMemberOf]->(:GHTeam {node_id:'T_kwDOCoV2Oc4AokLZ'}) RETURN p",
+          "query_unrolled_members": "MATCH p=(t:GHTeamRole)-[:GHMemberOf*1..]->(:GHTeam {node_id:'T_kwDOCoV2Oc4AokLZ'}) MATCH p1 = (t)<-[:GHHasRole]-(:GHUser) RETURN p,p1"
+        }
+      },
+      {
+        "id": "T_kwDOCoV2Oc4AqHzX",
+        "kinds": [
+          "GHTeam"
+        ],
+        "properties": {
+          "id": 11042007,
+          "node_id": "T_kwDOCoV2Oc4AqHzX",
+          "name": "Developers",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "slug": "developers",
+          "description": "",
+          "privacy": "closed",
+          "permission": "pull",
+          "query_first_degree_members": "MATCH p=(:GHUser)-[:GHHasRole]->(t:GHTeamRole)-[:GHMemberOf]->(:GHTeam {node_id:'T_kwDOCoV2Oc4AqHzX'}) RETURN p",
+          "query_unrolled_members": "MATCH p=(t:GHTeamRole)-[:GHMemberOf*1..]->(:GHTeam {node_id:'T_kwDOCoV2Oc4AqHzX'}) MATCH p1 = (t)<-[:GHHasRole]-(:GHUser) RETURN p,p1"
+        }
+      },
+      {
+        "id": "T_kwDOCoV2Oc4A3THb",
+        "kinds": [
+          "GHTeam"
+        ],
+        "properties": {
+          "id": 14496219,
+          "node_id": "T_kwDOCoV2Oc4A3THb",
+          "name": "policy-bot-developers",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "slug": "policy-bot-developers",
+          "description": "Test developer team for Policy Bot testing",
+          "privacy": "closed",
+          "permission": "pull",
+          "query_first_degree_members": "MATCH p=(:GHUser)-[:GHHasRole]->(t:GHTeamRole)-[:GHMemberOf]->(:GHTeam {node_id:'T_kwDOCoV2Oc4A3THb'}) RETURN p",
+          "query_unrolled_members": "MATCH p=(t:GHTeamRole)-[:GHMemberOf*1..]->(:GHTeam {node_id:'T_kwDOCoV2Oc4A3THb'}) MATCH p1 = (t)<-[:GHHasRole]-(:GHUser) RETURN p,p1"
+        }
+      },
+      {
+        "id": "T_kwDOCoV2Oc4A5Q0D",
+        "kinds": [
+          "GHTeam"
+        ],
+        "properties": {
+          "id": 15011075,
+          "node_id": "T_kwDOCoV2Oc4A5Q0D",
+          "name": "PushRestrictionTeam",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "slug": "pushrestrictionteam",
+          "description": "Team to demo push restrictions",
+          "privacy": "closed",
+          "permission": "pull",
+          "query_first_degree_members": "MATCH p=(:GHUser)-[:GHHasRole]->(t:GHTeamRole)-[:GHMemberOf]->(:GHTeam {node_id:'T_kwDOCoV2Oc4A5Q0D'}) RETURN p",
+          "query_unrolled_members": "MATCH p=(t:GHTeamRole)-[:GHMemberOf*1..]->(:GHTeam {node_id:'T_kwDOCoV2Oc4A5Q0D'}) MATCH p1 = (t)<-[:GHHasRole]-(:GHUser) RETURN p,p1"
+        }
+      },
+      {
+        "id": "T_kwDOCoV2Oc4AzHGg",
+        "kinds": [
+          "GHTeam"
+        ],
+        "properties": {
+          "id": 13398432,
+          "node_id": "T_kwDOCoV2Oc4AzHGg",
+          "name": "RandomTeam",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "slug": "randomteam",
+          "description": "",
+          "privacy": "closed",
+          "permission": "pull",
+          "query_first_degree_members": "MATCH p=(:GHUser)-[:GHHasRole]->(t:GHTeamRole)-[:GHMemberOf]->(:GHTeam {node_id:'T_kwDOCoV2Oc4AzHGg'}) RETURN p",
+          "query_unrolled_members": "MATCH p=(t:GHTeamRole)-[:GHMemberOf*1..]->(:GHTeam {node_id:'T_kwDOCoV2Oc4AzHGg'}) MATCH p1 = (t)<-[:GHHasRole]-(:GHUser) RETURN p,p1"
+        }
+      },
+      {
+        "id": "T_kwDOCoV2Oc4AqFnA",
+        "kinds": [
+          "GHTeam"
+        ],
+        "properties": {
+          "id": 11033024,
+          "node_id": "T_kwDOCoV2Oc4AqFnA",
+          "name": "TestTeam",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "slug": "testteam",
+          "description": "team for permission testing",
+          "privacy": "closed",
+          "permission": "pull",
+          "query_first_degree_members": "MATCH p=(:GHUser)-[:GHHasRole]->(t:GHTeamRole)-[:GHMemberOf]->(:GHTeam {node_id:'T_kwDOCoV2Oc4AqFnA'}) RETURN p",
+          "query_unrolled_members": "MATCH p=(t:GHTeamRole)-[:GHMemberOf*1..]->(:GHTeam {node_id:'T_kwDOCoV2Oc4AqFnA'}) MATCH p1 = (t)<-[:GHHasRole]-(:GHUser) RETURN p,p1"
+        }
+      },
+      {
+        "id": "T_kwDOCoV2Oc4A5Qt0",
+        "kinds": [
+          "GHTeam"
+        ],
+        "properties": {
+          "id": 15010676,
+          "node_id": "T_kwDOCoV2Oc4A5Qt0",
+          "name": "WriteTeam",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "slug": "writeteam",
+          "description": "team with write permission",
+          "privacy": "closed",
+          "permission": "pull",
+          "query_first_degree_members": "MATCH p=(:GHUser)-[:GHHasRole]->(t:GHTeamRole)-[:GHMemberOf]->(:GHTeam {node_id:'T_kwDOCoV2Oc4A5Qt0'}) RETURN p",
+          "query_unrolled_members": "MATCH p=(t:GHTeamRole)-[:GHMemberOf*1..]->(:GHTeam {node_id:'T_kwDOCoV2Oc4A5Qt0'}) MATCH p1 = (t)<-[:GHHasRole]-(:GHUser) RETURN p,p1"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "kind": "GHMemberOf",
+        "start": {
+          "value": "T_kwDOCoV2Oc4AqHzX"
+        },
+        "end": {
+          "value": "T_kwDOCoV2Oc4AqFnA"
+        },
+        "properties": {
+          "traversable": true
+        }
+      }
+    ]
+  }
+}

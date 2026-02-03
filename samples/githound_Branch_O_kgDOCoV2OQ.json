@@ -1,0 +1,1667 @@
+{
+  "metadata": {
+    "source_kind": "GitHub"
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "8210A63AA062E068BE9F55E2E99FFA32",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "branchtest2\\main",
+          "id": "8210A63AA062E068BE9F55E2E99FFA32",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "main",
+          "commit_hash": "510f9b2baa6f6cb10f92fbf26b81166730eb2ba6",
+          "commit_url": "https://api.github.com/repos/SpecterTst/branchtest2/commits/510f9b2baa6f6cb10f92fbf26b81166730eb2ba6",
+          "protected": false,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'8210A63AA062E068BE9F55E2E99FFA32'}) RETURN p"
+        }
+      },
+      {
+        "id": "1D86DDBAD18130340E22708FB1A5F80A",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-default-policy-test\\bull-dozer-2",
+          "id": "1D86DDBAD18130340E22708FB1A5F80A",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "bull-dozer-2",
+          "commit_hash": "7ef55342251e5c95b22cc1ea233d1e02cdd4d985",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-default-policy-test/commits/7ef55342251e5c95b22cc1ea233d1e02cdd4d985",
+          "protected": false,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'1D86DDBAD18130340E22708FB1A5F80A'}) RETURN p"
+        }
+      },
+      {
+        "id": "16DC3FAE8F0E3A85FD5757D31AF2215A",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-default-policy-test\\bulldozer-3",
+          "id": "16DC3FAE8F0E3A85FD5757D31AF2215A",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "bulldozer-3",
+          "commit_hash": "da263d201ba7ca93f003d2591f2844619a7e635c",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-default-policy-test/commits/da263d201ba7ca93f003d2591f2844619a7e635c",
+          "protected": false,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'16DC3FAE8F0E3A85FD5757D31AF2215A'}) RETURN p"
+        }
+      },
+      {
+        "id": "6F31A07A7D11E2DB1932057BF46EA441",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-default-policy-test\\bulldozer-patch-4",
+          "id": "6F31A07A7D11E2DB1932057BF46EA441",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "bulldozer-patch-4",
+          "commit_hash": "1e7ba1acd2e442fd21ed1b10f727cd86fde3569f",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-default-policy-test/commits/1e7ba1acd2e442fd21ed1b10f727cd86fde3569f",
+          "protected": false,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'6F31A07A7D11E2DB1932057BF46EA441'}) RETURN p"
+        }
+      },
+      {
+        "id": "CA3A76BF41AC94AF1349088453114F9D",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-default-policy-test\\bulldozer-testing",
+          "id": "CA3A76BF41AC94AF1349088453114F9D",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "bulldozer-testing",
+          "commit_hash": "c18aa7515515880db1b4bac9bd1a3bc60391ef74",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-default-policy-test/commits/c18aa7515515880db1b4bac9bd1a3bc60391ef74",
+          "protected": false,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'CA3A76BF41AC94AF1349088453114F9D'}) RETURN p"
+        }
+      },
+      {
+        "id": "B72CD653AFECDA47A8F016985B1E7E85",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-default-policy-test\\main",
+          "id": "B72CD653AFECDA47A8F016985B1E7E85",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "main",
+          "commit_hash": "993dd166ae1d491257b89c157dc2c9bd1c41364f",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-default-policy-test/commits/993dd166ae1d491257b89c157dc2c9bd1c41364f",
+          "protected": false,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'B72CD653AFECDA47A8F016985B1E7E85'}) RETURN p"
+        }
+      },
+      {
+        "id": "BBED23464801E9CD17C4AE35E50189BB",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-default-policy-test\\test.txt",
+          "id": "BBED23464801E9CD17C4AE35E50189BB",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "test.txt",
+          "commit_hash": "a4539b091e356125efd11e66b9651d87aacbabdb",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-default-policy-test/commits/a4539b091e356125efd11e66b9651d87aacbabdb",
+          "protected": false,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'BBED23464801E9CD17C4AE35E50189BB'}) RETURN p"
+        }
+      },
+      {
+        "id": "1A2EA83EFADB4F6D83AABE6E4A81822A",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-default-policy-test\\testing",
+          "id": "1A2EA83EFADB4F6D83AABE6E4A81822A",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "testing",
+          "commit_hash": "f6dbcf48ade531f20c138594735a0a3738682db9",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-default-policy-test/commits/f6dbcf48ade531f20c138594735a0a3738682db9",
+          "protected": false,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'1A2EA83EFADB4F6D83AABE6E4A81822A'}) RETURN p"
+        }
+      },
+      {
+        "id": "E3281BB9737C786DD656AFC1F06BE020",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-default-policy-test\\tin-rabbit-patch-2",
+          "id": "E3281BB9737C786DD656AFC1F06BE020",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "tin-rabbit-patch-2",
+          "commit_hash": "e429fd079d931b8038120f6b8651ff0c42443712",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-default-policy-test/commits/e429fd079d931b8038120f6b8651ff0c42443712",
+          "protected": false,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'E3281BB9737C786DD656AFC1F06BE020'}) RETURN p"
+        }
+      },
+      {
+        "id": "FAF67CE1F0B3B207C76A26FD4F878F42",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-default-policy-test\\tin-rabbit-patch-3",
+          "id": "FAF67CE1F0B3B207C76A26FD4F878F42",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "tin-rabbit-patch-3",
+          "commit_hash": "41746625c48f0794920e9cf797c3f2ad596f01b3",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-default-policy-test/commits/41746625c48f0794920e9cf797c3f2ad596f01b3",
+          "protected": false,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'FAF67CE1F0B3B207C76A26FD4F878F42'}) RETURN p"
+        }
+      },
+      {
+        "id": "C037D500CE0264326F3D04149CCD0089",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "oidc-actions-test-2\\main",
+          "id": "C037D500CE0264326F3D04149CCD0089",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "main",
+          "commit_hash": "2370557e46ef86fbf7b9e37d14f96eba954e7c69",
+          "commit_url": "https://api.github.com/repos/SpecterTst/oidc-actions-test-2/commits/2370557e46ef86fbf7b9e37d14f96eba954e7c69",
+          "protected": false,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'C037D500CE0264326F3D04149CCD0089'}) RETURN p"
+        }
+      },
+      {
+        "id": "4BD9D5AFE52B4072A3D4209FB3667FD4",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "oidc-actions-test-1\\jared",
+          "id": "4BD9D5AFE52B4072A3D4209FB3667FD4",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "jared",
+          "commit_hash": "7bc0696bbaa835df102a0dcea8f0cc81b7a3672e",
+          "commit_url": "https://api.github.com/repos/SpecterTst/oidc-actions-test-1/commits/7bc0696bbaa835df102a0dcea8f0cc81b7a3672e",
+          "protected": false,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'4BD9D5AFE52B4072A3D4209FB3667FD4'}) RETURN p"
+        }
+      },
+      {
+        "id": "FAD02FAD289F588C3E96115D1A4A78F0",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "branchprotectiontest\\CanPush3",
+          "id": "FAD02FAD289F588C3E96115D1A4A78F0",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "CanPush3",
+          "commit_hash": "581ba7f1403496187f0d6a61fb2cad3b0d33b8c5",
+          "commit_url": "https://api.github.com/repos/SpecterTst/branchprotectiontest/commits/581ba7f1403496187f0d6a61fb2cad3b0d33b8c5",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'FAD02FAD289F588C3E96115D1A4A78F0'}) RETURN p"
+        }
+      },
+      {
+        "id": "4D30EF22AE6E0A6962BBBC41916294B1",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "oidc-actions-test-1\\main",
+          "id": "4D30EF22AE6E0A6962BBBC41916294B1",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "main",
+          "commit_hash": "4bce3408c1e022d27085d3899b8c49c438b943ad",
+          "commit_url": "https://api.github.com/repos/SpecterTst/oidc-actions-test-1/commits/4bce3408c1e022d27085d3899b8c49c438b943ad",
+          "protected": false,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'4D30EF22AE6E0A6962BBBC41916294B1'}) RETURN p"
+        }
+      },
+      {
+        "id": "D1B8D1241EEFC632BA41A4D00E777F11",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "oidc-actions-test-1\\prod",
+          "id": "D1B8D1241EEFC632BA41A4D00E777F11",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "prod",
+          "commit_hash": "c5c5f8577f00d5ef7c4bc5ece873389e5b84cad8",
+          "commit_url": "https://api.github.com/repos/SpecterTst/oidc-actions-test-1/commits/c5c5f8577f00d5ef7c4bc5ece873389e5b84cad8",
+          "protected": false,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'D1B8D1241EEFC632BA41A4D00E777F11'}) RETURN p"
+        }
+      },
+      {
+        "id": "9AB92B96D8C404AC04D02AA67408E501",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "branch_protections_test\\main",
+          "id": "9AB92B96D8C404AC04D02AA67408E501",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "main",
+          "commit_hash": "48ef870836c9d575ef41857e8edee6cabf9547d7",
+          "commit_url": "https://api.github.com/repos/SpecterTst/branch_protections_test/commits/48ef870836c9d575ef41857e8edee6cabf9547d7",
+          "protected": false,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'9AB92B96D8C404AC04D02AA67408E501'}) RETURN p"
+        }
+      },
+      {
+        "id": "6FEB17ECC38D324998CEF6EF25000F7B",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-testing\\Anam0x-circleci-exfil-5",
+          "id": "6FEB17ECC38D324998CEF6EF25000F7B",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "Anam0x-circleci-exfil-5",
+          "commit_hash": "ed89d80a96d76dc01aec7ecefbad717414be716b",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-testing/commits/ed89d80a96d76dc01aec7ecefbad717414be716b",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": "",
+          "protection_require_code_owner_reviews": "",
+          "protection_require_last_push_approval": "",
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'6FEB17ECC38D324998CEF6EF25000F7B'}) RETURN p"
+        }
+      },
+      {
+        "id": "833E48E3F265B725D288EF6513961DD0",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "org-wide-policy-bot\\main",
+          "id": "833E48E3F265B725D288EF6513961DD0",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "main",
+          "commit_hash": "85d5c665ea83438ff15f3e11731d4d26bfca63da",
+          "commit_url": "https://api.github.com/repos/SpecterTst/org-wide-policy-bot/commits/85d5c665ea83438ff15f3e11731d4d26bfca63da",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'833E48E3F265B725D288EF6513961DD0'}) RETURN p"
+        }
+      },
+      {
+        "id": "DC91D41E68612261B8464C81C1FC136D",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "org-wide-policy-bot\\policies",
+          "id": "DC91D41E68612261B8464C81C1FC136D",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "policies",
+          "commit_hash": "0c9e3f85198dc92de79b395347270328e33e26e5",
+          "commit_url": "https://api.github.com/repos/SpecterTst/org-wide-policy-bot/commits/0c9e3f85198dc92de79b395347270328e33e26e5",
+          "protected": false,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'DC91D41E68612261B8464C81C1FC136D'}) RETURN p"
+        }
+      },
+      {
+        "id": "AFF55A4EE51CA703B70E322155255CA4",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "org-wide-policy-bot\\upgrayyed",
+          "id": "AFF55A4EE51CA703B70E322155255CA4",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "upgrayyed",
+          "commit_hash": "a17ee9f42ee958a1e24ec92fa1f6e359383600ff",
+          "commit_url": "https://api.github.com/repos/SpecterTst/org-wide-policy-bot/commits/a17ee9f42ee958a1e24ec92fa1f6e359383600ff",
+          "protected": false,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'AFF55A4EE51CA703B70E322155255CA4'}) RETURN p"
+        }
+      },
+      {
+        "id": "8960A5EBB6FB3661675D98B598AE3ABA",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "branchprotectiontest\\main",
+          "id": "8960A5EBB6FB3661675D98B598AE3ABA",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "main",
+          "commit_hash": "581ba7f1403496187f0d6a61fb2cad3b0d33b8c5",
+          "commit_url": "https://api.github.com/repos/SpecterTst/branchprotectiontest/commits/581ba7f1403496187f0d6a61fb2cad3b0d33b8c5",
+          "protected": true,
+          "protection_enforce_admins": true,
+          "protection_lock_branch": true,
+          "protection_required_pull_request_reviews": true,
+          "protection_required_approving_review_count": 1,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'8960A5EBB6FB3661675D98B598AE3ABA'}) RETURN p"
+        }
+      },
+      {
+        "id": "92767A4AAE9AA61CEE0E92584E29A3A8",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "branch_protections_test\\scenario3-1",
+          "id": "92767A4AAE9AA61CEE0E92584E29A3A8",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "scenario3-1",
+          "commit_hash": "3941a506564d6b6ece77dd8a27c6163a7156919e",
+          "commit_url": "https://api.github.com/repos/SpecterTst/branch_protections_test/commits/3941a506564d6b6ece77dd8a27c6163a7156919e",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": true,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'92767A4AAE9AA61CEE0E92584E29A3A8'}) RETURN p"
+        }
+      },
+      {
+        "id": "B58C30BA84E57558FF88BF2FEBF5DC89",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-testing\\Anam0x-circleci-exfil-test-1",
+          "id": "B58C30BA84E57558FF88BF2FEBF5DC89",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "Anam0x-circleci-exfil-test-1",
+          "commit_hash": "eedfa6b7de0df78dbc18f0720514d046aaa768ea",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-testing/commits/eedfa6b7de0df78dbc18f0720514d046aaa768ea",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": "",
+          "protection_require_code_owner_reviews": "",
+          "protection_require_last_push_approval": "",
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'B58C30BA84E57558FF88BF2FEBF5DC89'}) RETURN p"
+        }
+      },
+      {
+        "id": "44A537968BDD57D37905BE50FDA6CC1F",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "branch_protections_test\\scenario3-2",
+          "id": "44A537968BDD57D37905BE50FDA6CC1F",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "scenario3-2",
+          "commit_hash": "7835296eab112fcc3bd83783deeba7450108ba87",
+          "commit_url": "https://api.github.com/repos/SpecterTst/branch_protections_test/commits/7835296eab112fcc3bd83783deeba7450108ba87",
+          "protected": true,
+          "protection_enforce_admins": true,
+          "protection_lock_branch": true,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 0,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'44A537968BDD57D37905BE50FDA6CC1F'}) RETURN p"
+        }
+      },
+      {
+        "id": "246C4B9819D79D61D01683D482D5535D",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-testing\\Anam0x-circleci-exfil-test-3",
+          "id": "246C4B9819D79D61D01683D482D5535D",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "Anam0x-circleci-exfil-test-3",
+          "commit_hash": "5f433dea4171a09f1f777a57b40c1da0be7f5db5",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-testing/commits/5f433dea4171a09f1f777a57b40c1da0be7f5db5",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": "",
+          "protection_require_code_owner_reviews": "",
+          "protection_require_last_push_approval": "",
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'246C4B9819D79D61D01683D482D5535D'}) RETURN p"
+        }
+      },
+      {
+        "id": "4161BC509C679FD39819B2B057B90C7C",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "branch_protections_test\\scenario4-1",
+          "id": "4161BC509C679FD39819B2B057B90C7C",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "scenario4-1",
+          "commit_hash": "7835296eab112fcc3bd83783deeba7450108ba87",
+          "commit_url": "https://api.github.com/repos/SpecterTst/branch_protections_test/commits/7835296eab112fcc3bd83783deeba7450108ba87",
+          "protected": true,
+          "protection_enforce_admins": true,
+          "protection_lock_branch": true,
+          "protection_required_pull_request_reviews": true,
+          "protection_required_approving_review_count": 1,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'4161BC509C679FD39819B2B057B90C7C'}) RETURN p"
+        }
+      },
+      {
+        "id": "0E0A5D340D5298725AC9393113867060",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-testing\\Anam0x-circleci-exfil-test-4",
+          "id": "0E0A5D340D5298725AC9393113867060",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "Anam0x-circleci-exfil-test-4",
+          "commit_hash": "ed60ffa24cfbcebee7bec7b50061b40c6efdc3b4",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-testing/commits/ed60ffa24cfbcebee7bec7b50061b40c6efdc3b4",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": "",
+          "protection_require_code_owner_reviews": "",
+          "protection_require_last_push_approval": "",
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'0E0A5D340D5298725AC9393113867060'}) RETURN p"
+        }
+      },
+      {
+        "id": "6D3A5D686065AFFC7813632CA3516EC9",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "branch_protections_test\\scenario5-1",
+          "id": "6D3A5D686065AFFC7813632CA3516EC9",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "scenario5-1",
+          "commit_hash": "7835296eab112fcc3bd83783deeba7450108ba87",
+          "commit_url": "https://api.github.com/repos/SpecterTst/branch_protections_test/commits/7835296eab112fcc3bd83783deeba7450108ba87",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": true,
+          "protection_required_approving_review_count": 1,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'6D3A5D686065AFFC7813632CA3516EC9'}) RETURN p"
+        }
+      },
+      {
+        "id": "CF15293B63EBCA6F1D8F87334D7C5ED0",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-testing\\Anam0x-patch-1",
+          "id": "CF15293B63EBCA6F1D8F87334D7C5ED0",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "Anam0x-patch-1",
+          "commit_hash": "c289b11467e26c49a32e043f7b12986ace408515",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-testing/commits/c289b11467e26c49a32e043f7b12986ace408515",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": "",
+          "protection_require_code_owner_reviews": "",
+          "protection_require_last_push_approval": "",
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'CF15293B63EBCA6F1D8F87334D7C5ED0'}) RETURN p"
+        }
+      },
+      {
+        "id": "146AF4A15562A719A16F78F636887035",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "branch_protections_test\\scenario5-2",
+          "id": "146AF4A15562A719A16F78F636887035",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "scenario5-2",
+          "commit_hash": "f48cc2cdec70f8243c906a46fecfc78a079fc9fb",
+          "commit_url": "https://api.github.com/repos/SpecterTst/branch_protections_test/commits/f48cc2cdec70f8243c906a46fecfc78a079fc9fb",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": true,
+          "protection_required_approving_review_count": 1,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": true,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'146AF4A15562A719A16F78F636887035'}) RETURN p"
+        }
+      },
+      {
+        "id": "AC0557C4177DDB7246E1658C05702141",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-testing\\circleci-project-setup",
+          "id": "AC0557C4177DDB7246E1658C05702141",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "circleci-project-setup",
+          "commit_hash": "c893016b2eecd36e7a120babb4020cb059ef74f1",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-testing/commits/c893016b2eecd36e7a120babb4020cb059ef74f1",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": "",
+          "protection_require_code_owner_reviews": "",
+          "protection_require_last_push_approval": "",
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'AC0557C4177DDB7246E1658C05702141'}) RETURN p"
+        }
+      },
+      {
+        "id": "79A9A85679A1D1087BE87C50CE34628A",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "branch_protections_test\\scenario5-3",
+          "id": "79A9A85679A1D1087BE87C50CE34628A",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "scenario5-3",
+          "commit_hash": "f48cc2cdec70f8243c906a46fecfc78a079fc9fb",
+          "commit_url": "https://api.github.com/repos/SpecterTst/branch_protections_test/commits/f48cc2cdec70f8243c906a46fecfc78a079fc9fb",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": true,
+          "protection_required_approving_review_count": 1,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": true,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'79A9A85679A1D1087BE87C50CE34628A'}) RETURN p"
+        }
+      },
+      {
+        "id": "C0899B2B2C6F39A8E5420ACB003DF04F",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-testing\\exploit-vuln-001-1760103740",
+          "id": "C0899B2B2C6F39A8E5420ACB003DF04F",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "exploit-vuln-001-1760103740",
+          "commit_hash": "4661b43ddc066951933fab24b905533a348b9012",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-testing/commits/4661b43ddc066951933fab24b905533a348b9012",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": "",
+          "protection_require_code_owner_reviews": "",
+          "protection_require_last_push_approval": "",
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'C0899B2B2C6F39A8E5420ACB003DF04F'}) RETURN p"
+        }
+      },
+      {
+        "id": "62EB2B29D9F92539C298DF4B33A0AC7D",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "branch_protections_test\\scenario5-4",
+          "id": "62EB2B29D9F92539C298DF4B33A0AC7D",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "scenario5-4",
+          "commit_hash": "f48cc2cdec70f8243c906a46fecfc78a079fc9fb",
+          "commit_url": "https://api.github.com/repos/SpecterTst/branch_protections_test/commits/f48cc2cdec70f8243c906a46fecfc78a079fc9fb",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": true,
+          "protection_required_pull_request_reviews": true,
+          "protection_required_approving_review_count": 1,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": true,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'62EB2B29D9F92539C298DF4B33A0AC7D'}) RETURN p"
+        }
+      },
+      {
+        "id": "C37D32FBDFD0C3E3F24198C191E13C0E",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-testing\\main",
+          "id": "C37D32FBDFD0C3E3F24198C191E13C0E",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "main",
+          "commit_hash": "97d8c3c650d935b01911aa914c8a0c7d7b67470f",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-testing/commits/97d8c3c650d935b01911aa914c8a0c7d7b67470f",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": "",
+          "protection_require_code_owner_reviews": "",
+          "protection_require_last_push_approval": "",
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'C37D32FBDFD0C3E3F24198C191E13C0E'}) RETURN p"
+        }
+      },
+      {
+        "id": "FDEBF1E0A0EF770A07244644D4C709BF",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "branch_protections_test\\scenario5-5",
+          "id": "FDEBF1E0A0EF770A07244644D4C709BF",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "scenario5-5",
+          "commit_hash": "f1a8b8c9ebdf34415e6bdd6223f05b5d2f8d7a11",
+          "commit_url": "https://api.github.com/repos/SpecterTst/branch_protections_test/commits/f1a8b8c9ebdf34415e6bdd6223f05b5d2f8d7a11",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": true,
+          "protection_required_approving_review_count": 1,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": true,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'FDEBF1E0A0EF770A07244644D4C709BF'}) RETURN p"
+        }
+      },
+      {
+        "id": "5AB18ED702EA5220FCDC7485E0FAB436",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-testing\\safe-baseline-test-reattempt",
+          "id": "5AB18ED702EA5220FCDC7485E0FAB436",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "safe-baseline-test-reattempt",
+          "commit_hash": "bb953fd8719548a294aaf16a2fdd30036bd7337e",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-testing/commits/bb953fd8719548a294aaf16a2fdd30036bd7337e",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": "",
+          "protection_require_code_owner_reviews": "",
+          "protection_require_last_push_approval": "",
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'5AB18ED702EA5220FCDC7485E0FAB436'}) RETURN p"
+        }
+      },
+      {
+        "id": "B36B3E8750CF535F8F583FAF3D996978",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-testing\\test-pr-1761148915",
+          "id": "B36B3E8750CF535F8F583FAF3D996978",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "test-pr-1761148915",
+          "commit_hash": "7629117ecfc5d8cdf36c2ae400ff525ac1c8a956",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-testing/commits/7629117ecfc5d8cdf36c2ae400ff525ac1c8a956",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": "",
+          "protection_require_code_owner_reviews": "",
+          "protection_require_last_push_approval": "",
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'B36B3E8750CF535F8F583FAF3D996978'}) RETURN p"
+        }
+      },
+      {
+        "id": "188F04EF3383975AA3D77C19AD74DA13",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "branch_protections_test\\scenario6-1",
+          "id": "188F04EF3383975AA3D77C19AD74DA13",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "scenario6-1",
+          "commit_hash": "995febd9dc8f3401115832c9db56b7e54359ee1a",
+          "commit_url": "https://api.github.com/repos/SpecterTst/branch_protections_test/commits/995febd9dc8f3401115832c9db56b7e54359ee1a",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 1,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": true,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'188F04EF3383975AA3D77C19AD74DA13'}) RETURN p"
+        }
+      },
+      {
+        "id": "6A769F22D657F22B241BE5099029560F",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "policy-bot-testing\\tin-rabbit-patch-1",
+          "id": "6A769F22D657F22B241BE5099029560F",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "tin-rabbit-patch-1",
+          "commit_hash": "4ed9b84e5b2781fd069666485bd5b68591ad53f4",
+          "commit_url": "https://api.github.com/repos/SpecterTst/policy-bot-testing/commits/4ed9b84e5b2781fd069666485bd5b68591ad53f4",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": "",
+          "protection_require_code_owner_reviews": "",
+          "protection_require_last_push_approval": "",
+          "protection_push_restrictions": false,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'6A769F22D657F22B241BE5099029560F'}) RETURN p"
+        }
+      },
+      {
+        "id": "5049B712DB7B908FC271FA7DF769DE4E",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "branch_protections_test\\scenario6-2",
+          "id": "5049B712DB7B908FC271FA7DF769DE4E",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "scenario6-2",
+          "commit_hash": "f1a8b8c9ebdf34415e6bdd6223f05b5d2f8d7a11",
+          "commit_url": "https://api.github.com/repos/SpecterTst/branch_protections_test/commits/f1a8b8c9ebdf34415e6bdd6223f05b5d2f8d7a11",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 1,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": true,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'5049B712DB7B908FC271FA7DF769DE4E'}) RETURN p"
+        }
+      },
+      {
+        "id": "B6E36019F7A01525404B65C6B1F89F35",
+        "kinds": [
+          "GHBranch"
+        ],
+        "properties": {
+          "name": "branch_protections_test\\scenario6-3",
+          "id": "B6E36019F7A01525404B65C6B1F89F35",
+          "organization": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "scenario6-3",
+          "commit_hash": "f1a8b8c9ebdf34415e6bdd6223f05b5d2f8d7a11",
+          "commit_url": "https://api.github.com/repos/SpecterTst/branch_protections_test/commits/f1a8b8c9ebdf34415e6bdd6223f05b5d2f8d7a11",
+          "protected": true,
+          "protection_enforce_admins": false,
+          "protection_lock_branch": false,
+          "protection_required_pull_request_reviews": false,
+          "protection_required_approving_review_count": 1,
+          "protection_require_code_owner_reviews": false,
+          "protection_require_last_push_approval": false,
+          "protection_push_restrictions": true,
+          "query_branch_write": "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'B6E36019F7A01525404B65C6B1F89F35'}) RETURN p"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOM3LdJg"
+        },
+        "end": {
+          "value": "8210A63AA062E068BE9F55E2E99FFA32"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQP_pww"
+        },
+        "end": {
+          "value": "1D86DDBAD18130340E22708FB1A5F80A"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQP_pww"
+        },
+        "end": {
+          "value": "16DC3FAE8F0E3A85FD5757D31AF2215A"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQP_pww"
+        },
+        "end": {
+          "value": "6F31A07A7D11E2DB1932057BF46EA441"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQP_pww"
+        },
+        "end": {
+          "value": "CA3A76BF41AC94AF1349088453114F9D"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQP_pww"
+        },
+        "end": {
+          "value": "B72CD653AFECDA47A8F016985B1E7E85"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQP_pww"
+        },
+        "end": {
+          "value": "BBED23464801E9CD17C4AE35E50189BB"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQP_pww"
+        },
+        "end": {
+          "value": "1A2EA83EFADB4F6D83AABE6E4A81822A"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQP_pww"
+        },
+        "end": {
+          "value": "E3281BB9737C786DD656AFC1F06BE020"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQP_pww"
+        },
+        "end": {
+          "value": "FAF67CE1F0B3B207C76A26FD4F878F42"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQMZ5PA"
+        },
+        "end": {
+          "value": "C037D500CE0264326F3D04149CCD0089"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQKVZEw"
+        },
+        "end": {
+          "value": "4BD9D5AFE52B4072A3D4209FB3667FD4"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQKVZEw"
+        },
+        "end": {
+          "value": "4D30EF22AE6E0A6962BBBC41916294B1"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOMuFnXA"
+        },
+        "end": {
+          "value": "FAD02FAD289F588C3E96115D1A4A78F0"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQKVZEw"
+        },
+        "end": {
+          "value": "D1B8D1241EEFC632BA41A4D00E777F11"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQXtMxw"
+        },
+        "end": {
+          "value": "9AB92B96D8C404AC04D02AA67408E501"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOP-0TlA"
+        },
+        "end": {
+          "value": "6FEB17ECC38D324998CEF6EF25000F7B"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQP_PSQ"
+        },
+        "end": {
+          "value": "833E48E3F265B725D288EF6513961DD0"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQP_PSQ"
+        },
+        "end": {
+          "value": "DC91D41E68612261B8464C81C1FC136D"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQP_PSQ"
+        },
+        "end": {
+          "value": "AFF55A4EE51CA703B70E322155255CA4"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHBypassRequiredPullRequest",
+        "start": {
+          "value": "MDQ6VXNlcjU1MDQ1MjM="
+        },
+        "end": {
+          "value": "8960A5EBB6FB3661675D98B598AE3ABA"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOMuFnXA"
+        },
+        "end": {
+          "value": "8960A5EBB6FB3661675D98B598AE3ABA"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQXtMxw"
+        },
+        "end": {
+          "value": "92767A4AAE9AA61CEE0E92584E29A3A8"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOP-0TlA"
+        },
+        "end": {
+          "value": "B58C30BA84E57558FF88BF2FEBF5DC89"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQXtMxw"
+        },
+        "end": {
+          "value": "44A537968BDD57D37905BE50FDA6CC1F"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOP-0TlA"
+        },
+        "end": {
+          "value": "246C4B9819D79D61D01683D482D5535D"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQXtMxw"
+        },
+        "end": {
+          "value": "4161BC509C679FD39819B2B057B90C7C"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOP-0TlA"
+        },
+        "end": {
+          "value": "0E0A5D340D5298725AC9393113867060"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHBypassRequiredPullRequest",
+        "start": {
+          "value": "MDQ6VXNlcjExOTMzMjUw"
+        },
+        "end": {
+          "value": "6D3A5D686065AFFC7813632CA3516EC9"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQXtMxw"
+        },
+        "end": {
+          "value": "6D3A5D686065AFFC7813632CA3516EC9"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOP-0TlA"
+        },
+        "end": {
+          "value": "CF15293B63EBCA6F1D8F87334D7C5ED0"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHBypassRequiredPullRequest",
+        "start": {
+          "value": "MDQ6VXNlcjExOTMzMjUw"
+        },
+        "end": {
+          "value": "146AF4A15562A719A16F78F636887035"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHRestrictionsCanPush",
+        "start": {
+          "value": "MDQ6VXNlcjU1MDQ1MjM="
+        },
+        "end": {
+          "value": "146AF4A15562A719A16F78F636887035"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQXtMxw"
+        },
+        "end": {
+          "value": "146AF4A15562A719A16F78F636887035"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOP-0TlA"
+        },
+        "end": {
+          "value": "AC0557C4177DDB7246E1658C05702141"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHBypassRequiredPullRequest",
+        "start": {
+          "value": "MDQ6VXNlcjExOTMzMjUw"
+        },
+        "end": {
+          "value": "79A9A85679A1D1087BE87C50CE34628A"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHRestrictionsCanPush",
+        "start": {
+          "value": "MDQ6VXNlcjExOTMzMjUw"
+        },
+        "end": {
+          "value": "79A9A85679A1D1087BE87C50CE34628A"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQXtMxw"
+        },
+        "end": {
+          "value": "79A9A85679A1D1087BE87C50CE34628A"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOP-0TlA"
+        },
+        "end": {
+          "value": "C0899B2B2C6F39A8E5420ACB003DF04F"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHBypassRequiredPullRequest",
+        "start": {
+          "value": "MDQ6VXNlcjExOTMzMjUw"
+        },
+        "end": {
+          "value": "62EB2B29D9F92539C298DF4B33A0AC7D"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHRestrictionsCanPush",
+        "start": {
+          "value": "MDQ6VXNlcjExOTMzMjUw"
+        },
+        "end": {
+          "value": "62EB2B29D9F92539C298DF4B33A0AC7D"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQXtMxw"
+        },
+        "end": {
+          "value": "62EB2B29D9F92539C298DF4B33A0AC7D"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOP-0TlA"
+        },
+        "end": {
+          "value": "C37D32FBDFD0C3E3F24198C191E13C0E"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHBypassRequiredPullRequest",
+        "start": {
+          "value": "MDQ6VXNlcjExOTMzMjUw"
+        },
+        "end": {
+          "value": "FDEBF1E0A0EF770A07244644D4C709BF"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQXtMxw"
+        },
+        "end": {
+          "value": "FDEBF1E0A0EF770A07244644D4C709BF"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOP-0TlA"
+        },
+        "end": {
+          "value": "5AB18ED702EA5220FCDC7485E0FAB436"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOP-0TlA"
+        },
+        "end": {
+          "value": "B36B3E8750CF535F8F583FAF3D996978"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHRestrictionsCanPush",
+        "start": {
+          "value": "MDQ6VXNlcjExOTMzMjUw"
+        },
+        "end": {
+          "value": "188F04EF3383975AA3D77C19AD74DA13"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQXtMxw"
+        },
+        "end": {
+          "value": "188F04EF3383975AA3D77C19AD74DA13"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOP-0TlA"
+        },
+        "end": {
+          "value": "6A769F22D657F22B241BE5099029560F"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHRestrictionsCanPush",
+        "start": {
+          "value": "MDQ6VXNlcjU1MDQ1MjM="
+        },
+        "end": {
+          "value": "5049B712DB7B908FC271FA7DF769DE4E"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQXtMxw"
+        },
+        "end": {
+          "value": "5049B712DB7B908FC271FA7DF769DE4E"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHRestrictionsCanPush",
+        "start": {
+          "value": "T_kwDOCoV2Oc4A5Q0D"
+        },
+        "end": {
+          "value": "B6E36019F7A01525404B65C6B1F89F35"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasBranch",
+        "start": {
+          "value": "R_kgDOQXtMxw"
+        },
+        "end": {
+          "value": "B6E36019F7A01525404B65C6B1F89F35"
+        },
+        "properties": {
+          "traversable": true
+        }
+      }
+    ]
+  }
+}

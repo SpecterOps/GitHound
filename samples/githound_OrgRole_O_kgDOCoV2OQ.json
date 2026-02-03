@@ -1,0 +1,647 @@
+{
+  "metadata": {
+    "source_kind": "GitHub"
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX2FkbWlu",
+        "kinds": [
+          "GHOrgRole",
+          "GHRole"
+        ],
+        "properties": {
+          "id": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX2FkbWlu",
+          "name": "SpecterTst/all_repo_admin",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "all_repo_admin",
+          "type": "custom",
+          "query_explicit_members": "MATCH p=(:GHUser)-[:GHHasRole]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FsbF9yZXBvX2FkbWlu'}) RETURN p",
+          "query_unrolled_members": "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FsbF9yZXBvX2FkbWlu'}) RETURN p",
+          "query_repositories": "MATCH p=(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FsbF9yZXBvX2FkbWlu'})-[*]->(:GHRepository) RETURN p"
+        }
+      },
+      {
+        "id": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX21haW50YWlu",
+        "kinds": [
+          "GHOrgRole",
+          "GHRole"
+        ],
+        "properties": {
+          "id": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX21haW50YWlu",
+          "name": "SpecterTst/all_repo_maintain",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "all_repo_maintain",
+          "type": "custom",
+          "query_explicit_members": "MATCH p=(:GHUser)-[:GHHasRole]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FsbF9yZXBvX21haW50YWlu'}) RETURN p",
+          "query_unrolled_members": "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FsbF9yZXBvX21haW50YWlu'}) RETURN p",
+          "query_repositories": "MATCH p=(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FsbF9yZXBvX21haW50YWlu'})-[*]->(:GHRepository) RETURN p"
+        }
+      },
+      {
+        "id": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3JlYWQ=",
+        "kinds": [
+          "GHOrgRole",
+          "GHRole"
+        ],
+        "properties": {
+          "id": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3JlYWQ=",
+          "name": "SpecterTst/all_repo_read",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "all_repo_read",
+          "type": "custom",
+          "query_explicit_members": "MATCH p=(:GHUser)-[:GHHasRole]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3JlYWQ='}) RETURN p",
+          "query_unrolled_members": "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3JlYWQ='}) RETURN p",
+          "query_repositories": "MATCH p=(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3JlYWQ='})-[*]->(:GHRepository) RETURN p"
+        }
+      },
+      {
+        "id": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3RyaWFnZQ==",
+        "kinds": [
+          "GHOrgRole",
+          "GHRole"
+        ],
+        "properties": {
+          "id": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3RyaWFnZQ==",
+          "name": "SpecterTst/all_repo_triage",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "all_repo_triage",
+          "type": "custom",
+          "query_explicit_members": "MATCH p=(:GHUser)-[:GHHasRole]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3RyaWFnZQ=='}) RETURN p",
+          "query_unrolled_members": "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3RyaWFnZQ=='}) RETURN p",
+          "query_repositories": "MATCH p=(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3RyaWFnZQ=='})-[*]->(:GHRepository) RETURN p"
+        }
+      },
+      {
+        "id": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3dyaXRl",
+        "kinds": [
+          "GHOrgRole",
+          "GHRole"
+        ],
+        "properties": {
+          "id": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3dyaXRl",
+          "name": "SpecterTst/all_repo_write",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "all_repo_write",
+          "type": "custom",
+          "query_explicit_members": "MATCH p=(:GHUser)-[:GHHasRole]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3dyaXRl'}) RETURN p",
+          "query_unrolled_members": "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3dyaXRl'}) RETURN p",
+          "query_repositories": "MATCH p=(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3dyaXRl'})-[*]->(:GHRepository) RETURN p"
+        }
+      },
+      {
+        "id": "T19rZ0RPQ29WMk9RX2FwcF9tYW5hZ2Vy",
+        "kinds": [
+          "GHOrgRole",
+          "GHRole"
+        ],
+        "properties": {
+          "id": "T19rZ0RPQ29WMk9RX2FwcF9tYW5hZ2Vy",
+          "name": "SpecterTst/app_manager",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "app_manager",
+          "type": "custom",
+          "query_explicit_members": "MATCH p=(:GHUser)-[:GHHasRole]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FwcF9tYW5hZ2Vy'}) RETURN p",
+          "query_unrolled_members": "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FwcF9tYW5hZ2Vy'}) RETURN p",
+          "query_repositories": "MATCH p=(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2FwcF9tYW5hZ2Vy'})-[*]->(:GHRepository) RETURN p"
+        }
+      },
+      {
+        "id": "T19rZ0RPQ29WMk9RX2NpX2NkX2FkbWlu",
+        "kinds": [
+          "GHOrgRole",
+          "GHRole"
+        ],
+        "properties": {
+          "id": "T19rZ0RPQ29WMk9RX2NpX2NkX2FkbWlu",
+          "name": "SpecterTst/ci_cd_admin",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "ci_cd_admin",
+          "type": "custom",
+          "query_explicit_members": "MATCH p=(:GHUser)-[:GHHasRole]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2NpX2NkX2FkbWlu'}) RETURN p",
+          "query_unrolled_members": "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2NpX2NkX2FkbWlu'}) RETURN p",
+          "query_repositories": "MATCH p=(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX2NpX2NkX2FkbWlu'})-[*]->(:GHRepository) RETURN p"
+        }
+      },
+      {
+        "id": "T19rZ0RPQ29WMk9RX3NlY3VyaXR5X21hbmFnZXI=",
+        "kinds": [
+          "GHOrgRole",
+          "GHRole"
+        ],
+        "properties": {
+          "id": "T19rZ0RPQ29WMk9RX3NlY3VyaXR5X21hbmFnZXI=",
+          "name": "SpecterTst/security_manager",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "security_manager",
+          "type": "custom",
+          "query_explicit_members": "MATCH p=(:GHUser)-[:GHHasRole]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX3NlY3VyaXR5X21hbmFnZXI='}) RETURN p",
+          "query_unrolled_members": "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX3NlY3VyaXR5X21hbmFnZXI='}) RETURN p",
+          "query_repositories": "MATCH p=(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX3NlY3VyaXR5X21hbmFnZXI='})-[*]->(:GHRepository) RETURN p"
+        }
+      },
+      {
+        "id": "T19rZ0RPQ29WMk9RX293bmVycw==",
+        "kinds": [
+          "GHOrgRole",
+          "GHRole"
+        ],
+        "properties": {
+          "id": "T19rZ0RPQ29WMk9RX293bmVycw==",
+          "name": "SpecterTst/owners",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "owners",
+          "type": "default",
+          "query_explicit_members": "MATCH p=(:GHUser)-[:GHHasRole]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX293bmVycw=='}) RETURN p",
+          "query_unrolled_members": "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX293bmVycw=='}) RETURN p",
+          "query_repositories": "MATCH p=(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX293bmVycw=='})-[*]->(:GHRepository) RETURN p"
+        }
+      },
+      {
+        "id": "T19rZ0RPQ29WMk9RX21lbWJlcnM=",
+        "kinds": [
+          "GHOrgRole",
+          "GHRole"
+        ],
+        "properties": {
+          "id": "T19rZ0RPQ29WMk9RX21lbWJlcnM=",
+          "name": "SpecterTst/members",
+          "organization_name": "SpecterTst",
+          "organization_id": "O_kgDOCoV2OQ",
+          "short_name": "members",
+          "type": "default",
+          "query_explicit_members": "MATCH p=(:GHUser)-[:GHHasRole]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX21lbWJlcnM='}) RETURN p",
+          "query_unrolled_members": "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX21lbWJlcnM='}) RETURN p",
+          "query_repositories": "MATCH p=(:GHOrgRole {id:'T19rZ0RPQ29WMk9RX21lbWJlcnM='})-[*]->(:GHRepository) RETURN p"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "kind": "GHHasBaseRole",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX2FkbWlu"
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX2FkbWlu"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasRole",
+        "start": {
+          "value": "T_kwDOCoV2Oc4AqHzX"
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX21haW50YWlu"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasRole",
+        "start": {
+          "value": "MDQ6VXNlcjEzMjc4MjEw"
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX21haW50YWlu"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBaseRole",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX21haW50YWlu"
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX21haW50YWlu"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBaseRole",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3JlYWQ="
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3JlYWQ="
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBaseRole",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3RyaWFnZQ=="
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3RyaWFnZQ=="
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasBaseRole",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3dyaXRl"
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3dyaXRl"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHReadOrganizationActionsUsageMetrics",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX2NpX2NkX2FkbWlu"
+        },
+        "end": {
+          "value": "O_kgDOCoV2OQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHWriteOrganizationActionsSecrets",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX2NpX2NkX2FkbWlu"
+        },
+        "end": {
+          "value": "O_kgDOCoV2OQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHWriteOrganizationActionsSettings",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX2NpX2NkX2FkbWlu"
+        },
+        "end": {
+          "value": "O_kgDOCoV2OQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHWriteOrganizationNetworkConfigurations",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX2NpX2NkX2FkbWlu"
+        },
+        "end": {
+          "value": "O_kgDOCoV2OQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasBaseRole",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX3NlY3VyaXR5X21hbmFnZXI="
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX3JlYWQ="
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHOrgBypassCodeScanningDismissalRequests",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX3NlY3VyaXR5X21hbmFnZXI="
+        },
+        "end": {
+          "value": "O_kgDOCoV2OQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHOrgBypassSecretScanningClosureRequests",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX3NlY3VyaXR5X21hbmFnZXI="
+        },
+        "end": {
+          "value": "O_kgDOCoV2OQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHOrgReviewAndManageSecretScanningBypassRequests",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX3NlY3VyaXR5X21hbmFnZXI="
+        },
+        "end": {
+          "value": "O_kgDOCoV2OQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHOrgReviewAndManageSecretScanningClosureRequests",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX3NlY3VyaXR5X21hbmFnZXI="
+        },
+        "end": {
+          "value": "O_kgDOCoV2OQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHResolveSecretScanningAlerts",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX3NlY3VyaXR5X21hbmFnZXI="
+        },
+        "end": {
+          "value": "O_kgDOCoV2OQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHViewSecretScanningAlerts",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX3NlY3VyaXR5X21hbmFnZXI="
+        },
+        "end": {
+          "value": "O_kgDOCoV2OQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHCreateRepository",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX293bmVycw=="
+        },
+        "end": {
+          "value": "O_kgDOCoV2OQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHInviteMember",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX293bmVycw=="
+        },
+        "end": {
+          "value": "O_kgDOCoV2OQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHAddCollaborator",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX293bmVycw=="
+        },
+        "end": {
+          "value": "O_kgDOCoV2OQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHCreateTeam",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX293bmVycw=="
+        },
+        "end": {
+          "value": "O_kgDOCoV2OQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHTransferRepository",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX293bmVycw=="
+        },
+        "end": {
+          "value": "O_kgDOCoV2OQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasBaseRole",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX293bmVycw=="
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX2FsbF9yZXBvX2FkbWlu"
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHCreateRepository",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX21lbWJlcnM="
+        },
+        "end": {
+          "value": "O_kgDOCoV2OQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHCreateTeam",
+        "start": {
+          "value": "T19rZ0RPQ29WMk9RX21lbWJlcnM="
+        },
+        "end": {
+          "value": "O_kgDOCoV2OQ"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GHHasRole",
+        "start": {
+          "value": "U_kgDOCoWQgw"
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX21lbWJlcnM="
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasRole",
+        "start": {
+          "value": "MDQ6VXNlcjMyMzczOTk5"
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX293bmVycw=="
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasRole",
+        "start": {
+          "value": "MDQ6VXNlcjU1MDQ1MjM="
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX293bmVycw=="
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasRole",
+        "start": {
+          "value": "MDQ6VXNlcjEzMjc4MjEw"
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX293bmVycw=="
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasRole",
+        "start": {
+          "value": "MDQ6VXNlcjExOTMzMjUw"
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX21lbWJlcnM="
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasRole",
+        "start": {
+          "value": "U_kgDOCYLP3w"
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX21lbWJlcnM="
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasRole",
+        "start": {
+          "value": "U_kgDOCxHCwg"
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX21lbWJlcnM="
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasRole",
+        "start": {
+          "value": "MDQ6VXNlcjI2NTEyMjI="
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX293bmVycw=="
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasRole",
+        "start": {
+          "value": "MDQ6VXNlcjg5ODYzNzY="
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX293bmVycw=="
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasRole",
+        "start": {
+          "value": "U_kgDODNl1TA"
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX293bmVycw=="
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasRole",
+        "start": {
+          "value": "MDQ6VXNlcjYxOTU1NTQz"
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX21lbWJlcnM="
+        },
+        "properties": {
+          "traversable": true
+        }
+      },
+      {
+        "kind": "GHHasRole",
+        "start": {
+          "value": "MDQ6VXNlcjEyNzE2NTM4"
+        },
+        "end": {
+          "value": "T19rZ0RPQ29WMk9RX21lbWJlcnM="
+        },
+        "properties": {
+          "traversable": true
+        }
+      }
+    ]
+  }
+}
