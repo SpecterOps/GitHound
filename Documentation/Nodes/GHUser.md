@@ -1,7 +1,7 @@
-# <img src="./images/black_GHUser.png" width="50"/> GHUser
+# <img src="../../images/black_GHUser.png" width="50"/> GHUser
 
-| Property Name     | Display Name | Data Type | Sample Value              | Description |
-|-------------------|--------------|-----------|---------------------------|-------------|
+| Property Name     | Display Name      | Data Type | Sample Value              | Description |
+|-------------------|-------------------|-----------|---------------------------|-------------|
 | objectid          | Object Id         | string    | | |
 | name              | Name              | string    | | I believe this is derived from the login property. |
 | login             | Login             | string    | | |

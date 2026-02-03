@@ -1,4 +1,4 @@
-# <img src="./images/black_GHRepository.png" width="50"/> GHRepository
+# <img src="../../images/black_GHRepository.png" width="50"/> GHRepository
 
 ## Properties
 

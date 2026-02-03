@@ -1,4 +1,4 @@
-# <img src="./images/black_GHBranch.png" width="50"/> GHBranch
+# <img src="../../images/black_GHBranch.png" width="50"/> GHBranch
 
 | Property Name                              | Display Name                               | Data Type | Sample Value              | Description |
 |--------------------------------------------|--------------------------------------------|-----------|---------------------------|-------------|

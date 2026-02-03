@@ -1,4 +1,4 @@
-# <img src="./images/black_GHEnvironment.png" width="50"/> GHEnvironment
+# <img src="../../images/black_GHEnvironment.png" width="50"/> GHEnvironment
 
 | Property Name     | Display Name | Data Type | Sample Value              | Description |
 |-------------------|--------------|-----------|---------------------------|-------------|

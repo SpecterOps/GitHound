@@ -1,4 +1,4 @@
-# <img src="./images/black_GHRepoRole.png" width="50"/> GHRepoRole
+# <img src="../../images/black_GHRepoRole.png" width="50"/> GHRepoRole
 
 | Property Name     | Display Name | Data Type | Sample Value              | Description |
 |-------------------|--------------|-----------|---------------------------|-------------|

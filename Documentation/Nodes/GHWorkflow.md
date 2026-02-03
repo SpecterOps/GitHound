@@ -1,4 +1,4 @@
-# <img src="./images/black_GHWorkflow.png" width="30"/> GHWorkflow
+# <img src="../../images/black_GHWorkflow.png" width="30"/> GHWorkflow
 
 ## Naming Convention
 
@@ -9,8 +9,8 @@ This section should include how the Object Identifier is derived and/or formatte
 For this, we found that it was useful to include the name of the repository in the "name" property because it is possible to have several workflows with the same name because they are in different repositories.
 I wonder if it may be worth considering whether we should include the containing repository name and id in the property list?
 
-| Property Name     | Display Name | Data Type | Sample Value              | Description |
-|-------------------|--------------|-----------|---------------------------|-------------|
+| Property Name     | Display Name      | Data Type | Sample Value              | Description |
+|-------------------|-------------------|-----------|---------------------------|-------------|
 | objectid          | Object Id         | string    | | This is derived from the node_id property to uniquely identify the Workflow. |
 | name              | Name              | string    | | |
 | short_name        | Short Name        | string    | | |
