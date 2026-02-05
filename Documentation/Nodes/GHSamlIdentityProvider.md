@@ -1,1 +1,0 @@
-<img src="../../images/black_GHSamlIdentityProvider.png" width="50"/> GHEnvironment
