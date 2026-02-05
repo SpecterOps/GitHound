@@ -1,4 +1,4 @@
-# Custom BloodHound Nodes for Okta
+# Custom BloodHound Nodes for GitHound
 
 Custom OpenGraph nodes used by `GitHound` are described in the table below:
 

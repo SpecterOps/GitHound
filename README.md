@@ -7,19 +7,39 @@
 **GitHound** is a BloodHound OpenGraph collector for GitHub, designed to map your organization’s structure and permissions into a navigable attack‑path graph. It:
 
 - **Models Key GitHub Entities**  
-  - **GHOrganization**: Your GitHub org metadata  
-  - **GHUser**: Individual user accounts in the org  
-  - **GHTeam**: Teams that group users for shared access  
-  - **GHRepository**: Repositories within the org  
-  - **GHBranch**: Named branches in each repo  
-  - **GHOrgRole**, **GHTeamRole**, **GHRepoRole**: Org‑, team‑, and repo‑level roles/permissions  
+  - **GH_Organization**: Your GitHub org metadata  
+  - **GH_User**: Individual user accounts in the org  
+  - **GH_Team**: Teams that group users for shared access  
+  - **GH_Repository**: Repositories within the org  
+  - **GH_Branch**: Named branches in each repo  
+  - **GH_OrgRole**, **GH_TeamRole**, **GH_RepoRole**: Org‑, team‑, and repo‑level roles/permissions  
 
 - **Visualize & Analyze in BloodHound**  
   - **Access Audits**: See at a glance who has admin/write/read on repos and branches  
   - **Compliance Checks**: Validate least‑privilege across teams and repos  
   - **Incident Response**: Trace privilege escalations and group memberships  
 
-With GitHound, you get a clear, interactive graph of your GitHub permissions landscape—perfect for security reviews, compliance audits, and rapid incident investigations.  
+With GitHound, you get a clear, interactive graph of your GitHub permissions landscape—perfect for security reviews, compliance audits, and rapid incident investigations.
+
+## Quick Start
+
+```powershell
+# 1. Load the collector
+. ./githound.ps1
+
+# 2. Create a session with your Personal Access Token
+$session = New-GitHubSession -OrganizationName "YourOrgName" -Token (Get-Clipboard)
+
+# 3. Run the collection
+Invoke-GitHound -Session $session
+
+# 4. Upload the resulting githound_*.json file to BloodHound
+```
+
+For detailed setup instructions, see:
+- [Personal Access Token Collection](./Documentation/COLLECTION.md) — Standard collection using PATs
+- [App Installation Collection](./Documentation/APP-COLLECTION.md) — Higher rate limits via GitHub App
+- [Troubleshooting](./Documentation/TROUBLESHOOTING.md) — Common issues and solutions
 
 ## Schema
 
@@ -27,110 +47,48 @@ With GitHound, you get a clear, interactive graph of your GitHub permissions lan
 
 ### Nodes
 
-Nodes correspond to each object type.
+Nodes correspond to each object type. For detailed property information and edge relationships, see the individual node documentation in [Documentation/Nodes](./Documentation/Nodes/).
 
-| Node                                                                                      | Icon              | Color     | Description                                                                                    |
-|-------------------------------------------------------------------------------------------|-------------------|-----------|------------------------------------------------------------------------------------------------|
-| <img src="./images/black_GHBranch.png" width="30"/> GHBranch                              | code-branch       | #FF80D2 | A named reference in a repository (e.g. `main`, `develop`) representing a line of development. |
-| <img src="./images/black_GHEnvironment.png" width="30"/> GHEnvironment                    | leaf              | #D5F2C2 |                                                                                                |
-| <img src="./images/black_GHEnvironmentSecret.png" width="30"/> GHEnvironmentSecret        | lock              | #6FB94A |                                                                                                |
-| <img src="./images/black_GHExternalIdentity.png" width="30"/> GHExternalIdentity          | arrows-left-right | #8A8F98 |                                                                                                |
-| <img src="./images/black_GHOrganization.png" width="30"/> GHOrganization                  | building          | #5FED83 | A GitHub Organization—top‑level container for repositories, teams, & settings.                 |
-| <img src="./images/black_GHOrgRole.png" width="30"/> GHOrgRole                            | user-tie          | #BFFFD1 | The role a user has at the organization level (e.g. `admin`, `member`).                        |
-| <img src="./images/black_GHOrgSecret.png" width="30"/> GHOrgSecret                        | lock              | #1FB65A |                                                                                                |
-| <img src="./images/black_GHRepository.png" width="30"/> GHRepository                      | box-archive       | #9EECFF | A code repository in an organization (or user account), containing files, issues, etc.         |
-| <img src="./images/black_GHRepoRole.png" width="30"/> GHRepoRole                          | user-tie          | #DEFEFA | The permission granted to a user or team on a repository (e.g. `admin`, `write`, `read`).      |
-| <img src="./images/black_GHRepoSecret.png" width="30"/> GHRepoSecret                      | lock              | #32BEE6 |                                                                                                |
-|  <img src="./images/black_GHSamlIdentityProvider.png" width="30"/> GHSamlIdentityProvider | id-badge          | #5A6C8F |                                                                                                |
-| <img src="./images/black_GHSecretScanningAlert.png" width="30"/> GHSecretScanningAlert    | key               | #3C7A6E | A component of GitHub Advanced Security to notify organizations when a secret is accidentally included in a repo's contents |
-| <img src="./images/black_GHTeam.png" width="30"/> GHTeam                                  | user-group        | #C06EFF | A team within an organization, grouping users for shared access and collaboration.             |
-| <img src="./images/black_GHTeamRole.png" width="30"/> GHTeamRole                          | user-tie          | #D0B0FF | The role a user has within a team (e.g. `maintainer`, `member`).                               |
-| <img src="./images/black_GHUser.png" width="30"/> GHUser                                  | user              | #FF8E40 | An individual GitHub user account.                                                             |
-| <img src="./images/black_GHWorkflow.png" width="30"/> GHWorkflow                          | cogs              | #FFE4A1 |                                                                                                |
+| Node                                                                                      | Icon              | Color   | Description                                                                                                                |
+|-------------------------------------------------------------------------------------------|-------------------|---------|----------------------------------------------------------------------------------------------------------------------------|
+| <img src="./images/black_GHAppInstallation.png" width="30"/> GH_AppInstallation            | plug              | #A8D8EA | A GitHub App installed on the organization with specific permissions and repository access scope.                          |
+| <img src="./images/black_GHBranch.png" width="30"/> GH_Branch                              | code-branch       | #FF80D2 | A named reference in a repository (e.g. `main`, `develop`) representing a line of development.                             |
+| <img src="./images/black_GHEnvironment.png" width="30"/> GH_Environment                    | leaf              | #D5F2C2 | A GitHub Actions deployment environment with protection rules, required reviewers, and deployment branch policies.         |
+| <img src="./images/black_GHEnvironmentSecret.png" width="30"/> GH_EnvironmentSecret        | lock              | #6FB94A | An environment-level GitHub Actions secret scoped to a specific deployment environment.                                    |
+| <img src="./images/black_GHExternalIdentity.png" width="30"/> GH_ExternalIdentity          | arrows-left-right | #8A8F98 | An external identity from a SAML/SCIM provider (Okta, Azure AD, etc.) linked to a GitHub user for SSO authentication.      |
+| <img src="./images/black_GHOrganization.png" width="30"/> GH_Organization                  | building          | #5FED83 | A GitHub Organization—top‑level container for repositories, teams, & settings.                                             |
+| <img src="./images/black_GHOrgRole.png" width="30"/> GH_OrgRole                            | user-tie          | #BFFFD1 | The role a user has at the organization level (e.g. `admin`, `member`).                                                    |
+| <img src="./images/black_GHOrgSecret.png" width="30"/> GH_OrgSecret                        | lock              | #1FB65A | An organization-level GitHub Actions secret that can be scoped to all, private, or selected repositories.                  |
+| <img src="./images/black_GHRepository.png" width="30"/> GH_Repository                      | box-archive       | #9EECFF | A code repository in an organization (or user account), containing files, issues, etc.                                     |
+| <img src="./images/black_GHRepoRole.png" width="30"/> GH_RepoRole                          | user-tie          | #DEFEFA | The permission granted to a user or team on a repository (e.g. `admin`, `write`, `read`).                                  |
+| <img src="./images/black_GHRepoSecret.png" width="30"/> GH_RepoSecret                      | lock              | #32BEE6 | A repository-level GitHub Actions secret accessible only to workflows in that specific repository.                         |
+| <img src="./images/black_GHSamlIdentityProvider.png" width="30"/> GH_SamlIdentityProvider  | id-badge          | #5A6C8F | A SAML identity provider configured for the organization, enabling SSO and linking external identities to GitHub users.    |
+| <img src="./images/black_GHSecretScanningAlert.png" width="30"/> GH_SecretScanningAlert    | key               | #3C7A6E | A GitHub Advanced Security alert indicating a secret was accidentally committed to a repository.                           |
+| <img src="./images/black_GHTeam.png" width="30"/> GH_Team                                  | user-group        | #C06EFF | A team within an organization, grouping users for shared access and collaboration.                                         |
+| <img src="./images/black_GHTeamRole.png" width="30"/> GH_TeamRole                          | user-tie          | #D0B0FF | The role a user has within a team (e.g. `maintainer`, `member`).                                                           |
+| <img src="./images/black_GHUser.png" width="30"/> GH_User                                  | user              | #FF8E40 | An individual GitHub user account.                                                                                         |
+| <img src="./images/black_GHWorkflow.png" width="30"/> GH_Workflow                          | cogs              | #FFE4A1 | A GitHub Actions workflow defined in a repository, capturing workflow metadata and state.                                  |
 
 ### Edges
 
-| Edge Type                                           | Source           | Target                  | Travesable | Custom |
-|-----------------------------------------------------|------------------|-------------------------|------------|--------|
-| `GHContains`                                        | `GHOrganization` | `GHOrgRole`             | n          | n/a    |
-| `GHContains`                                        | `GHOrganization` | `GHRepoRole`            | n          | n/a    |
-| `GHContains`                                        | `GHOrganization` | `GHRepository`          | n          | n/a    |
-| `GHContains`                                        | `GHOrganization` | `GHTeamRole`            | n          | n/a    |
-| `GHContains`                                        | `GHOrganization` | `GHTeam`                | n          | n/a    |
-| `GHContains`                                        | `GHOrganization` | `GHUser`                | n          | n/a    |
-| `OPContains`                                        | `GHRepository`   | `GHBranch`              | n          | n/a    |
-| `GHHasRole`                                         | `GHUser`         | `GHOrgRole`             | y          | n/a    |
-| `GHHasRole`                                         | `GHUser`         | `GHRepoRole`            | y          | n/a    |
-| `GHHasRole`                                         | `GHUser`         | `GHTeamRole`            | y          | n/a    |
-| `GHMemberOf`                                        | `GHTeamRole`     | `GHTeam`                | y          | n/a    |
-| `GHMemberOf`                                        | `GHTeam`         | `GHTeam`                | y          | n/a    |
-| `GHAddMember`                                       | `GHTeamRole`     | `GHTeam`                | y          | n/a    |
-| `GHCreateRepository`                                | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHInviteMember`                                    | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHAddCollaborator`                                 | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHCreateTeam`                                      | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHTransferRepository`                              | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHManageOrganizationWebhooks`.                     | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHOrgBypassCodeScanningDismissalRequests`          | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHOrgReviewAndManageSecretScanningBypassRequests`  | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHOrgReviewAndManageSecretScanningClosureRequests` | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHReadOrganizationActionsUsageMetrics`             | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHReadOrganizationCustomOrgRole`                   | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHReadOrganizationCustomRepoRole`                  | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHResolveSecretScanningAlerts`                     | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHViewSecretScanningAlerts`                        | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHWriteOrganizationActionsSecrets`                 | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHWriteOrganizationActionsSettings`                | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHWriteOrganizationCustomOrgRole`                  | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHWriteOrganizationCustomRepoRole`                 | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHWriteOrganizationNetworkConfigurations`          | `GHOrgRole`      | `GHOrganization`        | n          | n/a    |
-| `GHOwns`                                            | `GHOrganization` | `GHRepository`          | y          | n/a    |
-| `GHBypassRequiredPullRequest`                       | `GHTeam`         | `GHBranch`              | n          | n/a    |
-| `GHBypassRequiredPullRequest`                       | `GHUser`         | `GHBranch`              | n          | n/a    |
-| `GHRestrictionsCanPush`                             | `GHTeam`         | `GHBranch`              | n          | n/a    |
-| `GHRestrictionsCanPush`                             | `GHUser`         | `GHBranch`              | n          | n/a    |
-| `GHHasBranch`                                       | `GHRepository`   | `GHBranch`              | n          | n/a    |
-| `GHHasSecretScanningAlert`                          | `GHRepository`   | `GHSecretScanningAlert` | n          | n/a    |
-| `GHHasBaseRole`                                     | `GHOrgRole`      | `GHOrgRole`             | y          | n/a    |
-| `GHHasBaseRole`                                     | `GHOrgRole`      | `GHRepoRole`            | y          | n/a    |
-| `GHHasBaseRole`                                     | `GHRepoRole`     | `GHRepoRole`            | y          | n/a    |
-| `GHCanPull`                                         | `GHRepoRole`     | `GHRepository`          | y          | n/a    |
-| `GHReadRepoContents`                                | `GHRepoRole`     | `GHRepository`          | y          | n      |
-| `GHCanPush`                                         | `GHRepoRole`     | `GHRepository`          | n          | n      |
-| `GHWriteRepoContents`                               | `GHRepoRole`     | `GHRepository`          | n          | n      |
-| `GHWriteRepoPullRequests`                           | `GHRepoRole`     | `GHRepository`          | n          | n      |
-| `GHAdminTo`                                         | `GHRepoRole`     | `GHRepository`          | n          | n      |
-| `GHManageWebhooks`                                  | `GHRepoRole`     | `GHRepository`          | n          | y      |
-| `GHManageDeployKeys`                                | `GHRepoRole`     | `GHRepository`          | n          | y      |
-| `GHPushProtectedBranch`                             | `GHRepoRole`     | `GHRepository`          | n          | y      |
-| `GHDeleteAlertsCodeScanning`                        | `GHRepoRole`     | `GHRepository`          | n          | y      |
-| `GHViewSecretScanningAlerts`                        | `GHRepoRole`     | `GHRepository`          | n          | y      |
-| `GHRunOrgMigration`                                 | `GHRepoRole`     | `GHRepository`          | n          | n      |
-| `GHBypassBranchProtection`                          | `GHRepoRole`     | `GHRepository`          | n          | y      |
-| `GHManageSecurityProducts`                          | `GHRepoRole`     | `GHRepository`          | n          | n      |
-| `GHManageRepoSecurityProducts`                      | `GHRepoRole`     | `GHRepository`          | n          | n      |
-| `GHEditRepoProtections`                             | `GHRepoRole`     | `GHRepository`          | n          | y      |
-| `GHJumpMergeQueue`                                  | `GHRepoRole`     | `GHRepository`          | n          | y      |
-| `GHCreateSoloMergeQueue`                            | `GHRepoRole`     | `GHRepository`          | n          | y      |
-| `GHEditRepoCustomPropertiesValue`                   | `GHRepoRole`     | `GHRepository`          | n          | y      |
-| `GHHasWorkflow`                                     | `GHRepository`   | `GHWorkflow`            | n          | n/a    |
-| `GHHasEnvironment`                                  | `GHRepository`   | `GHEnvironment`         | n          | n/a    |
-| `GHHasEnvironment`                                  | `GHBranch`       | `GHEnvironment`         | n          | n/a    |
+GitHound models 50+ edge types representing permissions, memberships, and cross-cloud relationships. See [Documentation/SCHEMA.md](./Documentation/SCHEMA.md) for the complete edge reference.
 
-#### Structural Edges
+**Key edge categories:**
 
-This section should describe the edges that can be used to understand which prinicipals have which permissions.
-It's going to be something like this `(adminUsers:GHUser)-[:GHMemberOf|GHHasRole|GHHasBaseRole|GHOwns|GHAddMember*1..3]->(:GHRepoRole)-[:GHAdminTo]->(:GHRepository)`
+| Category | Key Edges | Description |
+|----------|-----------|-------------|
+| **Containment** | `GH_Contains`, `GH_Owns` | Organizational hierarchy |
+| **Role Assignment** | `GH_HasRole`, `GH_MemberOf`, `GH_HasBaseRole` | Who has which roles |
+| **Repository Permissions** | `GH_AdminTo`, `GH_CanPush`, `GH_CanPull` | What roles can do |
+| **Branch Protections** | `GH_BypassPullRequestAllowances`, `GH_RestrictionsCanPush` | Branch-level access |
+| **Secrets** | `GH_HasSecret` | Secret access mapping |
+| **Cross-Cloud** | `CanAssumeIdentity`, `SyncedToGHUser`, `GH_CanAssumeAWSRole` | Attack paths to Azure/AWS |
 
-#### Hybrid Edges
+**Primary attack path pattern:**
 
-| Edge Type                                           | Source           | Target                  | Travesable | Custom |
-|-----------------------------------------------------|------------------|-------------------------|------------|--------|
-| `SyncedToGHUser`                                    | `AZUser`         | `GHUser`                | y          | n/a    |
-| `SyncedToGHUser`                                    | `PingOnUser`     | `GHUser`                | y          | n/a    |
-| `GHCanAssumeAWSRole`                                | `GHBranch`       | `AWSRole`               | y          | n/a    |
-| `GHCanAssumeAWSRole`                                | `GHEnvironment`  | `AWSRole`               | y          | n/a    |
-| `GHCanAssumeAWSRole`                                | `GHRepository`   | `AWSRole`               | y          | n/a    |
+```cypher
+(:GH_User)-[:GH_HasRole|GH_MemberOf|GH_AddMember*1..]->(:GH_RepoRole)-[:GH_AdminTo|GH_CanPush]->(:GH_Repository)
+```
 
 ## Usage Examples
 
@@ -139,7 +97,7 @@ It's going to be something like this `(adminUsers:GHUser)-[:GHMemberOf|GHHasRole
 Find the object identifier for your target user:
 
 ```cypher
-MATCH (n:GHUser)
+MATCH (n:GH_User)
 RETURN n
 ```
 
@@ -150,7 +108,7 @@ https://github.com/user-attachments/assets/1ddfd075-2a15-4aa9-bad7-74c43e6c82d6
 Replace the `<object_id>` value in the subsequent query with the user's object identifier:
 
 ```cypher
-MATCH p = (:GHUser {objectid:"<object_id>"})-[:GHMemberOf|GHAddMember|GHHasRole|GHHasBaseRole|GHOwns*1..]->(:GHRepoRole)-[:GHWriteRepoContents]->(:GHRepository)
+MATCH p = (:GH_User {objectid:"<object_id>"})-[:GH_MemberOf|GH_AddMember|GH_HasRole|GH_HasBaseRole|GH_Owns*1..]->(:GH_RepoRole)-[:GH_WriteRepoContents]->(:GH_Repository)
 RETURN p
 ```
 
@@ -161,14 +119,14 @@ RETURN p
 Obtain the object identifier for your target repository:
 
 ```cypher
-MATCH (n:GHRepository)
+MATCH (n:GH_Repository)
 RETURN n
 ```
 
 Take the object identifier for your target repository and replace the `<object_id>` value in the subsequent query with it:
 
 ```cypher
-MATCH p = (:GHUser)-[:GHMemberOf|GHHasRole|GHHasBaseRole|GHOwns|GHAddMember*1..]->(:GHRepoRole)-[:GHWriteRepoContents]->(:GHRepository {objectid:"<object_id>"})
+MATCH p = (:GH_User)-[:GH_MemberOf|GH_HasRole|GH_HasBaseRole|GH_Owns|GH_AddMember*1..]->(:GH_RepoRole)-[:GH_WriteRepoContents]->(:GH_Repository {objectid:"<object_id>"})
 RETURN p
 ```
 
@@ -177,7 +135,7 @@ RETURN p
 ### Members of the Organization Admins (Domain Admin equivalent)?
 
 ```cypher
-MATCH p = (:GHUser)-[:GHHasRole|GHHasBaseRole]->(:GHOrgRole {short_name: "owners"})
+MATCH p = (:GH_User)-[:GH_HasRole|GH_HasBaseRole]->(:GH_OrgRole {short_name: "owners"})
 RETURN p
 ```
 
@@ -186,11 +144,39 @@ RETURN p
 ### Users that are managed via SSO (Entra-only)
 
 ```cypher
-MATCH p = (:AZUser)-[:SyncedToGHUser]->(:GHUser)
+MATCH p = (:AZUser)-[:SyncedToGHUser]->(:GH_User)
 RETURN p
 ```
 
 ![SSO Users](./images/sso-users.png)
+
+### Cross-Cloud Attack Paths: GitHub to Azure
+
+Find GitHub entities that can assume Azure federated identities (OIDC trust relationships):
+
+```cypher
+// All GitHub → Azure OIDC attack paths
+MATCH p = (:GH_Repository|GH_Branch|GH_Environment)-[:CanAssumeIdentity]->(:AZFederatedIdentityCredential)
+RETURN p
+
+// Users with paths to Azure via GitHub Actions
+MATCH p = (:GH_User)-[:GH_HasRole|GH_MemberOf|GH_AddMember*1..]->(:GH_RepoRole)-[:GH_CanPush]->(:GH_Repository)-[:CanAssumeIdentity]->(:AZFederatedIdentityCredential)
+RETURN p
+```
+
+### Which Repositories Have Access to Organization Secrets?
+
+```cypher
+MATCH p = (:GH_Repository)-[:GH_HasSecret]->(:GH_OrgSecret)
+RETURN p
+```
+
+### Repositories with Secret Scanning Alerts
+
+```cypher
+MATCH p = (:GH_Repository)-[:GH_HasSecretScanningAlert]->(:GH_SecretScanningAlert)
+RETURN p
+```
 
 ## Contributing
 

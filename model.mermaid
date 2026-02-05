@@ -4,120 +4,131 @@ config:
 ---
 flowchart TD
     AWSRole[fa:fa-user-tag AWSRole]
+    AZFederatedIdentityCredential[fa:fa-id-card AZFederatedIdentityCredential]
     AZUser[fa:fa-user AZUser]
-    GHBranch[fa:fa-code-branch GHBranch]
-    GHEnvironment[fa:fa-leaf GHEnvironment]
-    GHEnvironmentSecret[fa:fa-lock GHEnvironmentSecret]
-    GHExternalIdentity[fa:fa-arrows-left-right GHExternalIdentity]
-    GHOrganization[fa:fa-building GHOrganization]
-    GHOrgRole[fa:fa-user-tie GHOrgRole]
-    GHOrgSecret[fa:fa-lock GHOrgSecret]
-    GHRepository[fa:fa-box-archive GHRepository]
-    GHRepoRole[fa:fa-user-tie GHRepoRole]
-    GHRepoSecret[fa:fa-lock GHRepoSecret]
-    GHSamlIdentityProvider[fa:fa-id-badge GHSamlIdentityProvider]
-    GHSecretScanningAlert[fa:fa-key GHSecretScanningAlert]
-    GHTeam[fa:fa-user-group GHTeam]
-    GHTeamRole[fa:fa-user-tie GHTeamRole]
-    GHUser[fa:fa-user GHUser]
-    GHWorkflow[fa:fa-cogs GHWorkflow]
+    GH_AppInstallation[fa:fa-plug GH_AppInstallation]
+    GH_Branch[fa:fa-code-branch GH_Branch]
+    GH_Environment[fa:fa-leaf GH_Environment]
+    GH_EnvironmentSecret[fa:fa-lock GH_EnvironmentSecret]
+    GH_ExternalIdentity[fa:fa-arrows-left-right GH_ExternalIdentity]
+    GH_Organization[fa:fa-building GH_Organization]
+    GH_OrgRole[fa:fa-user-tie GH_OrgRole]
+    GH_OrgSecret[fa:fa-lock GH_OrgSecret]
+    GH_Repository[fa:fa-box-archive GH_Repository]
+    GH_RepoRole[fa:fa-user-tie GH_RepoRole]
+    GH_RepoSecret[fa:fa-lock GH_RepoSecret]
+    GH_SamlIdentityProvider[fa:fa-id-badge GH_SamlIdentityProvider]
+    GH_SecretScanningAlert[fa:fa-key GH_SecretScanningAlert]
+    GH_Team[fa:fa-user-group GH_Team]
+    GH_TeamRole[fa:fa-user-tie GH_TeamRole]
+    GH_User[fa:fa-user GH_User]
+    GH_Workflow[fa:fa-cogs GH_Workflow]
+    OktaUser[fa:fa-user OktaUser]
     PingOneUser[fa:fa-user PingOneUser]
 
     style AWSRole fill:#FF8E40
+    style AZFederatedIdentityCredential fill:#FF80D2
     style AZUser fill:#FF80D2
-    style GHBranch fill:#FF80D2
-    style GHEnvironment fill:#D5F2C2
-    style GHEnvironmentSecret fill:#6FB94A
-    style GHExternalIdentity fill:#8A8F98
-    style GHOrganization fill:#5FED83
-    style GHOrgRole fill:#BFFFD1
-    style GHOrgSecret fill:#1FB65A
-    style GHRepository fill:#9EECFF
-    style GHRepoRole fill:#DEFEFA
-    style GHRepoSecret fill:#32BEE6
-    style GHSamlIdentityProvider fill:#5A6C8F
-    style GHSecretScanningAlert fill:#3C7A6E
-    style GHTeam fill:#C06EFF
-    style GHTeamRole fill:#D0B0FF
-    style GHUser fill:#FF8E40
-    style GHWorkflow fill:#FFE4A1
+    style GH_AppInstallation fill:#A8D8EA
+    style GH_Branch fill:#FF80D2
+    style GH_Environment fill:#D5F2C2
+    style GH_EnvironmentSecret fill:#6FB94A
+    style GH_ExternalIdentity fill:#8A8F98
+    style GH_Organization fill:#5FED83
+    style GH_OrgRole fill:#BFFFD1
+    style GH_OrgSecret fill:#1FB65A
+    style GH_Repository fill:#9EECFF
+    style GH_RepoRole fill:#DEFEFA
+    style GH_RepoSecret fill:#32BEE6
+    style GH_SamlIdentityProvider fill:#5A6C8F
+    style GH_SecretScanningAlert fill:#3C7A6E
+    style GH_Team fill:#C06EFF
+    style GH_TeamRole fill:#D0B0FF
+    style GH_User fill:#FF8E40
+    style GH_Workflow fill:#FFE4A1
+    style OktaUser fill:#FFE4A1
     style PingOneUser fill:#FFE4A1
     
-    GHTeam -->|GHMemberOf| GHTeam
-    GHOrganization -.->|GHOwns| GHRepository
-    GHOrganization -.->|GHContains| GHOrgSecret
-    GHUser -.->|GHBypassPullRequestAllowances| GHBranch
-    GHTeam -.->|GHBypassPullRequestAllowances| GHBranch
-    GHUser -.->|GHRestrictionsCanPush| GHBranch
-    GHTeam -.->|GHRestrictionsCanPush| GHBranch
-    GHRepository -.->|GHHasBranch| GHBranch
-    GHRepository -.->|GHHasWorkflow| GHWorkflow
-    GHRepository -.->|GHHasEnvironment| GHEnvironment
-    GHBranch -.->|GHHasEnvironment| GHEnvironment
-    GHTeam -->|GHHasRole| GHOrgRole
-    GHUser -->|GHHasRole| GHOrgRole
-    GHOrgRole -->|GHHasBaseRole| GHOrgRole
-    GHOrgRole -.->|GHManageOrganizationWebhooks| GHOrganization
-    GHOrgRole -.->|GHOrgBypassCodeScanningDismissalRequests| GHOrganization
-    GHOrgRole -.->|GHOrgBypassSecretScanningClosureRequests| GHOrganization
-    %%GHOrgRole -.->|GHOrgReviewAndManageSecretScanningBypassRequests| GHOrganization
-    %%GHOrgRole -.->|GHOrgReviewAndManageSecretScanningClosureRequests| GHOrganization
-    %%GHOrgRole -.->|GHReadOrganizationActionsUsageMetrics| GHOrganization
-    %%GHOrgRole -.->|GHReadOrganizationCustomOrgRole| GHOrganization
-    %%GHOrgRole -.->|GHReadOrganizationCustomRepoRole| GHOrganization
-    %%GHOrgRole -.->|GHResolveSecretScanningAlerts| GHOrganization
-    %%GHOrgRole -.->|GHViewSecretScanningAlerts| GHOrganization
-    %%GHOrgRole -.->|GHWriteOrganizationActionsSecrets| GHOrganization
-    %%GHOrgRole -.->|GHWriteOrganizationActionsSettings| GHOrganization
-    %%GHOrgRole -.->|GHWriteOrganizationCustomOrgRole| GHOrganization
-    %%GHOrgRole -.->|GHWriteOrganizationCustomRepoRole| GHOrganization
-    %%GHOrgRole -.->|GHWriteOrganizationNetworkConfigurations| GHOrganization
-    GHOrgRole -.->|GHCreateRepository| GHOrganization
-    GHOrgRole -.->|GHInviteMember| GHOrganization
-    GHOrgRole -.->|GHAddCollaborator| GHOrganization
-    GHOrgRole -.->|GHCreateTeam| GHOrganization
-    GHOrgRole -.->|GHTransferRepository| GHOrganization
-    GHOrgRole -->|GHHasBaseRole| GHOrganization
-    GHTeamRole -->|GHMemberOf| GHTeam
-    GHTeamRole -->|GHAddMember| GHTeam
-    GHUser -->|GHHasRole| GHTeamRole
-    GHRepoRole -.->|GHCanPull| GHRepository
-    GHRepoRole -.->|GHReadRepoContents| GHRepository
-    GHOrgRole -->|GHHasBaseRole| GHRepoRole
-    GHRepoRole -.->|GHCanPush| GHRepository
-    GHRepoRole -.->|GHWriteRepoContents| GHRepository
-    %%GHRepoRole -.->|GHWriteRepoPullRequests| GHRepository
-    GHRepoRole -->|GHAdminTo| GHRepository
-    %%GHRepoRole -.->|GHManageWebhooks| GHRepository
-    %%GHRepoRole -.->|GHManageDeployKeys| GHRepository
-    %%GHRepoRole -.->|GHPushProtectedBranch| GHRepository
-    %%GHRepoRole -.->|GHDeleteAlertsCodeScanning| GHRepository
-    GHRepoRole -.->|GHViewSecretScanningAlerts| GHRepository
-    %%GHRepoRole -.->|GHRunOrgMigration| GHRepository
-    GHRepoRole -.->|GHBypassProtections| GHRepository
-    %%GHRepoRole -.->|GHManageSecurityProducts| GHRepository
-    %%GHRepoRole -.->|GHManageRepoSecurityProducts| GHRepository
-    GHRepoRole -.->|GHEditProtections| GHRepository
-    %%GHRepoRole -.->|GHJumpMergeQueue| GHRepository
-    %%GHRepoRole -.->|GHCreateSoloMergeQueueEntry| GHRepository
-    %%GHRepoRole -.->|GHEditRepoCustomPropertiesValues| GHRepository
-    GHRepoRole -->|GHHasBaseRole| GHRepoRole
-    GHUser -->|GHHasRole| GHRepoRole
-    GHTeam -->|GHHasRole| GHRepoRole
-    GHRepository -.->|GHHasSecret| GHOrgSecret
-    GHRepository -.->|GHContains| GHRepoSecret
-    GHRepository -.->|GHHasSecret| GHRepoSecret
-    GHRepository -.->|GHHasSecretScanningAlert| GHSecretScanningAlert
-    GHEnvironment -.->|GHContains| GHEnvironmentSecret
-    GHEnvironment -.->|GHHasSecret| GHEnvironmentSecret
+    GH_Team -->|GH_MemberOf| GH_Team
+    GH_Organization -.->|GH_Owns| GH_Repository
+    GH_Organization -.->|GH_Contains| GH_OrgSecret
+    GH_User -.->|GH_BypassPullRequestAllowances| GH_Branch
+    GH_Team -.->|GH_BypassPullRequestAllowances| GH_Branch
+    GH_User -.->|GH_RestrictionsCanPush| GH_Branch
+    GH_Team -.->|GH_RestrictionsCanPush| GH_Branch
+    GH_Repository -.->|GH_HasBranch| GH_Branch
+    GH_Repository -.->|GH_HasWorkflow| GH_Workflow
+    GH_Repository -.->|GH_HasEnvironment| GH_Environment
+    GH_Branch -.->|GH_HasEnvironment| GH_Environment
+    GH_Team -->|GH_HasRole| GH_OrgRole
+    GH_User -->|GH_HasRole| GH_OrgRole
+    GH_OrgRole -->|GH_HasBaseRole| GH_OrgRole
+    GH_OrgRole -.->|GH_ManageOrganizationWebhooks| GH_Organization
+    GH_OrgRole -.->|GH_OrgBypassCodeScanningDismissalRequests| GH_Organization
+    GH_OrgRole -.->|GH_OrgBypassSecretScanningClosureRequests| GH_Organization
+    %%GH_OrgRole -.->|GHOrgReviewAndManageSecretScanningBypassRequests| GH_Organization
+    %%GH_OrgRole -.->|GHOrgReviewAndManageSecretScanningClosureRequests| GH_Organization
+    %%GH_OrgRole -.->|GHReadOrganizationActionsUsageMetrics| GH_Organization
+    %%GH_OrgRole -.->|GHReadOrganizationCustomOrgRole| GH_Organization
+    %%GH_OrgRole -.->|GHReadOrganizationCustomRepoRole| GH_Organization
+    %%GH_OrgRole -.->|GHResolveSecretScanningAlerts| GH_Organization
+    %%GH_OrgRole -.->|GH_ViewSecretScanningAlerts| GH_Organization
+    %%GH_OrgRole -.->|GHWriteOrganizationActionsSecrets| GH_Organization
+    %%GH_OrgRole -.->|GHWriteOrganizationActionsSettings| GH_Organization
+    %%GH_OrgRole -.->|GHWriteOrganizationCustomOrgRole| GH_Organization
+    %%GH_OrgRole -.->|GHWriteOrganizationCustomRepoRole| GH_Organization
+    %%GH_OrgRole -.->|GHWriteOrganizationNetworkConfigurations| GH_Organization
+    GH_OrgRole -.->|GH_CreateRepository| GH_Organization
+    GH_OrgRole -.->|GH_InviteMember| GH_Organization
+    GH_OrgRole -.->|GH_AddCollaborator| GH_Organization
+    GH_OrgRole -.->|GH_CreateTeam| GH_Organization
+    GH_OrgRole -.->|GH_TransferRepository| GH_Organization
+    GH_OrgRole -->|GH_HasBaseRole| GH_Organization
+    GH_TeamRole -->|GH_MemberOf| GH_Team
+    GH_TeamRole -->|GH_AddMember| GH_Team
+    GH_User -->|GH_HasRole| GH_TeamRole
+    GH_RepoRole -.->|GH_CanPull| GH_Repository
+    GH_RepoRole -.->|GH_ReadRepoContents| GH_Repository
+    GH_OrgRole -->|GH_HasBaseRole| GH_RepoRole
+    GH_RepoRole -.->|GH_CanPush| GH_Repository
+    GH_RepoRole -.->|GH_WriteRepoContents| GH_Repository
+    %%GH_RepoRole -.->|GHWriteRepoPullRequests| GH_Repository
+    GH_RepoRole -->|GH_AdminTo| GH_Repository
+    %%GH_RepoRole -.->|GHManageWebhooks| GH_Repository
+    %%GH_RepoRole -.->|GHManageDeployKeys| GH_Repository
+    %%GH_RepoRole -.->|GHPushProtectedBranch| GH_Repository
+    %%GH_RepoRole -.->|GHDeleteAlertsCodeScanning| GH_Repository
+    GH_RepoRole -.->|GH_ViewSecretScanningAlerts| GH_Repository
+    %%GH_RepoRole -.->|GHRunOrgMigration| GH_Repository
+    GH_RepoRole -.->|GH_BypassProtections| GH_Repository
+    %%GH_RepoRole -.->|GHManageSecurityProducts| GH_Repository
+    %%GH_RepoRole -.->|GHManageRepoSecurityProducts| GH_Repository
+    GH_RepoRole -.->|GH_EditProtections| GH_Repository
+    %%GH_RepoRole -.->|GHJumpMergeQueue| GH_Repository
+    %%GH_RepoRole -.->|GHCreateSoloMergeQueueEntry| GH_Repository
+    %%GH_RepoRole -.->|GHEditRepoCustomPropertiesValues| GH_Repository
+    GH_RepoRole -->|GH_HasBaseRole| GH_RepoRole
+    GH_User -->|GH_HasRole| GH_RepoRole
+    GH_Team -->|GH_HasRole| GH_RepoRole
+    GH_Repository -.->|GH_HasSecret| GH_OrgSecret
+    GH_Repository -.->|GH_Contains| GH_RepoSecret
+    GH_Repository -.->|GH_HasSecret| GH_RepoSecret
+    GH_Repository -.->|GH_HasSecretScanningAlert| GH_SecretScanningAlert
+    GH_Environment -.->|GH_Contains| GH_EnvironmentSecret
+    GH_Environment -.->|GH_HasSecret| GH_EnvironmentSecret
 
-    GHOrganization -.->|GHHasSamlIdentityProvider| GHSamlIdentityProvider
-    GHSamlIdentityProvider -.->|GHHasExternalIdentity| GHExternalIdentity
-    GHExternalIdentity -.->|GHMapsToUser| GHUser
-    GHExternalIdentity -.->|GHMapsToUser| AZUser
-    GHExternalIdentity -.->|GHMapsToUser| PingOneUser
-    AZUser -->|SyncedToGHUser| GHUser
-    PingOneUser -->|SyncedToGHUser| GHUser
-    GHRepository -.->|GHCanAssumeAWSRole| AWSRole
-    GHBranch -.->|GHCanAssumeAWSRole| AWSRole
-    GHEnvironment -.->|GHCanAssumeAWSRole| AWSRole
+    GH_Organization -.->|GH_HasSamlIdentityProvider| GH_SamlIdentityProvider
+    GH_SamlIdentityProvider -.->|GH_HasExternalIdentity| GH_ExternalIdentity
+    GH_ExternalIdentity -.->|GH_MapsToUser| GH_User
+    GH_ExternalIdentity -.->|GH_MapsToUser| AZUser
+    GH_ExternalIdentity -.->|GH_MapsToUser| OktaUser
+    GH_ExternalIdentity -.->|GH_MapsToUser| PingOneUser
+    AZUser -->|SyncedToGHUser| GH_User
+    OktaUser -->|SyncedToGHUser| GH_User
+    PingOneUser -->|SyncedToGHUser| GH_User
+    GH_Repository -.->|GH_CanAssumeAWSRole| AWSRole
+    GH_Branch -.->|GH_CanAssumeAWSRole| AWSRole
+    GH_Environment -.->|GH_CanAssumeAWSRole| AWSRole
+    GH_Repository -->|CanAssumeIdentity| AZFederatedIdentityCredential
+    GH_Branch -->|CanAssumeIdentity| AZFederatedIdentityCredential
+    GH_Environment -->|CanAssumeIdentity| AZFederatedIdentityCredential
