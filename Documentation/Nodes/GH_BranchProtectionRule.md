@@ -4,7 +4,7 @@ Represents a branch protection rule configured on a GitHub repository. Protectio
 
 A single protection rule can apply to multiple branches via pattern matching (e.g., `main`, `release/*`).
 
-Created by: `Git-HoundBranchProtection`
+Created by: `Git-HoundBranch`
 
 ## Properties
 
