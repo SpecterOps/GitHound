@@ -1,118 +1,125 @@
 {
   "custom_types": {
-    "GHAppInstallation": {
+    "GH_AppInstallation": {
       "icon": {
         "type": "font-awesome",
         "name": "window-restore",
         "color": "#EFC41D"
       }
     },
-    "GHBranch": {
+    "GH_Branch": {
       "icon": {
         "type": "font-awesome",
         "name": "code-branch",
         "color": "#FF80D2"
       }
     },
-    "GHEnvironment": {
+    "GH_BranchProtectionRule": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "shield",
+        "color": "#FFB347"
+      }
+    },
+    "GH_Environment": {
       "icon": {
         "type": "font-awesome",
         "name": "leaf",
         "color": "#D5F2C2"
       }
     },
-    "GHEnvironmentSecret": {
+    "GH_EnvironmentSecret": {
       "icon": {
         "type": "font-awesome",
         "name": "lock",
         "color": "#6FB94A"
       }
     },
-    "GHExternalIdentity": {
+    "GH_ExternalIdentity": {
       "icon": {
         "type": "font-awesome",
         "name": "arrows-left-right",
         "color": "#8A8F98"
       }
     },
-    "GHOrganization": {
+    "GH_Organization": {
       "icon": {
         "type": "font-awesome",
         "name": "building",
         "color": "#5FED83"
       }
     },
-    "GHOrgRole": {
+    "GH_OrgRole": {
       "icon": {
         "type": "font-awesome",
         "name": "user-tie",
         "color": "#BFFFD1"
       }
     },
-    "GHOrgSecret": {
+    "GH_OrgSecret": {
       "icon": {
         "type": "font-awesome",
         "name": "lock",
         "color": "#1FB65A"
       }
     },
-    "GHRepository": {
+    "GH_Repository": {
       "icon": {
         "type": "font-awesome",
         "name": "box-archive",
         "color": "#9EECFF"
       }
     },
-    "GHRepoRole": {
+    "GH_RepoRole": {
       "icon": {
         "type": "font-awesome",
         "name": "user-tie",
         "color": "#DEFEFA"
       }
     },
-    "GHRepoSecret": {
+    "GH_RepoSecret": {
       "icon": {
         "type": "font-awesome",
         "name": "lock",
         "color": "#32BEE6"
       }
     },
-    "GHSamlIdentityProvider": {
+    "GH_SamlIdentityProvider": {
       "icon": {
         "type": "font-awesome",
         "name": "id-badge",
         "color": "#5A6C8F"
       }
     },
-    "GHSecretScanningAlert": {
+    "GH_SecretScanningAlert": {
       "icon": {
         "type": "font-awesome",
         "name": "key",
         "color": "#3C7A6E"
       }
     },
-    "GHTeam": {
+    "GH_Team": {
       "icon": {
         "type": "font-awesome",
         "name": "user-group",
         "color": "#C06EFF"
       }
     },
-    "GHTeamRole": {
+    "GH_TeamRole": {
       "icon": {
         "type": "font-awesome",
         "name": "user-tie",
         "color": "#D0B0FF"
       }
     },
-    "GHUser": {
+    "GH_User": {
       "icon": {
         "type": "font-awesome",
         "name": "user",
         "color": "#FF8E40"
       }
     },
-    "GHWorkflow": {
+    "GH_Workflow": {
       "icon": {
         "type": "font-awesome",
         "name": "cogs",

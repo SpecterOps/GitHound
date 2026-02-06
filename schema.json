@@ -1,0 +1,349 @@
+{
+  "schema": {
+    "name": "GitHub (GitHound)",
+    "version": "1.0.0",
+    "namespace": "GH"
+  },
+  "node_kinds": [
+    {
+      "name": "GH_Organization",
+      "display_name": "GitHub Organization",
+      "description": "A GitHub Organization—top-level container for repositories, teams, and settings",
+      "is_display_kind": true,
+      "icon": "building",
+      "color": "0x5FED83"
+    },
+    {
+      "name": "GH_User",
+      "display_name": "GitHub User",
+      "description": "An individual GitHub user account",
+      "is_display_kind": true,
+      "icon": "user",
+      "color": "0xFF8E40"
+    },
+    {
+      "name": "GH_Team",
+      "display_name": "GitHub Team",
+      "description": "A team within an organization, grouping users for shared access and collaboration",
+      "is_display_kind": true,
+      "icon": "user-group",
+      "color": "0xC06EFF"
+    },
+    {
+      "name": "GH_Repository",
+      "display_name": "GitHub Repository",
+      "description": "A code repository in an organization, containing files, issues, and other resources",
+      "is_display_kind": true,
+      "icon": "box-archive",
+      "color": "0x9EECFF"
+    },
+    {
+      "name": "GH_Branch",
+      "display_name": "GitHub Branch",
+      "description": "A named reference in a repository representing a line of development",
+      "is_display_kind": true,
+      "icon": "code-branch",
+      "color": "0xFF80D2"
+    },
+    {
+      "name": "GH_BranchProtectionRule",
+      "display_name": "GitHub Branch Protection Rule",
+      "description": "A branch protection rule that applies to one or more branches via pattern matching",
+      "is_display_kind": true,
+      "icon": "shield",
+      "color": "0xFFB347"
+    },
+    {
+      "name": "GH_OrgRole",
+      "display_name": "GitHub Org Role",
+      "description": "The role a user has at the organization level (e.g., admin, member)",
+      "is_display_kind": true,
+      "icon": "user-tie",
+      "color": "0xBFFFD1"
+    },
+    {
+      "name": "GH_TeamRole",
+      "display_name": "GitHub Team Role",
+      "description": "The role a user has within a team (e.g., maintainer, member)",
+      "is_display_kind": true,
+      "icon": "user-tie",
+      "color": "0xD0B0FF"
+    },
+    {
+      "name": "GH_RepoRole",
+      "display_name": "GitHub Repo Role",
+      "description": "The permission granted to a user or team on a repository (e.g., admin, write, read)",
+      "is_display_kind": true,
+      "icon": "user-tie",
+      "color": "0xDEFEFA"
+    },
+    {
+      "name": "GH_Workflow",
+      "display_name": "GitHub Workflow",
+      "description": "A GitHub Actions workflow defined in a repository",
+      "is_display_kind": true,
+      "icon": "cogs",
+      "color": "0xFFE4A1"
+    },
+    {
+      "name": "GH_Environment",
+      "display_name": "GitHub Environment",
+      "description": "A GitHub Actions deployment environment with protection rules and deployment branch policies",
+      "is_display_kind": true,
+      "icon": "leaf",
+      "color": "0xD5F2C2"
+    },
+    {
+      "name": "GH_OrgSecret",
+      "display_name": "GitHub Org Secret",
+      "description": "An organization-level GitHub Actions secret that can be scoped to all, private, or selected repositories",
+      "is_display_kind": true,
+      "icon": "lock",
+      "color": "0x1FB65A"
+    },
+    {
+      "name": "GH_RepoSecret",
+      "display_name": "GitHub Repo Secret",
+      "description": "A repository-level GitHub Actions secret accessible only to workflows in that repository",
+      "is_display_kind": true,
+      "icon": "lock",
+      "color": "0x32BEE6"
+    },
+    {
+      "name": "GH_EnvironmentSecret",
+      "display_name": "GitHub Environment Secret",
+      "description": "An environment-level GitHub Actions secret scoped to a specific deployment environment",
+      "is_display_kind": true,
+      "icon": "lock",
+      "color": "0x6FB94A"
+    },
+    {
+      "name": "GH_SecretScanningAlert",
+      "display_name": "GitHub Secret Scanning Alert",
+      "description": "A GitHub Advanced Security alert indicating a secret was accidentally committed to a repository",
+      "is_display_kind": true,
+      "icon": "key",
+      "color": "0x3C7A6E"
+    },
+    {
+      "name": "GH_SamlIdentityProvider",
+      "display_name": "GitHub SAML Identity Provider",
+      "description": "A SAML identity provider configured for the organization, enabling SSO",
+      "is_display_kind": true,
+      "icon": "id-badge",
+      "color": "0x5A6C8F"
+    },
+    {
+      "name": "GH_ExternalIdentity",
+      "display_name": "GitHub External Identity",
+      "description": "An external identity from a SAML/SCIM provider linked to a GitHub user for SSO authentication",
+      "is_display_kind": true,
+      "icon": "arrows-left-right",
+      "color": "0x8A8F98"
+    },
+    {
+      "name": "GH_AppInstallation",
+      "display_name": "GitHub App Installation",
+      "description": "A GitHub App installed on the organization with specific permissions and repository access",
+      "is_display_kind": true,
+      "icon": "plug",
+      "color": "0xA8D8EA"
+    }
+  ],
+  "relationship_kinds": [
+    {
+      "name": "GH_Contains",
+      "description": "Container relationship for organizational hierarchy (org contains users, teams, roles, secrets, etc.)",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_Owns",
+      "description": "Organization owns a repository",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_HasRole",
+      "description": "User or team has a role assignment (org role, team role, or repo role)",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_MemberOf",
+      "description": "Team role is a member of a team, or team is a nested member of a parent team",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_AddMember",
+      "description": "Team role can add members to the team (maintainer privilege)",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_HasBaseRole",
+      "description": "Role inherits permissions from another role",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_CanPull",
+      "description": "Repo role can clone/pull the repository",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_ReadRepoContents",
+      "description": "Repo role can read repository contents",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_CanPush",
+      "description": "Repo role can push to the repository",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_WriteRepoContents",
+      "description": "Repo role can write repository contents",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_AdminTo",
+      "description": "Repo role has admin access to the repository",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_BypassProtections",
+      "description": "Repo role can bypass branch protections",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_EditProtections",
+      "description": "Repo role can edit branch protection rules",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ViewSecretScanningAlerts",
+      "description": "Repo role can view secret scanning alerts",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_CreateRepository",
+      "description": "Org role can create repositories in the organization",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_InviteMember",
+      "description": "Org role can invite members to the organization",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_AddCollaborator",
+      "description": "Org role can add outside collaborators",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_CreateTeam",
+      "description": "Org role can create teams in the organization",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_TransferRepository",
+      "description": "Org role can transfer repositories",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ManageOrganizationWebhooks",
+      "description": "Org role can manage organization webhooks",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_OrgBypassCodeScanningDismissalRequests",
+      "description": "Org role can bypass code scanning dismissal requests",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_OrgBypassSecretScanningClosureRequests",
+      "description": "Org role can bypass secret scanning closure requests",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_BypassPullRequestAllowances",
+      "description": "User or team can bypass pull request requirements on a branch protection rule",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_RestrictionsCanPush",
+      "description": "User or team is allowed to push to branches protected by this rule",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_HasBranch",
+      "description": "Repository has this branch",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ProtectedBy",
+      "description": "Branch protection rule protects this branch",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_HasWorkflow",
+      "description": "Repository has this workflow",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_HasEnvironment",
+      "description": "Repository or branch has/can deploy to this environment",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_HasSecret",
+      "description": "Repository or environment has access to this secret",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_HasSecretScanningAlert",
+      "description": "Repository has this secret scanning alert",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_HasSamlIdentityProvider",
+      "description": "Organization has this SAML identity provider configured",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_HasExternalIdentity",
+      "description": "SAML identity provider has this external identity",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_MapsToUser",
+      "description": "External identity maps to a GitHub user or identity provider user",
+      "is_traversable": false
+    },
+    {
+      "name": "SyncedToGHUser",
+      "description": "Identity provider user (Azure AD, Okta, PingOne) is synced to a GitHub user via SAML/SCIM",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_CanAssumeAWSRole",
+      "description": "GitHub repository, branch, or environment can assume an AWS IAM role via OIDC federation",
+      "is_traversable": true
+    },
+    {
+      "name": "CanAssumeIdentity",
+      "description": "GitHub repository, branch, or environment can assume an Azure federated identity via OIDC",
+      "is_traversable": true
+    }
+  ],
+  "environments": [
+    {
+      "environment_kind": "GH_Organization",
+      "source_kind": "GitHub",
+      "principal_kinds": [
+        "GH_User",
+        "GH_Team",
+        "GH_Repository",
+        "GH_Branch",
+        "GH_Environment"
+      ]
+    }
+  ],
+  "relationship_findings": []
+}
