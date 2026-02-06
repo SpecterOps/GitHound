@@ -1,5 +1,5 @@
 {
   "name": "SAML Configuration Mapping",
-  "query": "MATCH p=(OIP:GHSamlIdentityProvider)-[:GHHasExternalIdentity]->(EI:GHExternalIdentity) MATCH p1=(OIP)<-[:GHHasSamlIdentityProvider]-(:GHOrganization) MATCH p2=(EI)-[:GHMapsToUser]->() RETURN p,p1,p2",
+  "query": "MATCH p=(OIP:GH_SamlIdentityProvider)-[:GH_HasExternalIdentity]->(EI:GH_ExternalIdentity) MATCH p1=(OIP)<-[:GH_HasSamlIdentityProvider]-(:GH_Organization) MATCH p2=(EI)-[:GH_MapsToUser]->() RETURN p,p1,p2",
   "description": "Finds SAML Identity Providers, their external identities, and mapped users."
 }
