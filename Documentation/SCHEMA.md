@@ -10,6 +10,7 @@ For individual node documentation with properties and diagrams, see the [Nodes](
 |-------------------------|-------------------|-----------|----------------------------------------------------------------------------------------------------|
 | GH_AppInstallation      | plug              | #A8D8EA | A GitHub App installed on the organization with specific permissions and repository access.        |
 | GH_Branch               | code-branch       | #FF80D2 | A named reference in a repository (e.g. `main`, `develop`) representing a line of development.     |
+| GH_BranchProtectionRule | shield            | #FFB347 | A branch protection rule that applies to one or more branches via pattern matching.                |
 | GH_Environment          | leaf              | #D5F2C2 | A GitHub Actions deployment environment with protection rules and deployment branch policies.      |
 | GH_EnvironmentSecret    | lock              | #6FB94A | An environment-level GitHub Actions secret scoped to a specific deployment environment.            |
 | GH_ExternalIdentity     | arrows-left-right | #8A8F98 | An external identity from a SAML/SCIM provider linked to a GitHub user for SSO authentication.     |
@@ -97,27 +98,28 @@ These edges represent permissions that repo roles grant on repositories.
 
 These edges represent branch-level permissions and protections.
 
-| Edge Type                        | Source    | Target      | Traversable | Description                                    |
-|----------------------------------|-----------|-------------|-------------|------------------------------------------------|
-| `GH_BypassPullRequestAllowances` | `GH_User` | `GH_Branch` | No          | User can bypass PR requirements on branch.     |
-| `GH_BypassPullRequestAllowances` | `GH_Team` | `GH_Branch` | No          | Team can bypass PR requirements on branch.     |
-| `GH_RestrictionsCanPush`         | `GH_User` | `GH_Branch` | No          | User is allowed to push to protected branch.   |
-| `GH_RestrictionsCanPush`         | `GH_Team` | `GH_Branch` | No          | Team is allowed to push to protected branch.   |
+| Edge Type                        | Source                    | Target                    | Traversable | Description                                                |
+|----------------------------------|---------------------------|---------------------------|-------------|------------------------------------------------------------|
+| `GH_ProtectedBy`                 | `GH_BranchProtectionRule` | `GH_Branch`               | Yes         | Branch protection rule protects this branch.               |
+| `GH_BypassPullRequestAllowances` | `GH_User`                 | `GH_BranchProtectionRule` | No          | User can bypass PR requirements on this protection rule.   |
+| `GH_BypassPullRequestAllowances` | `GH_Team`                 | `GH_BranchProtectionRule` | No          | Team can bypass PR requirements on this protection rule.   |
+| `GH_RestrictionsCanPush`         | `GH_User`                 | `GH_BranchProtectionRule` | No          | User is allowed to push to branches protected by this rule.|
+| `GH_RestrictionsCanPush`         | `GH_Team`                 | `GH_BranchProtectionRule` | No          | Team is allowed to push to branches protected by this rule.|
 
 ### Resource Relationship Edges
 
 These edges connect repositories to their resources.
 
-| Edge Type                 | Source          | Target                   | Traversable | Description                                    |
-|---------------------------|-----------------|--------------------------|-------------|------------------------------------------------|
-| `GH_HasBranch`            | `GH_Repository` | `GH_Branch`              | No          | Repository has this branch.                    |
-| `GH_HasWorkflow`          | `GH_Repository` | `GH_Workflow`            | No          | Repository has this workflow.                  |
-| `GH_HasEnvironment`       | `GH_Repository` | `GH_Environment`         | No          | Repository has this environment.               |
-| `GH_HasEnvironment`       | `GH_Branch`     | `GH_Environment`         | No          | Branch can deploy to this environment.         |
-| `GH_HasSecret`            | `GH_Repository` | `GH_OrgSecret`           | No          | Repository has access to this org secret.      |
-| `GH_HasSecret`            | `GH_Repository` | `GH_RepoSecret`          | No          | Repository has this repo secret.               |
-| `GH_HasSecret`            | `GH_Environment`| `GH_EnvironmentSecret`   | No          | Environment has this secret.                   |
-| `GH_HasSecretScanningAlert`| `GH_Repository`| `GH_SecretScanningAlert` | No          | Repository has this secret scanning alert.     |
+| Edge Type                  | Source          | Target                   | Traversable | Description                                    |
+|----------------------------|-----------------|--------------------------|-------------|------------------------------------------------|
+| `GH_HasBranch`             | `GH_Repository` | `GH_Branch`              | No          | Repository has this branch.                    |
+| `GH_HasWorkflow`           | `GH_Repository` | `GH_Workflow`            | No          | Repository has this workflow.                  |
+| `GH_HasEnvironment`        | `GH_Repository` | `GH_Environment`         | No          | Repository has this environment.               |
+| `GH_HasEnvironment`        | `GH_Branch`     | `GH_Environment`         | No          | Branch can deploy to this environment.         |
+| `GH_HasSecret`             | `GH_Repository` | `GH_OrgSecret`           | No          | Repository has access to this org secret.      |
+| `GH_HasSecret`             | `GH_Repository` | `GH_RepoSecret`          | No          | Repository has this repo secret.               |
+| `GH_HasSecret`             | `GH_Environment`| `GH_EnvironmentSecret`   | No          | Environment has this secret.                   |
+| `GH_HasSecretScanningAlert`| `GH_Repository` | `GH_SecretScanningAlert` | No          | Repository has this secret scanning alert.     |
 
 ### Identity Provider Edges
 

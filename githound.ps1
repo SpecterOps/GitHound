@@ -253,18 +253,51 @@ function Invoke-GitHubGraphQL
     }
     $requestSuccessful = $false
     $retryCount = 0
-    
-    while (-not $requestSuccessful -and $retryCount -lt 3) {
+    $maxRetries = 5
+
+    while (-not $requestSuccessful -and $retryCount -lt $maxRetries) {
         try {
             $result = Invoke-RestMethod @fparams
             $requestSuccessful = $true
         }
         catch {
-            $httpException = $_.ErrorDetails | ConvertFrom-Json
-            if (($httpException.status -eq "403" -and $httpException.message -match "rate limit") -or $httpException.status -eq "429") {
-                Write-Warning "Rate limit hit when doing GraphQL call. Retry $($retryCount + 1)/3"
+            $isRateLimit = $false
+            $isRetryable = $false
+            $errorString = "$($_.Exception.Message) $($_.ErrorDetails)"
+
+            try {
+                $httpException = $_.ErrorDetails | ConvertFrom-Json
+                if (($httpException.status -eq "403" -and $httpException.message -match "rate limit") -or $httpException.status -eq "429") {
+                    $isRateLimit = $true
+                }
+                if ($httpException.message -match "couldn.t respond.*in time" -or $httpException.message -match "timeout") {
+                    $isRetryable = $true
+                }
+            }
+            catch {
+                # ErrorDetails was not valid JSON — check the raw error string
+                if ($errorString -match "rate limit" -or $errorString -match "abuse" -or $errorString -match "secondary" -or $errorString -match "429") {
+                    $isRateLimit = $true
+                }
+            }
+
+            # Catch server errors (502, 503), timeouts, and gateway errors as retryable
+            if (-not $isRateLimit -and -not $isRetryable) {
+                if ($errorString -match "502" -or $errorString -match "503" -or $errorString -match "Bad Gateway" -or $errorString -match "couldn.t respond.*in time" -or $errorString -match "timeout") {
+                    $isRetryable = $true
+                }
+            }
+
+            if ($isRateLimit) {
+                Write-Warning "Rate limit hit when doing GraphQL call. Retry $($retryCount + 1)/$maxRetries"
                 Write-Debug $_
                 Wait-GithubGraphQlRateLimit -Session $Session
+                $retryCount++
+            }
+            elseif ($isRetryable) {
+                $sleepSeconds = 5 * [Math]::Pow(2, $retryCount)  # Exponential backoff: 5, 10, 20, 40...
+                Write-Warning "GitHub server error on GraphQL query. Retry $($retryCount + 1)/$maxRetries after ${sleepSeconds}s..."
+                Start-Sleep -Seconds $sleepSeconds
                 $retryCount++
             }
             else {
@@ -274,7 +307,7 @@ function Invoke-GitHubGraphQL
     }
 
     if (-not $requestSuccessful) {
-        throw "Failed after 3 retry attempts due to rate limiting"
+        throw "Failed after $maxRetries retry attempts due to server errors or rate limiting"
     }
 
     return $result
@@ -330,7 +363,55 @@ function Wait-GithubGraphQlRateLimit {
     )
     
      Wait-GithubRateLimitReached -githubRateLimitInfo (Get-RateLimitInformation -Session $Session).graphql
-   
+
+}
+
+function Git-HoundRateLimit
+{
+    <#
+    .SYNOPSIS
+        Displays the current GitHub API rate limit status for REST and GraphQL.
+
+    .DESCRIPTION
+        Queries the GitHub rate limit endpoint and displays a formatted summary showing
+        remaining requests, total limit, used count, and reset time for both the REST (core)
+        and GraphQL APIs.
+
+    .PARAMETER Session
+        A GitHound.Session object used for authentication and API requests.
+
+    .EXAMPLE
+        Git-HoundRateLimit -Session $Session
+    #>
+    param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session
+    )
+
+    $info = Get-RateLimitInformation -Session $Session
+
+    $results = @()
+
+    foreach ($entry in @(
+        @{ Name = "REST (core)"; Data = $info.core },
+        @{ Name = "GraphQL";     Data = $info.graphql }
+    )) {
+        $resetUtc = ([DateTimeOffset]::FromUnixTimeSeconds($entry.Data.reset)).DateTime
+        $resetLocal = ([DateTimeOffset]::FromUnixTimeSeconds($entry.Data.reset)).LocalDateTime
+        $timeUntilReset = $resetLocal - (Get-Date)
+
+        $results += [PSCustomObject]@{
+            API             = $entry.Name
+            Remaining       = $entry.Data.remaining
+            Limit           = $entry.Data.limit
+            Used            = $entry.Data.used
+            "Resets In"     = "{0}m {1}s" -f [math]::Floor($timeUntilReset.TotalMinutes), $timeUntilReset.Seconds
+            "Reset Time"    = $resetLocal.ToString("HH:mm:ss")
+        }
+    }
+
+    $results | Format-Table -AutoSize
 }
 
 function New-GitHoundNode
@@ -352,9 +433,9 @@ function New-GitHoundNode
         A hashtable of additional properties to associate with the node.
 
     .EXAMPLE
-        $node = New-GitHoundNode -Id 'node123' -Kind @('GHUser', 'GHAdmin') -Properties @{ name = 'John Doe'; email = 'john.doe@example.com' }
+        $node = New-GitHoundNode -Id 'node123' -Kind @('GH_User', 'GH_Admin') -Properties @{ name = 'John Doe'; email = 'john.doe@example.com' }
 
-        This example creates a new node with the identifier 'node123', of kinds 'GHUser' and 'GHAdmin', and includes additional properties for name and email.
+        This example creates a new node with the identifier 'node123', of kinds 'GH_User' and 'GH_Admin', and includes additional properties for name and email.
     #>
 
     Param(
@@ -415,9 +496,9 @@ function New-GitHoundEdge
 
     .EXAMPLE
 
-        $edge = New-GitHoundEdge -Kind 'GHOwns' -StartId 'user123' -EndId 'repo456' -StartKind 'GHUser' -EndKind 'GHRepository' -Properties @{ traversable = $true }
+        $edge = New-GitHoundEdge -Kind 'GH_Owns' -StartId 'user123' -EndId 'repo456' -StartKind 'GH_User' -EndKind 'GH_Repository' -Properties @{ traversable = $true }
 
-        This example creates a new edge of kind 'GHOwns' from a user node to a repository node with additional properties.
+        This example creates a new edge of kind 'GH_Owns' from a user node to a repository node with additional properties.
     #>
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
@@ -519,6 +600,95 @@ function Normalize-Null
     
 }
 
+function Import-GitHoundStepOutput
+{
+    <#
+    .SYNOPSIS
+        Imports a GitHound per-function checkpoint file from disk.
+
+    .DESCRIPTION
+        Reads a JSON file written by Export-GitHoundStepOutput and returns a PSCustomObject
+        with Nodes and Edges ArrayLists, matching the shape returned by collection functions.
+        Returns $null if the file does not exist or is corrupt/invalid.
+
+    .PARAMETER FilePath
+        The path to the JSON file to import.
+
+    .EXAMPLE
+        $org = Import-GitHoundStepOutput -FilePath "./githound_Organization_abc123.json"
+    #>
+    Param(
+        [Parameter(Mandatory)]
+        [string]$FilePath
+    )
+
+    if (-not (Test-Path $FilePath)) { return $null }
+
+    try {
+        $data = Get-Content $FilePath -Raw | ConvertFrom-Json
+        if (-not $data.graph) {
+            Write-Warning "Checkpoint file $FilePath has invalid format (missing graph). Will re-collect."
+            return $null
+        }
+    }
+    catch {
+        Write-Warning "Checkpoint file $FilePath is corrupted. Will re-collect."
+        Remove-Item $FilePath -Force -ErrorAction SilentlyContinue
+        return $null
+    }
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+    if ($data.graph.nodes) { $null = $nodes.AddRange(@($data.graph.nodes)) }
+    if ($data.graph.edges) { $null = $edges.AddRange(@($data.graph.edges)) }
+
+    return [PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    }
+}
+
+function Export-GitHoundStepOutput
+{
+    <#
+    .SYNOPSIS
+        Exports a GitHound collection step result to a JSON file.
+
+    .DESCRIPTION
+        Writes a collection function's output (Nodes and Edges) to a JSON file in the standard
+        GitHound format. Filters out null entries that may have been introduced by thread-safety
+        issues or API errors.
+
+    .PARAMETER StepResult
+        A PSCustomObject with Nodes and Edges properties (as returned by collection functions).
+
+    .PARAMETER FilePath
+        The path to write the JSON file to.
+
+    .EXAMPLE
+        Export-GitHoundStepOutput -StepResult $org -FilePath "./githound_Organization_abc123.json"
+    #>
+    Param(
+        [Parameter(Mandatory)]
+        [PSCustomObject]$StepResult,
+
+        [Parameter(Mandatory)]
+        [string]$FilePath
+    )
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = @($StepResult.Nodes | Where-Object { $_ -ne $null })
+            edges = @($StepResult.Edges | Where-Object { $_ -ne $null })
+        }
+    }
+
+    $payload | ConvertTo-Json -Depth 10 | Out-File -FilePath $FilePath
+}
+
 function ConvertTo-PascalCase
 {
     <#
@@ -562,17 +732,22 @@ function Git-HoundOrganization
 {
     <#
     .SYNOPSIS
-        Fetches and processes GitHub Organizations.
+        Fetches and processes GitHub Organizations and Organization Roles.
 
     .DESCRIPTION
-        This function retrieves organization details for the organization specified in the GitHound.Session object. It creates a node representing the organization.
+        This function retrieves organization details for the organization specified in the GitHound.Session object. It creates a node representing the organization,
+        as well as nodes and edges for the default organization roles (owners, members) and any custom organization roles.
 
-        API Reference: 
+        API Reference:
         - Get an organization: https://docs.github.com/en/rest/orgs/orgs?apiVersion=2022-11-28#get-an-organization
         - Get GitHub Actions permissions for an organization: https://docs.github.com/en/rest/actions/permissions?apiVersion=2022-11-28#get-github-actions-permissions-for-an-organization
+        - Get all organization roles for an organization: https://docs.github.com/en/rest/orgs/organization-roles?apiVersion=2022-11-28#get-all-organization-roles-for-an-organization
+        - List teams that are assigned to an organization role: https://docs.github.com/en/rest/orgs/organization-roles?apiVersion=2022-11-28#list-teams-that-are-assigned-to-an-organization-role
+        - List users that are assigned to an organization role: https://docs.github.com/en/rest/orgs/organization-roles?apiVersion=2022-11-28#list-users-that-are-assigned-to-an-organization-role
 
         Fine Grained Permissions Reference:
         - "Administration" organization permissions (read)
+        - "Custom organization roles" organization permissions (read)
 
     .PARAMETER Session
         A GitHound.Session object used for authentication and API requests.
@@ -618,12 +793,161 @@ function Git-HoundOrganization
         actions_allowed_actions                        = Normalize-Null $actions.allowed_actions
         actions_sha_pinning_required                   = Normalize-Null $actions.sha_pinning_required
         # Accordion Panel Queries
-        query_users                                    = "MATCH (n:GHUser {organization_id:'$($org.node_id)}) RETURN n"
-        query_teams                                    = "MATCH (n:GHTeam {organization_id:'$($org.node_id)}) RETURN n"
-        query_repositories                             = "MATCH (n:GHRepository {organization_id:'$($org.node_id)}) RETURN n"
+        query_users                                    = "MATCH (n:GH_User {environment_id:'$($org.node_id)}) RETURN n"
+        query_teams                                    = "MATCH (n:GH_Team {environment_id:'$($org.node_id)}) RETURN n"
+        query_repositories                             = "MATCH (n:GH_Repository {environment_id:'$($org.node_id)}) RETURN n"
     }
 
-    $null = $nodes.Add((New-GitHoundNode -Id $org.node_id -Kind 'GHOrganization' -Properties $properties))
+    $orgNode = New-GitHoundNode -Id $org.node_id -Kind 'GH_Organization' -Properties $properties
+    $null = $nodes.Add($orgNode)
+
+    # --- Organization Role Nodes and Edges ---
+    # These were previously created in Git-HoundOrganizationRole but are moved here
+    # because they are static properties of the organization, not per-user assignments.
+
+    $orgAllRepoReadId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_all_repo_read"))
+    $orgAllRepoTriageId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_all_repo_triage"))
+    $orgAllRepoWriteId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_all_repo_write"))
+    $orgAllRepoMaintainId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_all_repo_maintain"))
+    $orgAllRepoAdminId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_all_repo_admin"))
+
+    # Custom Organization Roles
+    # In general parallelizing this is a bad idea, because most organizations have a small number of custom roles
+    foreach($customrole in (Invoke-GithubRestMethod -Session $session -Path "orgs/$($org.login)/organization-roles").roles)
+    {
+        $customRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_$($customrole.name)"))
+        $customRoleProps = [pscustomobject]@{
+            # Common Properties
+            id                     = Normalize-Null $customRoleId
+            name                   = Normalize-Null "$($org.login)/$($customrole.name)"
+            # Relational Properties
+            environment_name      = Normalize-Null $org.login
+            environment_id        = Normalize-Null $org.node_id
+            # Node Specific Properties
+            short_name             = Normalize-Null $customrole.name
+            type                   = Normalize-Null 'custom'
+            # Accordion Panel Queries
+            query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_OrgRole {id:'$($customRoleId)'}) RETURN p"
+            query_unrolled_members = "MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_OrgRole {id:'$($customRoleId)'}) RETURN p"
+            query_repositories     = "MATCH p=(:GH_OrgRole {id:'$($customRoleId)'})-[*]->(:GH_Repository) RETURN p"
+        }
+        $null = $nodes.Add((New-GitHoundNode -Id $customRoleId -Kind 'GH_OrgRole', 'GH_Role' -Properties $customRoleProps))
+
+        foreach($team in (Invoke-GithubRestMethod -Session $session -Path "orgs/$($org.login)/organization-roles/$($customRole.id)/teams"))
+        {
+            $null = $edges.Add((New-GitHoundEdge -Kind GH_HasRole -StartId $team.node_id -EndId $customRoleId -Properties @{traversable=$true}))
+        }
+
+        foreach($user in (Invoke-GithubRestMethod -Session $session -Path "orgs/$($org.login)/organization-roles/$($customRole.id)/users"))
+        {
+            $null = $edges.Add((New-GitHoundEdge -Kind GH_HasRole -StartId $user.node_id -EndId $customRoleId -Properties @{traversable=$true}))
+        }
+
+        if($null -ne $customrole.base_role)
+        {
+            switch($customrole.base_role)
+            {
+                'read' {$baseId = $orgAllRepoReadId}
+                'triage' {$baseId = $orgAllRepoTriageId}
+                'write' {$baseId = $orgAllRepoWriteId}
+                'maintain' {$baseId = $orgAllRepoMaintainId}
+                'admin' {$baseId = $orgAllRepoAdminId}
+            }
+
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $customRoleId -EndId $baseId -Properties @{traversable=$true}))
+        }
+
+        # Need to add support for custom permissions here
+        foreach($premission in $customrole.permissions)
+        {
+            switch($premission)
+            {
+                #'delete_alerts_code_scanning' {$kind = 'GH_DeleteAlertCodeScanning'}
+                #'edit_org_custom_properties_values' {$kind = 'GH_EditOrgCustomPropertiesValues'}
+                #'manage_org_custom_properties_definitions' {$kind = 'GH_ManageOrgCustomPropertiesDefinitions'}
+                #'manage_organization_oauth_application_policy' {$kind = 'GH_ManageOrganizationOAuthApplicationPolicy'}
+                #'manage_organization_ref_rules' {$kind = 'GH_ManageOrganizationRefRules'}
+                'manage_organization_webhooks' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageOrganizationWebhooks' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
+                'org_bypass_code_scanning_dismissal_requests' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_OrgBypassCodeScanningDismissalRequests' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
+                'org_bypass_secret_scanning_closure_requests' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_OrgBypassSecretScanningClosureRequests' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
+                'org_review_and_manage_secret_scanning_bypass_requests' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_OrgReviewAndManageSecretScanningBypassRequests' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
+                'org_review_and_manage_secret_scanning_closure_requests' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_OrgReviewAndManageSecretScanningClosureRequests' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
+                #'read_audit_logs' {$kind = 'GH_ReadAuditLogs'}
+                #'read_code_quality' {$kind = 'GH_ReadCodeQuality'}
+                #'read_code_scanning' {$kind = 'GH_ReadCodeScanning'}
+                'read_organization_actions_usage_metrics' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadOrganizationActionsUsageMetrics' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
+                'read_organization_custom_org_role' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadOrganizationCustomOrgRole' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
+                'read_organization_custom_repo_role' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadOrganizationCustomRepoRole' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
+                #'resolve_dependabot_alerts' {$kind = 'GH_ResolveDependabotAlerts'}
+                'resolve_secret_scanning_alerts' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ResolveSecretScanningAlerts' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
+                #'review_org_code_scanning_dismissal_requests' {$kind = 'GH_ReviewOrgCodeScanningDismissalRequests'}
+                #'view_dependabot_alerts' {$kind = 'GH_ViewDependabotAlerts'}
+                #'view_org_code_scanning_dismissal_requests' {$kind = 'GH_ViewOrgCodeScanningDismissalRequests'}
+                'view_secret_scanning_alerts' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ViewSecretScanningAlerts' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
+                'write_organization_actions_secrets' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteOrganizationActionsSecrets' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
+                'write_organization_actions_settings' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteOrganizationActionsSettings' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
+                #'write_organization_actions_variables' {$kind = 'GH_WriteOrganizationActionsVariables'}
+                #'write_code_quality' {$kind = 'GH_WriteCodeQuality'}
+                #'write_code_scanning' {$kind = 'GH_WriteCodeScanning'}
+                'write_organization_custom_org_role' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteOrganizationCustomOrgRole' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
+                'write_organization_custom_repo_role' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteOrganizationCustomRepoRole' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
+                'write_organization_network_configurations' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteOrganizationNetworkConfigurations' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
+                #'write_organization_runner_custom_images' {$kind = 'GH_WriteOrganizationRunnerCustomImages'}
+                #'write_organization_runners_and_runner_groups' {$kind = 'GH_WriteOrganizationRunnersAndRunnerGroups'}
+            }
+        }
+    }
+
+    # Default Organization Role: Owners
+    $orgOwnersId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_owners"))
+    $ownersProps = [pscustomobject]@{
+        # Common Properties
+        id                     = Normalize-Null $orgOwnersId
+        name                   = Normalize-Null "$($org.login)/owners"
+        # Relational Properties
+        environment_name      = Normalize-Null $org.login
+        environment_id        = Normalize-Null $org.node_id
+        # Node Specific Properties
+        short_name             = Normalize-Null 'owners'
+        type                   = Normalize-Null 'default'
+        # Accordion Panel Queries
+        query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_OrgRole {id:'$($orgOwnersId)'}) RETURN p"
+        query_unrolled_members = "MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_OrgRole {id:'$($orgOwnersId)'}) RETURN p"
+        query_repositories     = "MATCH p=(:GH_OrgRole {id:'$($orgOwnersId)'})-[*]->(:GH_Repository) RETURN p"
+    }
+    $null = $nodes.Add((New-GitHoundNode -Id $orgOwnersId -Kind 'GH_OrgRole', 'GH_Role' -Properties $ownersProps))
+    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateRepository' -StartId $orgOwnersId -EndId $orgNode.id -Properties @{traversable=$false}))
+    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_InviteMember' -StartId $orgOwnersId -EndId $orgNode.id -Properties @{traversable=$false}))
+    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddCollaborator' -StartId $orgOwnersId -EndId $orgNode.id -Properties @{traversable=$false}))
+    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateTeam' -StartId $orgOwnersId -EndId $orgNode.id -Properties @{traversable=$false}))
+    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_TransferRepository' -StartId $orgOwnersId -EndId $orgNode.id -Properties @{traversable=$false}))
+    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgOwnersId -EndId $orgAllRepoAdminId -Properties @{traversable=$true}))
+
+    # Default Organization Role: Members
+    $orgMembersId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_members"))
+    $membersProps = [pscustomobject]@{
+        # Common Properties
+        id                = Normalize-Null $orgMembersId
+        name              = Normalize-Null "$($org.login)/members"
+        # Relational Properties
+        environment_name = Normalize-Null $org.login
+        environment_id   = Normalize-Null $org.node_id
+        # Node Specific Properties
+        short_name        = Normalize-Null 'members'
+        type              = Normalize-Null 'default'
+        # Accordion Panel Queries
+        query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_OrgRole {id:'$($orgMembersId)'}) RETURN p"
+        query_unrolled_members = "MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_OrgRole {id:'$($orgMembersId)'}) RETURN p"
+        query_repositories     = "MATCH p=(:GH_OrgRole {id:'$($orgMembersId)'})-[*]->(:GH_Repository) RETURN p"
+    }
+    $null = $nodes.Add((New-GitHoundNode -Id $orgMembersId -Kind 'GH_OrgRole', 'GH_Role' -Properties $membersProps))
+    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateRepository' -StartId $orgMembersId -EndId $orgNode.id -Properties @{traversable=$false}))
+    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateTeam' -StartId $orgMembersId -EndId $orgNode.id -Properties @{traversable=$false}))
+
+    if($org.default_repository_permission -ne 'none')
+    {
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgMembersId -EndId ([Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_all_repo_$($org.default_repository_permission)"))) -Properties @{traversable=$true}))
+    }
 
     $output = [PSCustomObject]@{
         Nodes = $nodes
@@ -637,13 +961,19 @@ function Git-HoundTeam
 {
     <#
     .SYNOPSIS
-        Fetches and processes GitHub Teams for an organization.
+        Fetches and processes GitHub Teams, Team Roles, and Team Member assignments for an organization.
 
     .DESCRIPTION
-        This function retrieves teams for each organization provided in the pipeline. It creates nodes representing the teams and their relationships to the organization.
+        This function retrieves teams for each organization provided in the pipeline using the GitHub GraphQL API.
+        It creates nodes representing teams, team role nodes (members/maintainers), and GH_HasRole edges linking
+        users to their team roles — all in a single paginated GraphQL query.
 
-        API Reference: 
-        - List teams: https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#list-teams
+        For teams with more than 100 immediate members, follow-up GraphQL queries are made to paginate through
+        the remaining members.
+
+        API Reference:
+        - GitHub GraphQL API: Organization.teams connection
+        - GitHub GraphQL API: Team.members connection (membership: IMMEDIATE)
 
         Fine Grained Permissions Reference:
         - "Members" organization permissions (read)
@@ -671,31 +1001,202 @@ function Git-HoundTeam
     $nodes = New-Object System.Collections.ArrayList
     $edges = New-Object System.Collections.ArrayList
 
-    foreach($team in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Session.OrganizationName)/teams"))
-    {
-        $properties = [pscustomobject]@{
-            # Common Properties
-            id                = Normalize-Null $team.id
-            node_id           = Normalize-Null $team.node_id
-            name              = Normalize-Null $team.name
-            # Relational Properties
-            organization_name = Normalize-Null $Organization.properties.login
-            organization_id   = Normalize-Null $Organization.properties.node_id
-            # Node Specific Properties
-            slug              = Normalize-Null $team.slug
-            description       = Normalize-Null $team.description
-            privacy           = Normalize-Null $team.privacy
-            permission        = Normalize-Null $team.permission
-            # Accordion Panel Queries
-            query_first_degree_members = "MATCH p=(:GHUser)-[:GHHasRole]->(t:GHTeamRole)-[:GHMemberOf]->(:GHTeam {node_id:'$($team.node_id)'}) RETURN p"
-            query_unrolled_members     = "MATCH p=(t:GHTeamRole)-[:GHMemberOf*1..]->(:GHTeam {node_id:'$($team.node_id)'}) MATCH p1 = (t)<-[:GHHasRole]-(:GHUser) RETURN p,p1"
+    # Primary query: fetches teams with nested immediate members and their roles
+    $TeamsQuery = @'
+query Teams($login: String!, $count: Int = 100, $after: String = null) {
+    organization(login: $login) {
+        teams(first: $count, after: $after) {
+            nodes {
+                id
+                databaseId
+                name
+                slug
+                description
+                privacy
+                parentTeam {
+                    id
+                }
+                members(first: 100, membership: IMMEDIATE) {
+                    edges {
+                        role
+                        node {
+                            id
+                            login
+                        }
+                    }
+                    pageInfo {
+                        endCursor
+                        hasNextPage
+                    }
+                }
+            }
+            pageInfo {
+                endCursor
+                hasNextPage
+            }
         }
-        $null = $nodes.Add((New-GitHoundNode -Id $team.node_id -Kind 'GHTeam' -Properties $properties))
-        
-        if($null -ne $team.parent)
+    }
+}
+'@
+
+    # Follow-up query for teams with >100 immediate members
+    $TeamMembersOverflowQuery = @'
+query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $after: String!) {
+    organization(login: $login) {
+        team(slug: $slug) {
+            members(first: $count, after: $after, membership: IMMEDIATE) {
+                edges {
+                    role
+                    node {
+                        id
+                        login
+                    }
+                }
+                pageInfo {
+                    endCursor
+                    hasNextPage
+                }
+            }
+        }
+    }
+}
+'@
+
+    $TeamsVariables = @{
+        login = $Organization.properties.login
+        count = 100
+        after = $null
+    }
+
+    # Track teams that need follow-up member pagination
+    $overflowTeams = New-Object System.Collections.ArrayList
+
+    do {
+        $result = Invoke-GitHubGraphQL -Headers $Session.Headers -Query $TeamsQuery -Variables $TeamsVariables -Session $Session
+
+        foreach($team in $result.data.organization.teams.nodes)
         {
-            $null = $edges.Add((New-GitHoundEdge -Kind GHMemberOf -StartId $team.node_id -EndId $team.Parent.node_id -Properties @{ traversable = $true }))
+            # --- Team Node ---
+            $properties = [pscustomobject]@{
+                # Common Properties
+                id                = Normalize-Null $team.databaseId
+                node_id           = Normalize-Null $team.id
+                name              = Normalize-Null $team.name
+                # Relational Properties
+                environment_name = Normalize-Null $Organization.properties.login
+                environment_id   = Normalize-Null $Organization.properties.node_id
+                # Node Specific Properties
+                slug              = Normalize-Null $team.slug
+                description       = Normalize-Null $team.description
+                privacy           = Normalize-Null $team.privacy
+                # Accordion Panel Queries
+                query_first_degree_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(t:GH_TeamRole)-[:GH_MemberOf]->(:GH_Team {node_id:'$($team.id)'}) RETURN p"
+                query_unrolled_members     = "MATCH p=(t:GH_TeamRole)-[:GH_MemberOf*1..]->(:GH_Team {node_id:'$($team.id)'}) MATCH p1 = (t)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
+            }
+            $null = $nodes.Add((New-GitHoundNode -Id $team.id -Kind 'GH_Team' -Properties $properties))
+
+            # Parent team edge
+            if($null -ne $team.parentTeam)
+            {
+                $null = $edges.Add((New-GitHoundEdge -Kind GH_MemberOf -StartId $team.id -EndId $team.parentTeam.id -Properties @{ traversable = $true }))
+            }
+
+            # --- Team Role Nodes (members and maintainers) ---
+            $memberId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($team.id)_members"))
+            $memberProps = [pscustomobject]@{
+                # Common Properties
+                id                 = Normalize-Null $memberId
+                name               = Normalize-Null "$($Organization.properties.login)/$($team.slug)/members"
+                # Relational Properties
+                environment_name  = Normalize-Null $Organization.properties.login
+                environment_id    = Normalize-Null $Organization.properties.node_id
+                team_name          = Normalize-Null $team.name
+                team_id            = Normalize-Null $team.id
+                # Node Specific Properties
+                short_name         = Normalize-Null 'members'
+                type               = Normalize-Null 'team'
+                # Accordion Panel Queries
+                query_members      = "MATCH p=(:GH_User)-[GH_HasRole]->(:GH_TeamRole {id:'$($memberId)'}) RETURN p"
+                query_repositories = "MATCH p=(:GH_TeamRole {id:'$($memberId)'})-[*]->(:GH_Repository) RETURN p"
+            }
+            $null = $nodes.Add((New-GitHoundNode -Id $memberId -Kind 'GH_TeamRole','GH_Role' -Properties $memberProps))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MemberOf' -StartId $memberId -EndId $team.id -Properties @{traversable=$true}))
+
+            $maintainerId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($team.id)_maintainers"))
+            $maintainerProps = [pscustomobject]@{
+                # Common Properties
+                id                 = Normalize-Null $maintainerId
+                name               = Normalize-Null "$($Organization.properties.login)/$($team.slug)/maintainers"
+                # Relational Properties
+                environment_name  = Normalize-Null $Organization.properties.login
+                environment_id    = Normalize-Null $Organization.properties.node_id
+                team_name          = Normalize-Null $team.name
+                team_id            = Normalize-Null $team.id
+                # Node Specific Properties
+                short_name         = Normalize-Null 'maintainers'
+                type               = Normalize-Null 'team'
+                # Accordion Panel Queries
+                query_members      = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_TeamRole {id:'$($maintainerId)'}) RETURN p"
+                query_repositories = "MATCH p=(:GH_TeamRole {id:'$($maintainerId)'})-[*]->(:GH_Repository) RETURN p"
+            }
+            $null = $nodes.Add((New-GitHoundNode -Id $maintainerId -Kind 'GH_TeamRole','GH_Role' -Properties $maintainerProps))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MemberOf' -StartId $maintainerId -EndId $team.id -Properties @{traversable=$true}))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddMember' -StartId $maintainerId -EndId $team.id -Properties @{traversable=$true}))
+
+            # --- Member Role Assignments (from first page of members) ---
+            foreach($memberEdge in $team.members.edges)
+            {
+                switch($memberEdge.role)
+                {
+                    'MEMBER' { $destId = $memberId }
+                    'MAINTAINER' { $destId = $maintainerId }
+                }
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartId $memberEdge.node.id -EndId $destId -Properties @{traversable=$true}))
+            }
+
+            # Track teams that need follow-up pagination for remaining members
+            if($team.members.pageInfo.hasNextPage)
+            {
+                $null = $overflowTeams.Add([PSCustomObject]@{
+                    slug          = $team.slug
+                    teamId        = $team.id
+                    memberId      = $memberId
+                    maintainerId  = $maintainerId
+                    endCursor     = $team.members.pageInfo.endCursor
+                })
+            }
         }
+
+        $TeamsVariables['after'] = $result.data.organization.teams.pageInfo.endCursor
+    }
+    while($result.data.organization.teams.pageInfo.hasNextPage)
+
+    # Phase 2: Paginate remaining members for overflow teams
+    foreach($overflow in $overflowTeams)
+    {
+        $overflowVars = @{
+            login = $Organization.properties.login
+            slug  = $overflow.slug
+            count = 100
+            after = $overflow.endCursor
+        }
+
+        do {
+            $overflowResult = Invoke-GitHubGraphQL -Headers $Session.Headers -Query $TeamMembersOverflowQuery -Variables $overflowVars -Session $Session
+
+            foreach($memberEdge in $overflowResult.data.organization.team.members.edges)
+            {
+                switch($memberEdge.role)
+                {
+                    'MEMBER' { $destId = $overflow.memberId }
+                    'MAINTAINER' { $destId = $overflow.maintainerId }
+                }
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartId $memberEdge.node.id -EndId $destId -Properties @{traversable=$true}))
+            }
+
+            $overflowVars['after'] = $overflowResult.data.organization.team.members.pageInfo.endCursor
+        }
+        while($overflowResult.data.organization.team.members.pageInfo.hasNextPage)
     }
 
     $output = [PSCustomObject]@{
@@ -710,14 +1211,18 @@ function Git-HoundUser
 {
     <#
     .SYNOPSIS
-        Fetches and processes GitHub Users for an organization.
+        Fetches and processes GitHub Users for an organization, including their organization role assignments.
 
     .DESCRIPTION
-        This function retrieves users for each organization provided in the pipeline. It creates nodes representing the users and their relationships to the organization.
+        This function retrieves users for each organization provided in the pipeline using the GitHub GraphQL API's
+        membersWithRole connection. This returns user details (name, email, company) and the organization role
+        (ADMIN or MEMBER) in a single batched query, avoiding per-user API calls.
 
-        API Reference: 
-        - List organization members: https://docs.github.com/en/rest/orgs/members?apiVersion=2022-11-28#list-organization-members
-        - Get a user: https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user
+        It creates GH_User nodes and GH_HasRole edges linking each user to their default organization role
+        (owners or members).
+
+        API Reference:
+        - GitHub GraphQL API: Organization.membersWithRole connection
 
         Fine Grained Permissions Reference:
         - "Members" organization permissions (read)
@@ -742,75 +1247,113 @@ function Git-HoundUser
     )
 
     $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
 
+    # Compute the owners and members role IDs using the same formula as Git-HoundOrganization
+    $orgOwnersId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_owners"))
+    $orgMembersId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_members"))
 
-    Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/members" | ForEach-Object -Parallel {
-        
-        $nodes = $using:nodes
-        $Session = $using:Session
-        $Organization = $using:Organization
-        $functionBundle = $using:GitHoundFunctionBundle
-        foreach($funcName in $functionBundle.Keys) {
-            Set-Item -Path "function:$funcName" -Value ([scriptblock]::Create($functionBundle[$funcName]))
+    $Query = @'
+query MembersWithRole($login: String!, $count: Int = 100, $after: String = null) {
+    organization(login: $login) {
+        membersWithRole(first: $count, after: $after) {
+            edges {
+                role
+                node {
+                    id
+                    databaseId
+                    login
+                    name
+                    email
+                    company
+                }
+            }
+            pageInfo {
+                endCursor
+                hasNextPage
+            }
         }
-        
+    }
+}
+'@
 
-        $user = $_
-        <#
-        Write-Verbose "Fetching user details for $($user.login)"
-        try {
-            $user_details = Invoke-GithubRestMethod -Session $Session -Path "user/$($user.id)"
-        } catch {
-            Write-Verbose "User $($user.login) could not be found via api"
-            continue
+    $Variables = @{
+        login = $Organization.properties.login
+        count = 100
+        after = $null
+    }
+
+    do {
+        $result = Invoke-GitHubGraphQL -Headers $Session.Headers -Query $Query -Variables $Variables -Session $Session
+
+        foreach($edge in $result.data.organization.membersWithRole.edges)
+        {
+            $user = $edge.node
+
+            $properties = @{
+                # Common Properties
+                id                  = Normalize-Null $user.databaseId
+                node_id             = Normalize-Null $user.id
+                name                = Normalize-Null $user.login
+                # Relational Properties
+                environment_name   = Normalize-Null $Organization.properties.login
+                environment_id     = Normalize-Null $Organization.properties.node_id
+                # Node Specific Properties
+                login               = Normalize-Null $user.login
+                full_name           = Normalize-Null $user.name
+                company             = Normalize-Null $user.company
+                email               = Normalize-Null $user.email
+                # Accordion Panel Queries
+                query_roles         = "MATCH p=(t:GH_User {node_id:'$($user.id)'})-[:GH_HasRole|GH_MemberOf*1..4]->(:GitHub) RETURN p"
+                query_teams         = "MATCH p=(:GH_User {node_id:'$($user.id)'})-[:GH_HasRole]->(t:GH_TeamRole)-[:GH_MemberOf*1..4]->(:GH_Team) RETURN p"
+                query_repositories  = "MATCH p=(t:GH_User {node_id:'$($user.id)'})-[:GH_HasRole]->(:GH_RepoRole)-[:GH_ReadRepoContents|GH_WriteRepoContents|GH_WriteRepoPullRequests|GH_ManageWebhooks|GH_ManageDeployKeys|GH_PushProtectedBranch|GH_DeleteAlertsCodeScanning|GH_ViewSecretScanningAlerts|GH_RunOrgMigration|GH_BypassBranchProtection|GH_EditRepoProtections]->(:GH_Repository) RETURN p"
+                query_branches      = ""
+            }
+
+            $null = $nodes.Add((New-GitHoundNode -Id $user.id -Kind 'GH_User' -Properties $properties))
+
+            # Create GH_HasRole edge to the appropriate default organization role
+            switch($edge.role)
+            {
+                'ADMIN' { $destId = $orgOwnersId }
+                'MEMBER' { $destId = $orgMembersId }
+            }
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartId $user.id -EndId $destId -Properties @{traversable=$true}))
         }
-        #>
 
-        $properties = @{
-            # Common Properties
-            id                  = Normalize-Null $user.id
-            node_id             = Normalize-Null $user.node_id
-            name                = Normalize-Null $user.login
-            # Relational Properties
-            organization_name   = Normalize-Null $Organization.properties.login
-            organization_id     = Normalize-Null $Organization.properties.node_id
-            # Node Specific Properties
-            login               = Normalize-Null $user.login
-            #full_name           = Normalize-Null $user_details.name
-            #company             = Normalize-Null $user_details.company
-            #email               = Normalize-Null $user_details.email
-            #twitter_username    = Normalize-Null $user_details.twitter_username
-            type                = Normalize-Null $user.type
-            site_admin          = Normalize-Null $user.site_admin
-            # Accordion Panel Queries
-            query_roles         = "MATCH p=(t:GHUser {node_id:'$($user.node_id)'})-[:GHHasRole|GHMemberOf*1..4]->(:GitHub) RETURN p"
-            query_teams         = "MATCH p=(:GHUser {node_id:'$($user.node_id)'})-[:GHHasRole]->(t:GHTeamRole)-[:GHMemberOf*1..4]->(:GHTeam) RETURN p"
-            query_repositories  = "MATCH p=(t:GHUser {node_id:'$($user.node_id)'})-[:GHHasRole]->(:GHRepoRole)-[:GHReadRepoContents|GHWriteRepoContents|GHWriteRepoPullRequests|GHManageWebhooks|GHManageDeployKeys|GHPushProtectedBranch|GHDeleteAlertsCodeScanning|GHViewSecretScanningAlerts|GHRunOrgMigration|GHBypassBranchProtection|GHEditRepoProtections]->(:GHRepository) RETURN p"
-            query_branches      = ""
-        }
-        
-        $null = $nodes.Add((New-GitHoundNode -Id $user.node_id -Kind 'GHUser' -Properties $properties))
-    } -ThrottleLimit 25
+        $Variables['after'] = $result.data.organization.membersWithRole.pageInfo.endCursor
+    }
+    while($result.data.organization.membersWithRole.pageInfo.hasNextPage)
 
-    Write-Output $nodes
+    $output = [PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    }
+
+    Write-Output $output
 }
 
 function Git-HoundRepository
 {
     <#
     .SYNOPSIS
-        Fetches and processes GitHub Repositories for an organization. 
+        Fetches and processes GitHub Repositories, Repository Roles, and role assignments for an organization.
 
     .DESCRIPTION
-        This function retrieves repositories for each organization provided in the pipeline. It creates nodes and edges representing the repositories and their relationships to the organization.
+        This function retrieves repositories for each organization provided in the pipeline. It creates nodes
+        representing the repositories and their default and custom repository role nodes with permission edges.
 
-        API Reference: 
+        Role assignments (collaborator and team access) are handled separately by Git-HoundRepositoryRole.
+
+        API Reference:
         - Get GitHub Actions permissions for an organization: https://docs.github.com/en/rest/actions/permissions?apiVersion=2022-11-28#get-github-actions-permissions-for-an-organization
         - List selected repositories enabled for GitHub Actions in an organization: https://docs.github.com/en/rest/actions/permissions?apiVersion=2022-11-28#list-github-actions-enabled-repositories-for-an-organization
         - List organization repositories: https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#list-organization-repositories
+        - List custom repository roles in an organization: https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/custom-roles?apiVersion=2022-11-28#list-custom-repository-roles-in-an-organization
 
         Fine Grained Permissions Reference:
         - "Administration" organization permissions (read)
+        - "Custom repository roles" organization permissions (read)
         - "Metadata" repository permissions (read)
 
     .PARAMETER Session
@@ -822,7 +1365,7 @@ function Git-HoundRepository
     .EXAMPLE
         $repositories = Git-HoundOrganization | Git-HoundRepository
     #>
-    
+
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [PSTypeName('GitHound.Session')]
@@ -833,18 +1376,51 @@ function Git-HoundRepository
         $Organization
     )
 
-    $nodes = New-Object System.Collections.ArrayList
-    $edges = New-Object System.Collections.ArrayList
+    # ConcurrentBag is thread-safe for parallel ForEach-Object blocks
+    $nodes = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
+    $edges = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
 
+    # Pre-loop setup: Actions permissions
     $actions = Invoke-GithubRestMethod -Session $session -Path "orgs/$($Organization.Properties.login)/actions/permissions"
 
+    $enabledRepos = $null
     if($actions.enabled_repositories -ne 'all')
     {
         $enabledRepos = (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/actions/permissions/repositories").repositories.node_id
     }
 
-    foreach($repo in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/repos"))
-    {
+    # Pre-loop setup: Custom repository roles and org-level all_repo_* IDs
+    $customRepoRoles = (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/custom-repository-roles").custom_roles
+
+    $orgAllRepoReadId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_read"))
+    $orgAllRepoTriageId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_triage"))
+    $orgAllRepoWriteId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_write"))
+    $orgAllRepoMaintainId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_maintain"))
+    $orgAllRepoAdminId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_admin"))
+
+    # Per-repo processing: create repo node, role nodes, and fetch collaborator/team assignments
+    Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/repos" | ForEach-Object -Parallel {
+
+        $nodes = $using:nodes
+        $edges = $using:edges
+        $Session = $using:Session
+        $Organization = $using:Organization
+        $actions = $using:actions
+        $enabledRepos = $using:enabledRepos
+        $customRepoRoles = $using:customRepoRoles
+        $orgAllRepoReadId = $using:orgAllRepoReadId
+        $orgAllRepoTriageId = $using:orgAllRepoTriageId
+        $orgAllRepoWriteId = $using:orgAllRepoWriteId
+        $orgAllRepoMaintainId = $using:orgAllRepoMaintainId
+        $orgAllRepoAdminId = $using:orgAllRepoAdminId
+
+        $functionBundle = $using:GitHoundFunctionBundle
+        foreach($funcName in $functionBundle.Keys) {
+            Set-Item -Path "function:$funcName" -Value ([scriptblock]::Create($functionBundle[$funcName]))
+        }
+        $repo = $_
+
+        # --- Repository Node ---
         if($actions.enabled_repositories -eq 'all')
         {
             $actionsEnabled = $true
@@ -860,8 +1436,8 @@ function Git-HoundRepository
             node_id                      = Normalize-Null $repo.node_id
             name                         = Normalize-Null $repo.name
             # Relational Properties
-            organization_name            = Normalize-Null $Organization.properties.login
-            organization_id              = Normalize-Null $Organization.properties.node_id
+            environment_name            = Normalize-Null $Organization.properties.login
+            environment_id              = Normalize-Null $Organization.properties.node_id
             owner_id                     = Normalize-Null $repo.owner.id
             owner_node_id                = Normalize-Null $repo.owner.node_id
             owner_name                   = Normalize-Null $repo.owner.login
@@ -886,20 +1462,309 @@ function Git-HoundRepository
             actions_enabled              = Normalize-Null $actionsEnabled
             secret_scanning              = Normalize-Null $repo.security_and_analysis.secret_scanning.status
             # Accordion Panel Queries
-            query_branches               = "MATCH p=(:GHRepository {node_id: '$($repo.node_id)'})-[:GHHasBranch]->(:GHBranch) RETURN p"
-            query_roles                  = "MATCH p=(:GHRepoRole)-[]->(:GHRepository {node_id: '$($repo.node_id)'}) RETURN p"
-            query_teams                  = "MATCH p=(:GHTeam)-[:GHMemberOf|GHHasRole]->(:GHRepoRole)-[]->(:GHRepository {node_id: '$($repo.node_id)'}) RETURN p"
-            query_workflows              = "MATCH p=(:GHRepository {node_id:'R_kgDOQKVZEw'})-[:GHHasWorkflow]->(w:GHWorkflow) RETURN p"
-            query_user_permissions       = "MATCH p=(:GHUser)-[:GHHasRole]->()-[:GHHasBaseRole|GHHasRole|GHOwns|GHAddMember|GHMemberOf]->(:GHRepoRole)-[]->(:GHRepository {node_id: '$($repo.node_id)'}) RETURN p"
-            query_explicit_readers       = "MATCH p=(role:GitHub)-[:GHHasBaseRole|GHReadRepoContents*1..]->(r:GHRepository {node_id:'$($repo.node_id)'}) MATCH p1=(role)<-[:GHHasRole]-(:GHUser) RETURN p,p1"
-            query_unrolled_readers       = "MATCH p=(:GitHub)-[:GHMemberOf|GHHasRole|GHHasBaseRole|GHReadRepoContents*1..]->(r:GHRepository {node_id:'$($repo.node_id)'}) RETURN p"
-            query_explicit_writers       = "MATCH p=(role:GitHub)-[:GHHasBaseRole|GHWriteRepoContents|GHWriteRepoPullRequests*1..]->(r:GHRepository {node_id:'$($repo.node_id)'}) MATCH p1=(role)<-[:GHHasRole]-(:GHUser) RETURN p,p1"
-            query_unrolled_writers       = "MATCH p=(:GitHub)-[:GHMemberOf|GHHasRole|GHHasBaseRole|GHWriteRepoContents|GHWriteRepoPullRequests*1..]->(r:GHRepository {node_id:'$($repo.node_id)'}) RETURN p"
-            #query_first_degree_object_control  = "MATCH p=(t:GHUser)-[:GHHasRole]->(:GHRepoRole)-[:GHReadRepoContents|GHWriteRepoContents|GHWriteRepoPullRequests|GHManageWebhooks|GHManageDeployKeys|GHPushProtectedBranch|GHDeleteAlertsCodeScanning|GHViewSecretScanningAlerts|GHRunOrgMigration|GHBypassBranchProtection|GHEditRepoProtections]->(:GHRepository {node_id:'$($repo.node_id)'}) RETURN p"
+            query_branches               = "MATCH p=(:GH_Repository {node_id: '$($repo.node_id)'})-[:GH_HasBranch]->(:GH_Branch) RETURN p"
+            query_roles                  = "MATCH p=(:GH_RepoRole)-[]->(:GH_Repository {node_id: '$($repo.node_id)'}) RETURN p"
+            query_teams                  = "MATCH p=(:GH_Team)-[:GH_MemberOf|GH_HasRole]->(:GH_RepoRole)-[]->(:GH_Repository {node_id: '$($repo.node_id)'}) RETURN p"
+            query_workflows              = "MATCH p=(:GH_Repository {node_id:'R_kgDOQKVZEw'})-[:GH_HasWorkflow]->(w:GH_Workflow) RETURN p"
+            query_user_permissions       = "MATCH p=(:GH_User)-[:GH_HasRole]->()-[:GH_HasBaseRole|GH_HasRole|GH_Owns|GH_AddMember|GH_MemberOf]->(:GH_RepoRole)-[]->(:GH_Repository {node_id: '$($repo.node_id)'}) RETURN p"
+            query_explicit_readers       = "MATCH p=(role:GitHub)-[:GH_HasBaseRole|GH_ReadRepoContents*1..]->(r:GH_Repository {node_id:'$($repo.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
+            query_unrolled_readers       = "MATCH p=(:GitHub)-[:GH_MemberOf|GH_HasRole|GH_HasBaseRole|GH_ReadRepoContents*1..]->(r:GH_Repository {node_id:'$($repo.node_id)'}) RETURN p"
+            query_explicit_writers       = "MATCH p=(role:GitHub)-[:GH_HasBaseRole|GH_WriteRepoContents|GH_WriteRepoPullRequests*1..]->(r:GH_Repository {node_id:'$($repo.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
+            query_unrolled_writers       = "MATCH p=(:GitHub)-[:GH_MemberOf|GH_HasRole|GH_HasBaseRole|GH_WriteRepoContents|GH_WriteRepoPullRequests*1..]->(r:GH_Repository {node_id:'$($repo.node_id)'}) RETURN p"
+            #query_first_degree_object_control  = "MATCH p=(t:GH_User)-[:GH_HasRole]->(:GH_RepoRole)-[:GH_ReadRepoContents|GH_WriteRepoContents|GH_WriteRepoPullRequests|GH_ManageWebhooks|GH_ManageDeployKeys|GH_PushProtectedBranch|GH_DeleteAlertsCodeScanning|GH_ViewSecretScanningAlerts|GH_RunOrgMigration|GH_BypassBranchProtection|GH_EditRepoProtections]->(:GH_Repository {node_id:'$($repo.node_id)'}) RETURN p"
         }
-        $null = $nodes.Add((New-GitHoundNode -Id $repo.node_id -Kind 'GHRepository' -Properties $properties))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHOwns' -StartId $repo.owner.node_id -EndId $repo.node_id -Properties @{ traversable = $true }))
-    }
+        $null = $nodes.Add((New-GitHoundNode -Id $repo.node_id -Kind 'GH_Repository' -Properties $properties))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Owns' -StartId $repo.owner.node_id -EndId $repo.node_id -Properties @{ traversable = $true }))
+
+        # --- Default Repository Role Nodes ---
+
+        # Read Role
+        $repoReadId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_read"))
+        $repoReadProps = [pscustomobject]@{
+            # Common Properties
+            id                     = Normalize-Null $repoReadId
+            name                   = Normalize-Null "$($repo.full_name)/read"
+            # Relational Properties
+            environment_name      = Normalize-Null $Organization.properties.login
+            environment_id        = Normalize-Null $Organization.properties.node_id
+            repository_name        = Normalize-Null $repo.name
+            repository_id          = Normalize-Null $repo.node_id
+            # Node Specific Properties
+            short_name             = Normalize-Null 'read'
+            type                   = Normalize-Null 'default'
+            # Accordion Panel Queries
+            query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {id:'$($repoReadId)'}) RETURN p"
+            query_unrolled_members = "MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole {id:'$($repoReadId)'}) RETURN p"
+            query_repository       = "MATCH p=(:GH_RepoRole {id:'$($repoReadId)'})-[*]->(:GH_Repository) RETURN p"
+        }
+        $null = $nodes.Add((New-GitHoundNode -Id $repoReadId -Kind 'GH_RepoRole', 'GH_Role' -Properties $repoReadProps))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoMetadata' -StartId $repoReadId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoContents' -StartId $repoReadId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoPullRequests' -StartId $repoReadId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgAllRepoReadId -EndId $repoReadId -Properties @{traversable=$true}))
+
+        # Write Role
+        $repoWriteId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_write"))
+        $repoWriteProps = [pscustomobject]@{
+            # Common Properties
+            id                     = Normalize-Null $repoWriteId
+            name                   = Normalize-Null "$($repo.full_name)/write"
+            # Relational Properties
+            environment_name      = Normalize-Null $Organization.properties.login
+            environment_id        = Normalize-Null $Organization.properties.node_id
+            repository_name        = Normalize-Null $repo.name
+            repository_id          = Normalize-Null $repo.node_id
+            # Node Specific Properties
+            short_name             = Normalize-Null 'write'
+            type                   = Normalize-Null 'default'
+            # Accordion Panel Queries
+            query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {id:'$($repoWriteId)'}) RETURN p"
+            query_unrolled_members = "MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole {id:'$($repoWriteId)'}) RETURN p"
+            query_repository       = "MATCH p=(:GH_RepoRole {id:'$($repoWriteId)'})-[*]->(:GH_Repository) RETURN p"
+        }
+        $null = $nodes.Add((New-GitHoundNode -Id $repoWriteId -Kind 'GH_RepoRole', 'GH_Role' -Properties $repoWriteProps))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoMetadata' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoContents' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteRepoContents' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddLabel' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveLabel' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseIssue' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenIssue' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoPullRequests' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteRepoPullRequests' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ClosePullRequest' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenPullRequest' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddAssignee' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetIssueType' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveAssignee' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RequestPrReview' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_MarkAsDuplicate' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetMilestone' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadCodeScanning' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteCodeScanning' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionAnswer' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionCommentMinimize' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageDiscussionSpotlights' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussionCategory' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionCategory' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ConvertIssuesToDiscussions' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditCategoryOnDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionComment' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussionComment' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ViewDependabotAlerts' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ResolveDependabotAlerts' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageDiscussionBadges' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgAllRepoWriteId -EndId $repoWriteId -Properties @{traversable=$true}))
+
+        # Admin Role
+        $repoAdminId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_admin"))
+        $repoAdminProps = [pscustomobject]@{
+            # Common Properties
+            id                     = Normalize-Null $repoAdminId
+            name                   = Normalize-Null "$($repo.full_name)/admin"
+            # Relational Properties
+            environment_name      = Normalize-Null $Organization.properties.login
+            environment_id        = Normalize-Null $Organization.properties.node_id
+            repository_name        = Normalize-Null $repo.name
+            repository_id          = Normalize-Null $repo.node_id
+            # Node Specific Properties
+            short_name             = Normalize-Null 'admin'
+            type                   = Normalize-Null 'default'
+            # Accordion Panel Queries
+            query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {id:'$($repoAdminId)'}) RETURN p"
+            query_unrolled_members = "MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole {id:'$($repoAdminId)'}) RETURN p"
+            query_repository       = "MATCH p=(:GH_RepoRole {id:'$($repoAdminId)'})-[*]->(:GH_Repository) RETURN p"
+        }
+        $null = $nodes.Add((New-GitHoundNode -Id $repoAdminId -Kind 'GH_RepoRole', 'GH_Role' -Properties $repoAdminProps))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AdminTo' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoMetadata' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoContents' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteRepoContents' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddLabel' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveLabel' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseIssue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenIssue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoPullRequests' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteRepoPullRequests' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ClosePullRequest' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenPullRequest' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddAssignee' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteIssue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveAssignee' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RequestPrReview' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_MarkAsDuplicate' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetMilestone' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetIssueType' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageTopics' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsDiscussions' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsWiki' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsProjects' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsMergeTypes' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsPages' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageWebhooks' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageDeployKeys' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoMetadata' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetInteractionLimits' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetSocialPreview' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_PushProtectedBranch' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadCodeScanning' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteCodeScanning' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteAlertsCodeScanning' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ViewSecretScanningAlerts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ResolveSecretScanningAlerts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_RunOrgMigration' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussionAnnouncement' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussionCategory' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionCategory' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussionCategory' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageDiscussionSpotlights' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionAnswer' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionCommentMinimize' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ConvertIssuesToDiscussions' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateTag' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteTag' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ViewDependabotAlerts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ResolveDependabotAlerts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_BypassBranchProtection' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSecurityProducts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageRepoSecurityProducts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoProtections' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoAnnouncementBanners' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditCategoryOnDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageDiscussionBadges' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionComment' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussionComment' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_JumpMergeQueue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateSoloMergeQueueEntry' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoCustomPropertiesValue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgAllRepoAdminId -EndId $repoAdminId -Properties @{traversable=$true}))
+
+        # Triage Role
+        $repoTriageId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_triage"))
+        $repoTriageProps = [pscustomobject]@{
+            # Common Properties
+            id                     = Normalize-Null $repoTriageId
+            name                   = Normalize-Null "$($repo.full_name)/triage"
+            # Relational Properties
+            environment_name      = Normalize-Null $Organization.properties.login
+            environment_id        = Normalize-Null $Organization.properties.node_id
+            repository_name        = Normalize-Null $repo.name
+            repository_id          = Normalize-Null $repo.node_id
+            # Node Specific Properties
+            short_name             = Normalize-Null 'triage'
+            type                   = Normalize-Null 'default'
+            # Accordion Panel Queries
+            query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {id:'$($repoTriageId)'}) RETURN p"
+            query_unrolled_members = "MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole {id:'$($repoTriageId)'}) RETURN p"
+            query_repository       = "MATCH p=(:GH_RepoRole {id:'$($repoTriageId)'})-[*]->(:GH_Repository) RETURN p"
+        }
+        $null = $nodes.Add((New-GitHoundNode -Id $repoTriageId -Kind 'GH_RepoRole', 'GH_Role' -Properties $repoTriageProps))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddLabel' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveLabel' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseIssue' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenIssue' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ClosePullRequest' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenPullRequest' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddAssignee' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveAssignee' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RequestPrReview' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_MarkAsDuplicate' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetMilestone' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetIssueType' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionAnswer' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionCommentMinimize' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionCategory' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussionCategory' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ConvertIssuesToDiscussions' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditCategoryOnDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionComment' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussionComment' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $repoTriageId -EndId $repoReadId -Properties @{traversable=$true}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgAllRepoTriageId -EndId $repoTriageId -Properties @{traversable=$true}))
+
+        # Maintain Role
+        $repoMaintainId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_maintain"))
+        $repoMaintainProps = [pscustomobject]@{
+            # Common Properties
+            id                     = Normalize-Null $repoMaintainId
+            name                   = Normalize-Null "$($repo.full_name)/maintain"
+            # Relational Properties
+            environment_name      = Normalize-Null $Organization.properties.login
+            environment_id        = Normalize-Null $Organization.properties.node_id
+            repository_name        = Normalize-Null $repo.name
+            repository_id          = Normalize-Null $repo.node_id
+            # Node Specific Properties
+            short_name             = Normalize-Null 'maintain'
+            type                   = Normalize-Null 'default'
+            # Accordion Panel Queries
+            query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {id:'$($repoMaintainId)'}) RETURN p"
+            query_unrolled_members = "MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole {id:'$($repoMaintainId)'}) RETURN p"
+            query_repository       = "MATCH p=(:GH_RepoRole {id:'$($repoMaintainId)'})-[*]->(:GH_Repository) RETURN p"
+        }
+        $null = $nodes.Add((New-GitHoundNode -Id $repoMaintainId -Kind 'GH_RepoRole', 'GH_Role' -Properties $repoMaintainProps))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageTopics' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsWiki' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsProjects' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsMergeTypes' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsPages' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoMetadata' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetInteractionLimits' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetSocialPreview' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_PushProtectedBranch' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussionAnnouncement' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussionCategory' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsDiscussion' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $repoMaintainId -EndId $repoWriteId -Properties @{traversable=$true}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgAllRepoMaintainId -EndId $repoMaintainId -Properties @{traversable=$true}))
+
+        # --- Custom Repository Roles ---
+        foreach($customRepoRole in $customRepoRoles)
+        {
+            $customRepoRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_$($customRepoRole.name)"))
+            $customRepoRoleProps = [pscustomobject]@{
+                # Common Properties
+                id                     = Normalize-Null $customRepoRoleId
+                name                   = Normalize-Null "$($repo.full_name)/$($customRepoRole.name)"
+                # Relational Properties
+                environment_name      = Normalize-Null $Organization.properties.login
+                environment_id        = Normalize-Null $Organization.properties.node_id
+                repository_name        = Normalize-Null $repo.name
+                repository_id          = Normalize-Null $repo.node_id
+                # Node Specific Properties
+                short_name             = Normalize-Null $customRepoRole.name
+                type                   = Normalize-Null 'custom'
+                # Accordion Panel Queries
+                query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {id:'$($customRepoRoleId)'}) RETURN p"
+                query_unrolled_members = "MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole {id:'$($customRepoRoleId)'}) RETURN p"
+                query_repository       = "MATCH p=(:GH_RepoRole {id:'$($customRepoRoleId)'})-[*]->(:GH_Repository) RETURN p"
+            }
+            $null = $nodes.Add((New-GitHoundNode -Id $customRepoRoleId -Kind 'GH_RepoRole', 'GH_Role' -Properties $customRepoRoleProps))
+
+            if($null -ne $customRepoRole.base_role)
+            {
+                $targetBaseRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_$($customRepoRole.base_role)"))
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $customRepoRoleId -EndId $targetBaseRoleId -Properties @{traversable=$true}))
+            }
+
+            foreach($permission in $customRepoRole.permissions)
+            {
+                $null = $edges.Add((New-GitHoundEdge -Kind "GH$(ConvertTo-PascalCase -String $permission)" -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false}))
+            }
+        }
+
+    } -ThrottleLimit 25
 
     $output = [PSCustomObject]@{
         Nodes = $nodes
@@ -909,18 +1774,293 @@ function Git-HoundRepository
     Write-Output $output
 }
 
+function Git-HoundRepositoryRole
+{
+    <#
+    .SYNOPSIS
+        Fetches collaborator and team role assignments for GitHub repositories.
+
+    .DESCRIPTION
+        This function processes GitHub repositories to fetch their direct collaborators and team access,
+        creating GH_HasRole edges that map users and teams to the appropriate repository role nodes.
+
+        Role IDs are deterministic (Base64-encoded from repo node_id + role name), so this function
+        can compute them independently without needing the actual role nodes from Git-HoundRepository.
+
+        Uses a chunked parallel approach with rate limit awareness:
+        - Repos are processed in chunks sized to fit within the available REST API rate limit budget
+        - After each chunk, results are checkpointed to disk as JSON files
+        - If rate limit is exhausted, the function sleeps until reset and continues
+        - Supports resuming from a specific index via -StartIndex if a previous run was interrupted
+        - Each chunk costs ~2 REST calls per repo (collaborators + teams)
+
+        API Reference:
+        - List repository collaborators: https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#list-repository-collaborators
+        - List repository teams: https://docs.github.com/en/enterprise-cloud@latest/rest/repos/repos?apiVersion=2022-11-28#list-repository-teams
+
+        Fine Grained Permissions Reference:
+        - "Metadata" repository permissions (read)
+        - "Administration" repository permissions (read)
+
+    .PARAMETER Session
+        A GitHound.Session object used for authentication and API requests.
+
+    .PARAMETER Repository
+        A GitHound.Repository output object from Git-HoundRepository (pipeline input).
+
+    .PARAMETER StartIndex
+        Optional index into the repository array to resume from. Defaults to 0.
+
+    .PARAMETER CheckpointPath
+        Optional directory path to write checkpoint JSON files after each chunk.
+        Defaults to the current directory.
+
+    .PARAMETER ChunkSize
+        Number of repos to process per chunk. Defaults to 50. Each repo costs ~2 API calls,
+        so the default chunk costs ~100 API calls.
+
+    .EXAMPLE
+        $reporoles = $repos | Git-HoundRepositoryRole -Session $Session
+
+    .EXAMPLE
+        # Resume from repo index 500 after a previous interruption
+        $reporoles = $repos | Git-HoundRepositoryRole -Session $Session -StartIndex 500
+    #>
+
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session,
+
+        [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline)]
+        [psobject[]]
+        $Repository,
+
+        [Parameter()]
+        [int]
+        $StartIndex = 0,
+
+        [Parameter()]
+        [string]
+        $CheckpointPath = ".",
+
+        [Parameter()]
+        [int]
+        $ChunkSize = 50
+    )
+
+    begin
+    {
+        $allNodes = New-Object System.Collections.ArrayList
+        $allEdges = New-Object System.Collections.ArrayList
+    }
+
+    process
+    {
+        $repoNodes = @($Repository.nodes | Where-Object {$_.kinds -eq 'GH_Repository'})
+        $totalRepos = $repoNodes.Count
+        $callsPerRepo = 2
+        $rateLimitBuffer = 50  # reserve some calls for other operations
+
+        $currentIndex = $StartIndex
+
+        # Auto-detect resume from existing chunk files
+        if ($currentIndex -eq 0) {
+            $existingChunks = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_RepoRole_chunk_*.json" -ErrorAction SilentlyContinue | Sort-Object Name)
+            if ($existingChunks.Count -gt 0) {
+                foreach ($chunk in $existingChunks) {
+                    try {
+                        $chunkData = Get-Content $chunk.FullName -Raw | ConvertFrom-Json
+                        if ($chunkData.graph.edges) {
+                            $null = $allEdges.AddRange(@($chunkData.graph.edges))
+                        }
+                        $currentIndex = $chunkData.metadata.next_index
+                    }
+                    catch {
+                        Write-Warning "Skipping corrupt chunk file: $($chunk.Name)"
+                    }
+                }
+                Write-Host "[*] Auto-resuming Git-HoundRepositoryRole from index $currentIndex ($($existingChunks.Count) chunks loaded, $($allEdges.Count) edges recovered)"
+            }
+        }
+        else {
+            Write-Host "[*] Resuming Git-HoundRepositoryRole from index $StartIndex of $totalRepos repos"
+        }
+
+        while ($currentIndex -lt $totalRepos) {
+
+            # Check rate limit and determine chunk size
+            $rateLimitInfo = (Get-RateLimitInformation -Session $Session).core
+            $remaining = $rateLimitInfo.remaining
+            $resetTime = $rateLimitInfo.reset
+
+            $availableBudget = [Math]::Max(0, $remaining - $rateLimitBuffer)
+            $maxReposForBudget = [Math]::Floor($availableBudget / $callsPerRepo)
+
+            if ($maxReposForBudget -eq 0) {
+                # Not enough budget — sleep until reset
+                $timeNow = [DateTimeOffset]::Now.ToUnixTimeSeconds()
+                $sleepSeconds = [Math]::Max(1, $resetTime - $timeNow + 5) # +5s buffer
+                $resetLocal = ([DateTimeOffset]::FromUnixTimeSeconds($resetTime)).LocalDateTime.ToString("HH:mm:ss")
+                Write-Host "[!] Rate limit exhausted ($remaining remaining). Sleeping $sleepSeconds seconds until reset at $resetLocal..."
+                Start-Sleep -Seconds $sleepSeconds
+                continue
+            }
+
+            # Size the chunk: minimum of configured ChunkSize, budget, and remaining repos
+            $reposRemaining = $totalRepos - $currentIndex
+            $thisChunkSize = [Math]::Min($ChunkSize, [Math]::Min($maxReposForBudget, $reposRemaining))
+
+            $chunkEnd = $currentIndex + $thisChunkSize - 1
+            Write-Host "[*] Processing repos $currentIndex..$chunkEnd of $totalRepos ($thisChunkSize repos, ~$($thisChunkSize * $callsPerRepo) API calls, $remaining calls remaining)"
+
+            $chunkRepos = $repoNodes[$currentIndex..$chunkEnd]
+            # ConcurrentBag is thread-safe for parallel ForEach-Object blocks
+            $chunkEdges = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
+
+            $chunkRepos | ForEach-Object -Parallel {
+                $edges = $using:chunkEdges
+                $Session = $using:Session
+                $functionBundle = $using:GitHoundFunctionBundle
+                foreach($funcName in $functionBundle.Keys) {
+                    Set-Item -Path "function:$funcName" -Value ([scriptblock]::Create($functionBundle[$funcName]))
+                }
+                $repo = $_
+
+                # Compute deterministic role IDs from repo node_id
+                $repoReadId     = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.properties.node_id)_read"))
+                $repoWriteId    = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.properties.node_id)_write"))
+                $repoAdminId    = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.properties.node_id)_admin"))
+                $repoTriageId   = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.properties.node_id)_triage"))
+                $repoMaintainId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.properties.node_id)_maintain"))
+
+                # --- Role Assignments: Direct Collaborators ---
+                foreach($collaborator in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.environment_name)/$($repo.properties.name)/collaborators?affiliation=direct"))
+                {
+                    switch($collaborator.role_name)
+                    {
+                        'admin'    { $repoRoleId = $repoAdminId }
+                        'maintain' { $repoRoleId = $repoMaintainId }
+                        'write'    { $repoRoleId = $repoWriteId }
+                        'triage'   { $repoRoleId = $repoTriageId }
+                        'read'     { $repoRoleId = $repoReadId }
+                        default    { $repoRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.properties.node_id)_$($collaborator.role_name)")) }
+                    }
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartId $collaborator.node_id -EndId $repoRoleId -Properties @{traversable=$true}))
+                }
+
+                # --- Role Assignments: Teams ---
+                foreach($team in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.environment_name)/$($repo.properties.name)/teams"))
+                {
+                    switch($team.permission)
+                    {
+                        'admin'    { $repoRoleId = $repoAdminId }
+                        'maintain' { $repoRoleId = $repoMaintainId }
+                        'push'     { $repoRoleId = $repoWriteId }
+                        'triage'   { $repoRoleId = $repoTriageId }
+                        'pull'     { $repoRoleId = $repoReadId }
+                        default    { $repoRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.properties.node_id)_$($team.permission)")) }
+                    }
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartId $team.node_id -EndId $repoRoleId -Properties @{traversable=$true}))
+                }
+            } -ThrottleLimit 25
+
+            # Accumulate chunk results
+            if ($chunkEdges.Count -gt 0) {
+                $null = $allEdges.AddRange(@($chunkEdges))
+            }
+
+            # Checkpoint to disk
+            $chunkPayload = [PSCustomObject]@{
+                metadata = [PSCustomObject]@{
+                    source_kind  = "GitHub"
+                    chunk_start  = $currentIndex
+                    chunk_end    = $chunkEnd
+                    total_repos  = $totalRepos
+                    next_index   = $currentIndex + $thisChunkSize
+                    timestamp    = (Get-Date -Format "o")
+                }
+                graph = [PSCustomObject]@{
+                    nodes = @()
+                    edges = @($chunkEdges)
+                }
+            }
+            $chunkFile = Join-Path $CheckpointPath "githound_RepoRole_chunk_$($currentIndex).json"
+            $chunkPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath $chunkFile
+            Write-Host "[+] Checkpoint saved: $chunkFile ($($chunkEdges.Count) edges, next index: $($currentIndex + $thisChunkSize))"
+
+            $currentIndex += $thisChunkSize
+        }
+
+        # Write final consolidated output and clean up chunk files
+        $finalPayload = [PSCustomObject]@{
+            metadata = [PSCustomObject]@{
+                source_kind  = "GitHub"
+                total_repos  = $totalRepos
+                total_edges  = $allEdges.Count
+                timestamp    = (Get-Date -Format "o")
+            }
+            graph = [PSCustomObject]@{
+                nodes = @()
+                edges = @($allEdges)
+            }
+        }
+        $finalFile = Join-Path $CheckpointPath "githound_RepoRole_complete.json"
+        $finalPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath $finalFile
+
+        # Clean up intermediate chunk files
+        $intermediateFiles = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_RepoRole_chunk_*.json" -ErrorAction SilentlyContinue)
+        if ($intermediateFiles.Count -gt 0) {
+            $intermediateFiles | Remove-Item -Force
+            Write-Host "[+] Cleaned up $($intermediateFiles.Count) intermediate checkpoint files."
+        }
+
+        Write-Host "[+] Git-HoundRepositoryRole complete. Processed $totalRepos repos, collected $($allEdges.Count) edges. Final output: $finalFile"
+    }
+
+    end
+    {
+        $output = [PSCustomObject]@{
+            Nodes = $allNodes
+            Edges = $allEdges
+        }
+
+        Write-Output $output
+    }
+}
+
 function Git-HoundBranch
 {
     <#
     .SYNOPSIS
-        Retrieves branches for GitHub repositories and creates nodes and edges representing branch protections.
-    
-    .DESCRIPTION
-        This function processes GitHub repositories to fetch their branches and associated protection settings. It creates nodes for each branch and edges to represent relationships such as bypass permissions and push restrictions.
+        Retrieves branches and branch protection rules for GitHub repositories.
 
-        API Reference:
-        - Get a branch: https://docs.github.com/en/rest/branches/branches?apiVersion=2022-11-28#get-a-branch
-        - Get branch protection: https://docs.github.com/en/rest/branches/branch-protection?apiVersion=2022-11-28#get-branch-protection
+    .DESCRIPTION
+        This function uses the GitHub GraphQL API to enumerate branches and their protection
+        rules across all repositories in the organization.
+
+        This uses a three-phase approach with checkpointing and rate limit management:
+        - Phase 1: Paginate organization repositories with nested refs (50 per page).
+          Each ref includes only its branchProtectionRule ID to determine protection status.
+          Checkpoints are written after each page.
+        - Phase 2: For repos with >100 branches, paginate the remaining refs individually.
+        - Phase 3: Fetch protection rule details by node ID in batches of 100.
+
+        Creates:
+        - GH_Branch nodes for each branch
+        - GH_BranchProtectionRule nodes for each protection rule
+        - GH_HasBranch edges (Repository → Branch)
+        - GH_ProtectedBy edges (Rule → Branch)
+        - GH_BypassPullRequestAllowances edges (User/Team → Rule)
+        - GH_RestrictionsCanPush edges (User/Team → Rule)
+
+        Between phases and pages, the GraphQL rate limit is checked. If exhausted, the function
+        sleeps until reset and continues. Checkpoint files are written to disk after each page
+        so that progress is preserved if PowerShell crashes during long-running collection.
+
+        GraphQL API Reference:
+        - Repository.refs: https://docs.github.com/en/graphql/reference/objects#repository
+        - BranchProtectionRule: https://docs.github.com/en/graphql/reference/objects#branchprotectionrule
 
         Fine Grained Permissions Reference:
         - "Contents" repository permissions (read)
@@ -929,183 +2069,421 @@ function Git-HoundBranch
     .PARAMETER Session
         A GitHound.Session object used for authentication and API requests.
 
-    .PARAMETER Repository
-        A GitHound.Repository object representing the repository for which branches are to be fetched.
+    .PARAMETER Organization
+        A GitHound.Organization node object (pipeline input from Git-HoundOrganization).
+
+    .PARAMETER CheckpointPath
+        Optional directory path to write checkpoint JSON files. Defaults to the current directory.
+
+    .OUTPUTS
+        PSCustomObject with Nodes and Edges properties containing branches and protection rules.
 
     .EXAMPLE
-        $branches = Git-HoundRepository | Git-HoundBranch
+        $branches = $org.nodes[0] | Git-HoundBranch -Session $Session
+
+    .EXAMPLE
+        $branches = $org.nodes[0] | Git-HoundBranch -Session $Session -CheckpointPath "./output"
     #>
-        Param(
+    Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [PSTypeName('GitHound.Session')]
         $Session,
 
         [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline)]
-        [psobject[]]
-        $Repository
+        [psobject]
+        $Organization,
+
+        [Parameter()]
+        [string]
+        $CheckpointPath = "."
     )
-    
-    begin
-    {
-        $nodes = New-Object System.Collections.ArrayList
-        $edges = New-Object System.Collections.ArrayList
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+    $pageCount = 0
+    $totalRepos = 0
+    $totalPages = 0
+    $reposProcessed = 0
+
+    # ── Phase 1 Query ──────────────────────────────────────────────────────
+    # Paginate org repos with nested refs (branches). Only fetch branchProtectionRule ID
+    # to determine protection status. Full protection details are fetched in Phase 3.
+
+    $RepoRefsQuery = @'
+query RepoRefs($login: String!, $count: Int = 100, $after: String = null) {
+    organization(login: $login) {
+        repositories(first: $count, after: $after) {
+            totalCount
+            nodes {
+                id
+                name
+                nameWithOwner
+                owner { login }
+                refs(first: 100, refPrefix: "refs/heads/") {
+                    nodes {
+                        id
+                        name
+                        target { oid }
+                        branchProtectionRule { id }
+                    }
+                    pageInfo { endCursor, hasNextPage }
+                }
+            }
+            pageInfo { endCursor, hasNextPage }
+        }
+    }
+}
+'@
+
+    # ── Phase 2 Query ──────────────────────────────────────────────────────
+    # For repos with >100 branches, paginate remaining refs individually.
+
+    $RefOverflowQuery = @'
+query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: String!) {
+    repository(owner: $owner, name: $name) {
+        refs(first: $count, refPrefix: "refs/heads/", after: $after) {
+            nodes {
+                id
+                name
+                target { oid }
+                branchProtectionRule { id }
+            }
+            pageInfo { endCursor, hasNextPage }
+        }
+    }
+}
+'@
+
+    $orgLogin = $Organization.properties.login
+    $orgNodeId = $Organization.properties.node_id
+
+    # Map: branchProtectionRule ID → list of branch IDs (for Phase 3)
+    $ruleToBranches = @{}
+
+    # ── Phase 1: Paginate repos with nested refs ───────────────────────────
+    $overflowRepos = New-Object System.Collections.ArrayList
+
+    $variables = @{
+        login = $orgLogin
+        count = 25
+        after = $null
     }
 
-    process
-    {
-        $Repository.nodes | Where-Object {$_.kinds -eq 'GHRepository'} | ForEach-Object -Parallel {
-            $nodes = $using:nodes
-            $edges = $using:edges
-            $Session = $using:Session
-            $functionBundle = $using:GitHoundFunctionBundle
-            foreach($funcName in $functionBundle.Keys) {
-                Set-Item -Path "function:$funcName" -Value ([scriptblock]::Create($functionBundle[$funcName]))
-            }
-            $repo = $_
+    do {
+        $result = Invoke-GitHubGraphQL -Session $Session -Headers $Session.Headers -Query $RepoRefsQuery -Variables $variables
 
-            Write-Verbose "Fetching branches for $($repo.properties.full_name)"
-            foreach($branch in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/branches"))
-            {    
-                $branchId = [System.BitConverter]::ToString([System.Security.Cryptography.MD5]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes("$($repo.properties.organization_id)_$($repo.properties.full_name)_$($branch.name)"))).Replace('-', '')
+        # On first page, capture total repo count and calculate total pages
+        if ($pageCount -eq 0) {
+            $totalRepos = $result.data.organization.repositories.totalCount
+            $totalPages = [Math]::Ceiling($totalRepos / 25)
+            Write-Host "[*] Phase 1: Found $totalRepos repositories. Fetching branches ($totalPages pages of 25 repos)..."
+        }
 
-                #$BranchProtections = [pscustomobject]@{}
-                $BranchProtectionProperties = [ordered]@{}
-                
-                if ($branch.protection.enabled -and $branch.protection_url) 
-                {
-                    $Protections = Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.Properties.full_name)/branches/$($branch.name)/protection"
+        foreach ($repo in $result.data.organization.repositories.nodes) {
+            $reposProcessed++
 
-                    $protection_enforce_admins = $Protections.enforce_admins.enabled
-                    $protection_lock_branch = $Protections.lock_branch.enabled
+            # Process each branch ref
+            foreach ($ref in $repo.refs.nodes) {
+                $branchId = $ref.id
+                $rule = $ref.branchProtectionRule
 
-                    # Check for Pull Request Reviews
-                    # pull requests are required before merging
-                    if ($Protections.required_pull_request_reviews) {
-                        
-                        $protection_required_pull_request_reviews = $False
-                        
-                        $protection_required_approving_review_count = $Protections.required_pull_request_reviews.required_approving_review_count
-                        if ($Protections.required_pull_request_reviews.required_approving_review_count) {
-                            $protection_required_pull_request_reviews = $True
-                        }
-
-                        $protection_require_code_owner_reviews = $Protections.required_pull_request_reviews.require_code_owner_reviews
-                        if ($Protections.required_pull_request_reviews.require_code_owner_reviews) {
-                            $protection_required_pull_request_reviews = $True
-                        }
-
-                        $protection_require_last_push_approval = $Protections.required_pull_request_reviews.require_last_push_approval
-                        if ($Protections.required_pull_request_reviews.require_last_push_approval) {
-                            $protection_required_pull_request_reviews = $True
-                        }
-
-                        # We need an edge here
-                        foreach($user in $Protections.required_pull_request_reviews.bypass_pull_request_allowances.users) {
-                            $null = $edges.Add((New-GitHoundEdge -Kind GHBypassRequiredPullRequest -StartId $user.node_id -EndId $branchId -Properties @{ traversable = $false }))
-                        }
-
-                        # We need an edge here
-                        foreach($team in $Protections.required_pull_request_reviews.bypass_pull_request_allowances.teams) {
-                            $null = $edges.Add((New-GitHoundEdge -Kind GHBypassRequiredPullRequest -StartId $team.node_id -EndId $branchId -Properties @{ traversable = $false }))
-                        }
-
-                        # TODO: handle apps?
-                        foreach($app in $Protections.required_pull_request_reviews.bypass_pull_request_allowances.apps) {
-                            #$null = $edges.Add((New-GitHoundEdge -Kind GHBypassRequiredPullRequest -StartId $app.node_id -EndId $branchId -Properties @{ traversable = $false }))
-                        }
-
-                        # We replaced BypassPrincipals with the above edges
-                        # Do we still need this value or is it implied by the edges?
-                        <#
-                        if ($BypassPrincipals) {
-                            $protection_bypass_pull_request_allowances = $BypassPrincipals.Count
-                        }
-                        else {
-                            $protection_bypass_pull_request_allowances = 0
-                        }
-                        #>
+                # Track rule-to-branch mapping for Phase 3
+                if ($rule) {
+                    if (-not $ruleToBranches.ContainsKey($rule.id)) {
+                        $ruleToBranches[$rule.id] = New-Object System.Collections.ArrayList
                     }
-                    else {
-                        $protection_required_pull_request_reviews = $false
-                    }
-
-                    # Check for restrictions
-                    if ($Protections.restrictions) {
-                        foreach($user in $Protections.restrictions.users) {
-                            $null = $edges.Add((New-GitHoundEdge -Kind GHRestrictionsCanPush -StartId $user.node_id -EndId $branchId -Properties @{ traversable = $false }))
-                        }
-
-                        foreach($team in $Protections.restrictions.teams) {
-                            $null = $edges.Add((New-GitHoundEdge -Kind GHRestrictionsCanPush -StartId $team.node_id -EndId $branchId -Properties @{ traversable = $false }))
-                        }
-
-                        # TODO: handle apps?
-                        #foreach($app in $Protections.restrictions.apps) {
-                        #   $null = $edges.Add((New-GitHoundEdge -Kind GHRestrictionsCanPush -StartId $app.node_id -EndId $branchId -Properties @{ traversable = $false }))
-                        #}
-
-                        $protection_push_restrictions = $true
-                    }
-                    else {
-                        $protection_push_restrictions = $false
-                    }
-                }
-                else 
-                {
-                    # Here we just set all of the protection properties to false
-                    $protection_enforce_admins = $false
-                    $protection_lock_branch = $false
-                    $protection_required_pull_request_reviews = $false
-                    $protection_required_approving_review_count = 0
-                    $protection_require_code_owner_reviews = $false
-                    $protection_require_last_push_approval = $false
-                    #$protection_bypass_pull_request_allowances = $false
-                    $protection_push_restrictions = $false
+                    $null = $ruleToBranches[$rule.id].Add($branchId)
                 }
 
                 $props = [pscustomobject]@{
-                    # Common Properties
-                    name                                       = Normalize-Null "$($repo.properties.name)\$($branch.name)"
-                    id                                         = Normalize-Null $branchId
-                    # Relational Properties
-                    organization                               = Normalize-Null $repo.properties.organization_name
-                    organization_id                            = Normalize-Null $repo.properties.organization_id
-                    # Node Specific Properties
-                    short_name                                 = Normalize-Null $branch.name
-                    commit_hash                                = Normalize-Null $branch.commit.sha
-                    commit_url                                 = Normalize-Null $branch.commit.url
-                    protected                                  = Normalize-Null $branch.protected
-                    protection_enforce_admins                  = Normalize-Null $protection_enforce_admins
-                    protection_lock_branch                     = Normalize-Null $protection_lock_branch
-                    protection_required_pull_request_reviews   = Normalize-Null $protection_required_pull_request_reviews
-                    protection_required_approving_review_count = Normalize-Null $protection_required_approving_review_count
-                    protection_require_code_owner_reviews      = Normalize-Null $protection_require_code_owner_reviews
-                    protection_require_last_push_approval      = Normalize-Null $protection_require_last_push_approval
-                    #protection_bypass_pull_request_allowances  = Normalize-Null $protection_bypass_pull_request_allowances
-                    protection_push_restrictions               = Normalize-Null $protection_push_restrictions
-                    # Accordion Panel Queries
-                    query_branch_write                         = "MATCH p=(:GHUser)-[:GHCanWriteBranch|GHCanEditAndWriteBranch]->(:GHBranch {objectid:'$($branchId)'}) RETURN p"
+                    name               = Normalize-Null "$($repo.name)\$($ref.name)"
+                    id                 = Normalize-Null $branchId
+                    organization       = Normalize-Null $orgLogin
+                    environment_id     = Normalize-Null $orgNodeId
+                    short_name         = Normalize-Null $ref.name
+                    commit_hash        = Normalize-Null $ref.target.oid
+                    protected          = Normalize-Null ($null -ne $rule)
+                    query_branch_write = "MATCH p=(:GH_User)-[:GH_CanWriteBranch|GH_CanEditAndWriteBranch]->(:GH_Branch {objectid:'$($branchId)'}) RETURN p"
                 }
 
-                foreach ($BranchProtectionProperty in $BranchProtectionProperties.GetEnumerator()) {
-                    $props | Add-Member -MemberType NoteProperty -Name $BranchProtectionProperty.Key -Value $BranchProtectionProperty.Value
-                }
-
-                $null = $nodes.Add((New-GitHoundNode -Id $branchId -Kind GHBranch -Properties $props))
-                $null = $edges.Add((New-GitHoundEdge -Kind GHHasBranch -StartId $repo.id -EndId $branchId -Properties @{ traversable = $true }))
+                $null = $nodes.Add((New-GitHoundNode -Id $branchId -Kind GH_Branch -Properties $props))
+                $null = $edges.Add((New-GitHoundEdge -Kind GH_HasBranch -StartId $repo.id -EndId $branchId -Properties @{ traversable = $true }))
             }
-        } -ThrottleLimit 25
+
+            # Track repos with >100 branches for Phase 2
+            if ($repo.refs.pageInfo.hasNextPage) {
+                $null = $overflowRepos.Add(@{
+                    owner    = $repo.owner.login
+                    name     = $repo.name
+                    nodeId   = $repo.id
+                    fullName = $repo.nameWithOwner
+                    cursor   = $repo.refs.pageInfo.endCursor
+                })
+            }
+        }
+
+        # Checkpoint after each page
+        $pageCount++
+        $chunkPayload = [PSCustomObject]@{
+            metadata = [PSCustomObject]@{
+                source_kind = "GitHub"
+                phase       = "branches_phase1"
+                page        = $pageCount
+                timestamp   = (Get-Date -Format "o")
+            }
+            graph = [PSCustomObject]@{
+                nodes = @($nodes)
+                edges = @($edges)
+            }
+        }
+        $chunkFile = Join-Path $CheckpointPath "githound_Branch_page_$($pageCount).json"
+        $chunkPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath $chunkFile
+        Write-Host "[+] Phase 1 page $pageCount/$totalPages complete ($reposProcessed/$totalRepos repos, $($nodes.Count) branches so far)"
+
+        # Check GraphQL rate limit before next page
+        $graphqlRateLimit = (Get-RateLimitInformation -Session $Session).graphql
+        if ($graphqlRateLimit.remaining -lt 50) {
+            $timeNow = [DateTimeOffset]::Now.ToUnixTimeSeconds()
+            $sleepSeconds = [Math]::Max(1, $graphqlRateLimit.reset - $timeNow + 5)
+            $resetLocal = ([DateTimeOffset]::FromUnixTimeSeconds($graphqlRateLimit.reset)).LocalDateTime.ToString("HH:mm:ss")
+            Write-Host "[!] GraphQL rate limit low ($($graphqlRateLimit.remaining) remaining). Sleeping $sleepSeconds seconds until reset at $resetLocal..."
+            Start-Sleep -Seconds $sleepSeconds
+        }
+
+        $variables.after = $result.data.organization.repositories.pageInfo.endCursor
+    } while ($result.data.organization.repositories.pageInfo.hasNextPage)
+
+    Write-Host "[*] Phase 1 complete. $reposProcessed/$totalRepos repos processed, $($nodes.Count) branches found. $($overflowRepos.Count) repos need overflow pagination (>100 branches)."
+
+    # ── Phase 2: Paginate remaining refs for overflow repos ────────────────
+    $overflowCount = 0
+    foreach ($overflowRepo in $overflowRepos) {
+        $overflowCount++
+        Write-Host "[*] Phase 2: Fetching overflow branches for $($overflowRepo.fullName) ($overflowCount/$($overflowRepos.Count))"
+        $refVars = @{
+            owner = $overflowRepo.owner
+            name  = $overflowRepo.name
+            count = 100
+            after = $overflowRepo.cursor
+        }
+
+        do {
+            $refResult = Invoke-GitHubGraphQL -Session $Session -Headers $Session.Headers -Query $RefOverflowQuery -Variables $refVars
+
+            foreach ($ref in $refResult.data.repository.refs.nodes) {
+                $branchId = $ref.id
+                $rule = $ref.branchProtectionRule
+
+                # Track rule-to-branch mapping for Phase 3
+                if ($rule) {
+                    if (-not $ruleToBranches.ContainsKey($rule.id)) {
+                        $ruleToBranches[$rule.id] = New-Object System.Collections.ArrayList
+                    }
+                    $null = $ruleToBranches[$rule.id].Add($branchId)
+                }
+
+                $props = [pscustomobject]@{
+                    name               = Normalize-Null "$($overflowRepo.name)\$($ref.name)"
+                    id                 = Normalize-Null $branchId
+                    organization       = Normalize-Null $orgLogin
+                    environment_id     = Normalize-Null $orgNodeId
+                    short_name         = Normalize-Null $ref.name
+                    commit_hash        = Normalize-Null $ref.target.oid
+                    protected          = Normalize-Null ($null -ne $rule)
+                    query_branch_write = "MATCH p=(:GH_User)-[:GH_CanWriteBranch|GH_CanEditAndWriteBranch]->(:GH_Branch {objectid:'$($branchId)'}) RETURN p"
+                }
+
+                $null = $nodes.Add((New-GitHoundNode -Id $branchId -Kind GH_Branch -Properties $props))
+                $null = $edges.Add((New-GitHoundEdge -Kind GH_HasBranch -StartId $overflowRepo.nodeId -EndId $branchId -Properties @{ traversable = $true }))
+            }
+
+            # Check GraphQL rate limit between overflow pages
+            $graphqlRateLimit = (Get-RateLimitInformation -Session $Session).graphql
+            if ($graphqlRateLimit.remaining -lt 50) {
+                $timeNow = [DateTimeOffset]::Now.ToUnixTimeSeconds()
+                $sleepSeconds = [Math]::Max(1, $graphqlRateLimit.reset - $timeNow + 5)
+                $resetLocal = ([DateTimeOffset]::FromUnixTimeSeconds($graphqlRateLimit.reset)).LocalDateTime.ToString("HH:mm:ss")
+                Write-Host "[!] GraphQL rate limit low ($($graphqlRateLimit.remaining) remaining). Sleeping $sleepSeconds seconds until reset at $resetLocal..."
+                Start-Sleep -Seconds $sleepSeconds
+            }
+
+            $refVars.after = $refResult.data.repository.refs.pageInfo.endCursor
+        } while ($refResult.data.repository.refs.pageInfo.hasNextPage)
     }
 
-    end
-    {
-        $output = [PSCustomObject]@{
-            Nodes = $nodes
-            Edges = $edges
+    # Checkpoint after Phase 2
+    if ($overflowRepos.Count -gt 0) {
+        $chunkPayload = [PSCustomObject]@{
+            metadata = [PSCustomObject]@{
+                source_kind = "GitHub"
+                phase       = "branches_phase2"
+                timestamp   = (Get-Date -Format "o")
+            }
+            graph = [PSCustomObject]@{
+                nodes = @($nodes)
+                edges = @($edges)
+            }
         }
-    
-        Write-Output $output
+        $chunkFile = Join-Path $CheckpointPath "githound_Branch_phase2.json"
+        $chunkPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath $chunkFile
+        Write-Host "[+] Phase 2 checkpoint saved: $chunkFile ($($nodes.Count) nodes, $($edges.Count) edges)"
     }
+
+    Write-Host "[*] Phase 2 complete. $($nodes.Count) total branch nodes. $($ruleToBranches.Count) protection rules found."
+
+    # ── Phase 3: Fetch protection rules by node ID ─────────────────────────
+    # Query protection rule details in batches using GraphQL nodes() query.
+    # This is much more efficient than querying per-repository.
+
+    $ruleIds = @($ruleToBranches.Keys)
+    if ($ruleIds.Count -gt 0) {
+        Write-Host "[*] Phase 3: Fetching $($ruleIds.Count) branch protection rules..."
+
+        $ProtectionRulesQuery = @'
+query ProtectionRulesByIds($ids: [ID!]!) {
+    nodes(ids: $ids) {
+        ... on BranchProtectionRule {
+            id
+            pattern
+            isAdminEnforced
+            lockBranch
+            requiresApprovingReviews
+            requiredApprovingReviewCount
+            requiresCodeOwnerReviews
+            requireLastPushApproval
+            restrictsPushes
+            requiresStatusChecks
+            requiresStrictStatusChecks
+            dismissesStaleReviews
+            allowsForcePushes
+            allowsDeletions
+            bypassPullRequestAllowances(first: 100) {
+                nodes {
+                    actor {
+                        ... on User { id login }
+                        ... on Team { id slug }
+                    }
+                }
+            }
+            pushAllowances(first: 100) {
+                nodes {
+                    actor {
+                        ... on User { id login }
+                        ... on Team { id slug }
+                    }
+                }
+            }
+        }
+    }
+}
+'@
+
+        $batchSize = 100
+        $batchCount = 0
+
+        for ($i = 0; $i -lt $ruleIds.Count; $i += $batchSize) {
+            $batchCount++
+            $batch = $ruleIds[$i..[Math]::Min($i + $batchSize - 1, $ruleIds.Count - 1)]
+
+            # Check GraphQL rate limit before each batch
+            $graphqlRateLimit = (Get-RateLimitInformation -Session $Session).graphql
+            if ($graphqlRateLimit.remaining -lt 50) {
+                $timeNow = [DateTimeOffset]::Now.ToUnixTimeSeconds()
+                $sleepSeconds = [Math]::Max(1, $graphqlRateLimit.reset - $timeNow + 5)
+                $resetLocal = ([DateTimeOffset]::FromUnixTimeSeconds($graphqlRateLimit.reset)).LocalDateTime.ToString("HH:mm:ss")
+                Write-Host "[!] GraphQL rate limit low ($($graphqlRateLimit.remaining) remaining). Sleeping $sleepSeconds seconds until reset at $resetLocal..."
+                Start-Sleep -Seconds $sleepSeconds
+            }
+
+            Write-Host "[*] Phase 3 batch $batchCount ($($batch.Count) rules)..."
+
+            $result = Invoke-GitHubGraphQL -Session $Session -Headers $Session.Headers -Query $ProtectionRulesQuery -Variables @{ ids = $batch }
+
+            foreach ($rule in $result.data.nodes) {
+                if (-not $rule) { continue }  # Skip null entries (deleted/invalid rule IDs)
+
+                $ruleId = $rule.id
+
+                # Create GH_BranchProtectionRule node
+                $props = [pscustomobject]@{
+                    name                            = Normalize-Null $rule.pattern
+                    id                              = Normalize-Null $ruleId
+                    pattern                         = Normalize-Null $rule.pattern
+                    enforce_admins                  = Normalize-Null $rule.isAdminEnforced
+                    lock_branch                     = Normalize-Null $rule.lockBranch
+                    required_pull_request_reviews   = Normalize-Null $rule.requiresApprovingReviews
+                    required_approving_review_count = Normalize-Null $rule.requiredApprovingReviewCount
+                    require_code_owner_reviews      = Normalize-Null $rule.requiresCodeOwnerReviews
+                    require_last_push_approval      = Normalize-Null $rule.requireLastPushApproval
+                    push_restrictions               = Normalize-Null $rule.restrictsPushes
+                    requires_status_checks          = Normalize-Null $rule.requiresStatusChecks
+                    requires_strict_status_checks   = Normalize-Null $rule.requiresStrictStatusChecks
+                    dismisses_stale_reviews         = Normalize-Null $rule.dismissesStaleReviews
+                    allows_force_pushes             = Normalize-Null $rule.allowsForcePushes
+                    allows_deletions                = Normalize-Null $rule.allowsDeletions
+                }
+
+                $null = $nodes.Add((New-GitHoundNode -Id $ruleId -Kind GH_BranchProtectionRule -Properties $props))
+
+                # Create GH_ProtectedBy edges from this rule to its branches
+                foreach ($branchId in $ruleToBranches[$ruleId]) {
+                    $null = $edges.Add((New-GitHoundEdge -Kind GH_ProtectedBy -StartId $ruleId -EndId $branchId -Properties @{ traversable = $true }))
+                }
+
+                # Create GH_BypassPullRequestAllowances edges from actors to this rule
+                foreach ($allowance in $rule.bypassPullRequestAllowances.nodes) {
+                    if ($allowance.actor.id) {
+                        $null = $edges.Add((New-GitHoundEdge -Kind GH_BypassPullRequestAllowances -StartId $allowance.actor.id -EndId $ruleId -Properties @{ traversable = $false }))
+                    }
+                }
+
+                # Create GH_RestrictionsCanPush edges from actors to this rule
+                foreach ($allowance in $rule.pushAllowances.nodes) {
+                    if ($allowance.actor.id) {
+                        $null = $edges.Add((New-GitHoundEdge -Kind GH_RestrictionsCanPush -StartId $allowance.actor.id -EndId $ruleId -Properties @{ traversable = $false }))
+                    }
+                }
+            }
+        }
+
+        Write-Host "[+] Phase 3 complete. $($ruleIds.Count) protection rules processed."
+    }
+    else {
+        Write-Host "[*] Phase 3: No protected branches found, skipping protection rule fetch."
+    }
+
+    # Final checkpoint
+    $finalPayload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+            phase       = "branches_complete"
+            timestamp   = (Get-Date -Format "o")
+        }
+        graph = [PSCustomObject]@{
+            nodes = @($nodes)
+            edges = @($edges)
+        }
+    }
+    $finalFile = Join-Path $CheckpointPath "githound_Branch_complete.json"
+    $finalPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath $finalFile
+
+    # Clean up intermediate checkpoint files
+    $intermediateFiles = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Branch_page_*.json" -ErrorAction SilentlyContinue)
+    $phase2File = Join-Path $CheckpointPath "githound_Branch_phase2.json"
+    if (Test-Path $phase2File) { $intermediateFiles += Get-Item $phase2File }
+    if ($intermediateFiles.Count -gt 0) {
+        $intermediateFiles | Remove-Item -Force
+        Write-Host "[+] Cleaned up $($intermediateFiles.Count) intermediate checkpoint files."
+    }
+
+    Write-Host "[+] Git-HoundBranch complete. $($nodes.Count) nodes, $($edges.Count) edges. Final output: $finalFile"
+
+    $output = [PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    }
+
+    Write-Output $output
 }
 
 function Git-HoundWorkflow
@@ -1113,27 +2491,39 @@ function Git-HoundWorkflow
     <#
     .SYNOPSIS
         Fetches and processes GitHub Workflows (Actions) for repositories.
-    
-    .DESCRIPTION
-        This function retrieves workflows for each repository provided in the pipeline. It creates nodes and edges representing the workflows and their relationships to repositories.
 
-        API Reference: 
+    .DESCRIPTION
+        This function retrieves workflows for each repository provided in the pipeline. Only repos
+        with Actions enabled (actions_enabled = true) are queried — repos without Actions are skipped
+        to avoid wasted API calls. Uses chunked parallel execution with rate limit awareness and
+        checkpoint files for crash recovery.
+
+        API Reference:
         - List repository workflows: https://docs.github.com/en/rest/actions/workflows?apiVersion=2022-11-28#list-repository-workflows
 
-        Fine Grained Permissions Reference: 
+        Fine Grained Permissions Reference:
         - "Actions" repository permissions (read)
 
     .PARAMETER Session
-        A GitHound.Session object used for authentication and API requests.
+     A GitHound.Session object used for authentication and API requests.
 
     .PARAMETER Repository
         An array of repository objects to process.
+
+    .PARAMETER StartIndex
+        Index to resume processing from (default 0). Use this to resume after an interruption.
+
+    .PARAMETER CheckpointPath
+        Directory to write checkpoint files to (default current directory).
+
+    .PARAMETER ChunkSize
+        Number of repos to process per chunk (default 50).
 
     .OUTPUTS
         A PSObject containing arrays of nodes and edges representing the workflows and their relationships.
 
     .EXAMPLE
-        $workflows = Git-HoundRepository | Git-HoundWorkflow
+        $workflows = $repos | Git-HoundWorkflow -Session $Session
     #>
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
@@ -1142,63 +2532,201 @@ function Git-HoundWorkflow
 
         [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline)]
         [psobject[]]
-        $Repository
+        $Repository,
+
+        [Parameter()]
+        [int]
+        $StartIndex = 0,
+
+        [Parameter()]
+        [string]
+        $CheckpointPath = ".",
+
+        [Parameter()]
+        [int]
+        $ChunkSize = 50
     )
-    
+
     begin
     {
-        $nodes = New-Object System.Collections.ArrayList
-        $edges = New-Object System.Collections.ArrayList
+        $allNodes = New-Object System.Collections.ArrayList
+        $allEdges = New-Object System.Collections.ArrayList
     }
 
     process
     {
-        $Repository.nodes | Where-Object {$_.kinds -eq 'GHRepository'} | ForEach-Object -Parallel {
-            $nodes = $using:nodes
-            $edges = $using:edges
-            $Session = $using:Session
-            $functionBundle = $using:GitHoundFunctionBundle
-            foreach($funcName in $functionBundle.Keys) {
-                Set-Item -Path "function:$funcName" -Value ([scriptblock]::Create($functionBundle[$funcName]))
-            }
-            $repo = $_
+        # Filter to only repos with Actions enabled — no point querying repos that have Actions disabled
+        $allRepoNodes = @($Repository.nodes | Where-Object {$_.kinds -eq 'GH_Repository'})
+        $repoNodes = @($allRepoNodes | Where-Object {$_.properties.actions_enabled -eq $true})
+        $skippedCount = $allRepoNodes.Count - $repoNodes.Count
 
-            Write-Verbose "Fetching workflows for $($repo.properties.full_name)"
-            foreach($workflow in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/actions/workflows").workflows)
-            {
-                #$workflowconfig = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String((Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/contents/$($workflow.path)").content)) | ConvertFrom-Yaml
+        $totalRepos = $repoNodes.Count
+        $callsPerRepo = 1
+        $rateLimitBuffer = 50
 
-                $props = [pscustomobject]@{
-                    # Common Properties
-                    name              = Normalize-Null "$($repo.properties.name)\$($workflow.name)"
-                    id                = Normalize-Null $workflow.id
-                    node_id           = Normalize-Null $workflow.node_id
-                    # Relational Properties
-                    organization_name = Normalize-Null $repo.properties.organization_name
-                    organization_id   = Normalize-Null $repo.properties.organization_id
-                    repository_name   = Normalize-Null $repo.properties.full_name
-                    repository_id     = Normalize-Null $repo.properties.node_id
-                    # Node Specific Properties
-                    short_name        = Normalize-Null $workflow.name
-                    path              = Normalize-Null $workflow.path
-                    state             = Normalize-Null $workflow.state
-                    url               = Normalize-Null $workflow.url
-                    # Accordion Panel Queries
+        if ($skippedCount -gt 0) {
+            Write-Host "[*] Git-HoundWorkflow: Skipping $skippedCount repos with Actions disabled"
+        }
+
+        $currentIndex = $StartIndex
+
+        # Auto-detect resume from existing chunk files
+        if ($currentIndex -eq 0) {
+            $existingChunks = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Workflow_chunk_*.json" -ErrorAction SilentlyContinue | Sort-Object Name)
+            if ($existingChunks.Count -gt 0) {
+                foreach ($chunk in $existingChunks) {
+                    try {
+                        $chunkData = Get-Content $chunk.FullName -Raw | ConvertFrom-Json
+                        if ($chunkData.graph.nodes) { $null = $allNodes.AddRange(@($chunkData.graph.nodes)) }
+                        if ($chunkData.graph.edges) { $null = $allEdges.AddRange(@($chunkData.graph.edges)) }
+                        $currentIndex = $chunkData.metadata.next_index
+                    }
+                    catch {
+                        Write-Warning "Skipping corrupt chunk file: $($chunk.Name)"
+                    }
                 }
-
-                $null = $nodes.Add((New-GitHoundNode -Id $workflow.node_id -Kind GHWorkflow -Properties $props))
-                $null = $edges.Add((New-GitHoundEdge -Kind GHHasWorkflow -StartId $repo.properties.node_id -EndId $workflow.node_id -Properties @{ traversable = $false }))
+                Write-Host "[*] Auto-resuming Git-HoundWorkflow from index $currentIndex ($($existingChunks.Count) chunks loaded, $($allNodes.Count) nodes, $($allEdges.Count) edges recovered)"
             }
-        } -ThrottleLimit 25
+        }
+
+        if ($currentIndex -gt 0 -and $existingChunks.Count -eq 0) {
+            Write-Host "[*] Resuming Git-HoundWorkflow from index $StartIndex of $totalRepos repos"
+        } elseif ($currentIndex -eq 0) {
+            Write-Host "[*] Git-HoundWorkflow: Enumerating workflows for $totalRepos repos (Actions enabled)"
+        }
+
+        while ($currentIndex -lt $totalRepos) {
+
+            # Check rate limit and determine chunk size
+            $rateLimitInfo = (Get-RateLimitInformation -Session $Session).core
+            $remaining = $rateLimitInfo.remaining
+            $resetTime = $rateLimitInfo.reset
+
+            $availableBudget = [Math]::Max(0, $remaining - $rateLimitBuffer)
+            $maxReposForBudget = [Math]::Floor($availableBudget / $callsPerRepo)
+
+            if ($maxReposForBudget -eq 0) {
+                # Not enough budget — sleep until reset
+                $timeNow = [DateTimeOffset]::Now.ToUnixTimeSeconds()
+                $sleepSeconds = [Math]::Max(1, $resetTime - $timeNow + 5)
+                $resetLocal = ([DateTimeOffset]::FromUnixTimeSeconds($resetTime)).LocalDateTime.ToString("HH:mm:ss")
+                Write-Host "[!] Rate limit exhausted ($remaining remaining). Sleeping $sleepSeconds seconds until reset at $resetLocal..."
+                Start-Sleep -Seconds $sleepSeconds
+                continue
+            }
+
+            # Size the chunk: minimum of configured ChunkSize, budget, and remaining repos
+            $reposRemaining = $totalRepos - $currentIndex
+            $thisChunkSize = [Math]::Min($ChunkSize, [Math]::Min($maxReposForBudget, $reposRemaining))
+
+            $chunkEnd = $currentIndex + $thisChunkSize - 1
+            Write-Host "[*] Processing repos $currentIndex..$chunkEnd of $totalRepos ($thisChunkSize repos, ~$($thisChunkSize * $callsPerRepo) API calls, $remaining calls remaining)"
+
+            $chunkRepos = $repoNodes[$currentIndex..$chunkEnd]
+            # ConcurrentBag is thread-safe for parallel ForEach-Object blocks
+            $chunkNodes = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
+            $chunkEdges = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
+
+            $chunkRepos | ForEach-Object -Parallel {
+                $nodes = $using:chunkNodes
+                $edges = $using:chunkEdges
+                $Session = $using:Session
+                $functionBundle = $using:GitHoundFunctionBundle
+                foreach($funcName in $functionBundle.Keys) {
+                    Set-Item -Path "function:$funcName" -Value ([scriptblock]::Create($functionBundle[$funcName]))
+                }
+                $repo = $_
+
+                foreach($workflow in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/actions/workflows").workflows)
+                {
+                    $props = [pscustomobject]@{
+                        # Common Properties
+                        name              = Normalize-Null "$($repo.properties.name)\$($workflow.name)"
+                        id                = Normalize-Null $workflow.id
+                        node_id           = Normalize-Null $workflow.node_id
+                        # Relational Properties
+                        environment_name = Normalize-Null $repo.properties.environment_name
+                        environment_id   = Normalize-Null $repo.properties.environment_id
+                        repository_name   = Normalize-Null $repo.properties.full_name
+                        repository_id     = Normalize-Null $repo.properties.node_id
+                        # Node Specific Properties
+                        short_name        = Normalize-Null $workflow.name
+                        path              = Normalize-Null $workflow.path
+                        state             = Normalize-Null $workflow.state
+                        url               = Normalize-Null $workflow.url
+                        # Accordion Panel Queries
+                    }
+
+                    $null = $nodes.Add((New-GitHoundNode -Id $workflow.node_id -Kind GH_Workflow -Properties $props))
+                    $null = $edges.Add((New-GitHoundEdge -Kind GH_HasWorkflow -StartId $repo.properties.node_id -EndId $workflow.node_id -Properties @{ traversable = $false }))
+                }
+            } -ThrottleLimit 25
+
+            # Accumulate chunk results
+            if ($chunkNodes.Count -gt 0) {
+                $null = $allNodes.AddRange(@($chunkNodes))
+            }
+            if ($chunkEdges.Count -gt 0) {
+                $null = $allEdges.AddRange(@($chunkEdges))
+            }
+
+            # Checkpoint to disk
+            $chunkPayload = [PSCustomObject]@{
+                metadata = [PSCustomObject]@{
+                    source_kind  = "GitHub"
+                    chunk_start  = $currentIndex
+                    chunk_end    = $chunkEnd
+                    total_repos  = $totalRepos
+                    next_index   = $currentIndex + $thisChunkSize
+                    timestamp    = (Get-Date -Format "o")
+                }
+                graph = [PSCustomObject]@{
+                    nodes = @($chunkNodes)
+                    edges = @($chunkEdges)
+                }
+            }
+            $chunkFile = Join-Path $CheckpointPath "githound_Workflow_chunk_$($currentIndex).json"
+            $chunkPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath $chunkFile
+            Write-Host "[+] Checkpoint saved: $chunkFile ($($chunkNodes.Count) nodes, $($chunkEdges.Count) edges, next index: $($currentIndex + $thisChunkSize))"
+
+            $currentIndex += $thisChunkSize
+        }
+
+        # Write final consolidated output and clean up chunk files
+        $finalPayload = [PSCustomObject]@{
+            metadata = [PSCustomObject]@{
+                source_kind  = "GitHub"
+                total_repos  = $totalRepos
+                skipped_repos = $skippedCount
+                total_nodes  = $allNodes.Count
+                total_edges  = $allEdges.Count
+                timestamp    = (Get-Date -Format "o")
+            }
+            graph = [PSCustomObject]@{
+                nodes = @($allNodes)
+                edges = @($allEdges)
+            }
+        }
+        $finalFile = Join-Path $CheckpointPath "githound_Workflow_complete.json"
+        $finalPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath $finalFile
+
+        # Clean up intermediate chunk files
+        $intermediateFiles = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Workflow_chunk_*.json" -ErrorAction SilentlyContinue)
+        if ($intermediateFiles.Count -gt 0) {
+            $intermediateFiles | Remove-Item -Force
+            Write-Host "[+] Cleaned up $($intermediateFiles.Count) intermediate checkpoint files."
+        }
+
+        Write-Host "[+] Git-HoundWorkflow complete. Processed $totalRepos repos (skipped $skippedCount), collected $($allNodes.Count) nodes, $($allEdges.Count) edges. Final output: $finalFile"
     }
 
     end
     {
         $output = [PSCustomObject]@{
-            Nodes = $nodes
-            Edges = $edges
+            Nodes = $allNodes
+            Edges = $allEdges
         }
-    
+
         Write-Output $output
     }
 }
@@ -1245,13 +2773,14 @@ function Git-HoundEnvironment
     
     begin
     {
-        $nodes = New-Object System.Collections.ArrayList
-        $edges = New-Object System.Collections.ArrayList
+        # ConcurrentBag is thread-safe for parallel ForEach-Object blocks
+        $nodes = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
+        $edges = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
     }
 
     process
     {
-        $Repository.nodes | Where-Object {$_.kinds -eq 'GHRepository'} | ForEach-Object -Parallel {
+        $Repository.nodes | Where-Object {$_.kinds -eq 'GH_Repository'} | ForEach-Object -Parallel {
             $nodes = $using:nodes
             $edges = $using:edges
             $Session = $using:Session
@@ -1273,8 +2802,8 @@ function Git-HoundEnvironment
                     id                = Normalize-Null $environment.id
                     node_id           = Normalize-Null $environment.node_id
                     # Relational Properties
-                    organization      = Normalize-Null $repo.properties.organization_name
-                    organization_id   = Normalize-Null $repo.properties.organization_id
+                    environment_name  = Normalize-Null $repo.properties.environment_name
+                    environment_id    = Normalize-Null $repo.properties.environment_id
                     repository_name   = Normalize-Null $repo.properties.full_name
                     repository_id     = Normalize-Null $repo.properties.id
                     # Node Specific Properties
@@ -1283,19 +2812,19 @@ function Git-HoundEnvironment
                     # Accordion Panel Queries
                 }
 
-                $null = $nodes.Add((New-GitHoundNode -Id $environment.node_id -Kind GHEnvironment -Properties $props))
+                $null = $nodes.Add((New-GitHoundNode -Id $environment.node_id -Kind GH_Environment -Properties $props))
 
                 if($environment.deployment_branch_policy.custom_branch_policies -eq $true)
                 {
                     foreach($policy in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/environments/$($environment.name)/deployment-branch-policies").branch_policies)
                     {
-                        $branchId = [System.BitConverter]::ToString([System.Security.Cryptography.MD5]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes("$($repo.properties.organization_id)_$($repo.properties.full_name)_$($policy.name)"))).Replace('-', '')
-                        $null = $edges.Add((New-GitHoundEdge -Kind GHHasEnvironment -StartId $branchId -EndId $environment.node_id -Properties @{ traversable = $false }))
+                        $branchId = [System.BitConverter]::ToString([System.Security.Cryptography.MD5]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes("$($repo.properties.environment_id)_$($repo.properties.full_name)_$($policy.name)"))).Replace('-', '')
+                        $null = $edges.Add((New-GitHoundEdge -Kind GH_HasEnvironment -StartId $branchId -EndId $environment.node_id -Properties @{ traversable = $false }))
                     }
                 }
                 else 
                 {
-                    $null = $edges.Add((New-GitHoundEdge -Kind GHHasEnvironment -StartId $repo.Properties.node_id -EndId $environment.node_id -Properties @{ traversable = $true }))
+                    $null = $edges.Add((New-GitHoundEdge -Kind GH_HasEnvironment -StartId $repo.Properties.node_id -EndId $environment.node_id -Properties @{ traversable = $true }))
                 }
 
                 # List environment secrets
@@ -1303,25 +2832,25 @@ function Git-HoundEnvironment
                 # "Environments" repository permissions (read)
                 foreach($secret in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/environments/$($environment.name)/secrets").secrets)
                 {
-                    $secretId = "GHEnvironmentSecret_$($environment.node_id)_$($secret.name)"
+                    $secretId = "GH_EnvironmentSecret_$($environment.node_id)_$($secret.name)"
                     $properties = @{
                         # Common Properties
-                        id                   = Normalize-Null $secretId
-                        name                 = Normalize-Null $secret.name
+                        id                              = Normalize-Null $secretId
+                        name                            = Normalize-Null $secret.name
                         # Relational Properties
-                        organization_name    = Normalize-Null $Organization.Properties.login
-                        organization_id      = Normalize-Null $Organization.Properties.node_id
-                        environment_name     = Normalize-Null $environment.name
-                        environment_id       = Normalize-Null $environment.node_id
+                        environment_name                = Normalize-Null $repo.properties.environment_name
+                        environment_id                  = Normalize-Null $repo.properties.environment_id
+                        deployment_environment_name     = Normalize-Null $environment.name
+                        deployment_environment_id       = Normalize-Null $environment.node_id
                         # Node Specific Properties
-                        created_at           = Normalize-Null $secret.created_at
-                        updated_at           = Normalize-Null $secret.updated_at
+                        created_at                      = Normalize-Null $secret.created_at
+                        updated_at                      = Normalize-Null $secret.updated_at
                         # Accordion Panel Queries
                     }
 
-                    $null = $nodes.Add((New-GitHoundNode -Id $secretId -Kind 'GHEnvironmentSecret' -Properties $properties))
-                    $null = $edges.Add((New-GitHoundEdge -Kind 'GHContains' -StartId $environment.node_id -EndId $secretId -Properties @{ traversable = $false }))
-                    $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasSecret' -StartId $environment.node_id -EndId $secretId -Properties @{ traversable = $false }))
+                    $null = $nodes.Add((New-GitHoundNode -Id $secretId -Kind 'GH_EnvironmentSecret' -Properties $properties))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $environment.node_id -EndId $secretId -Properties @{ traversable = $false }))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecret' -StartId $environment.node_id -EndId $secretId -Properties @{ traversable = $false }))
                 }
             }
         } -ThrottleLimit 25
@@ -1338,38 +2867,44 @@ function Git-HoundEnvironment
     }
 }
 
-function Git-HoundSecret
+function Git-HoundOrganizationSecret
 {
     <#
     .SYNOPSIS
-        Fetches and processes GitHub Secrets for organizations and repositories.
+        Fetches and processes GitHub organization-level Actions secrets and resolves repository access.
 
     .DESCRIPTION
-        This function retrieves organization and repository secrets. It creates nodes and edges representing the secrets and their relationships to organizations and repositories.
+        This function retrieves organization-level Actions secrets and determines which repositories
+        have access to each secret based on the secret's visibility setting:
+        - "all": accessible to all organization repositories
+        - "private": accessible to private and internal repositories only
+        - "selected": accessible to specifically selected repositories (fetched via API)
 
-        API Reference: 
+        This replaces the per-repo organization-secrets lookup with a much more efficient org-scoped
+        approach: 1 + S API calls (S = number of "selected" visibility secrets) instead of R calls
+        (R = number of repos).
+
+        API Reference:
         - List organization secrets: https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-organization-secrets
-        - List repository organization secrets: https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-repository-organization-secrets
-        - List repository secrets: https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-repository-secrets
+        - List selected repositories for an organization secret: https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-selected-repositories-for-an-organization-secret
 
-        Fine Grained Permissions Reference: 
+        Fine Grained Permissions Reference:
         - "Secrets" organization permissions (read)
-        - "Secrets" repository permissions (read)
 
     .PARAMETER Session
         A GitHound.Session object used for authentication and API requests.
 
     .PARAMETER Repository
-        An array of repository objects to process.
+        Repository output from Git-HoundRepository. Used to resolve which repos get access edges.
 
     .OUTPUTS
-        A PSObject containing arrays of nodes and edges representing the environments and their relationships.
+        A PSObject containing arrays of nodes and edges representing the organization secrets and their relationships.
 
     .EXAMPLE
-        $secrets = Git-HoundRepository | Git-HoundSecret
+        $orgsecrets = $repos | Git-HoundOrganizationSecret -Session $Session
 
     #>
-        Param(
+    Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [PSTypeName('GitHound.Session')]
         $Session,
@@ -1378,27 +2913,61 @@ function Git-HoundSecret
         [psobject[]]
         $Repository
     )
-    
+
     begin
     {
         $nodes = New-Object System.Collections.ArrayList
         $edges = New-Object System.Collections.ArrayList
+        $repoNodes = New-Object System.Collections.ArrayList
+    }
 
-        $org = Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Session.OrganizationName)"
+    process
+    {
+        # Collect repo nodes from the pipeline
+        $Repository.nodes | Where-Object {$_.kinds -eq 'GH_Repository'} | ForEach-Object {
+            $null = $repoNodes.Add($_)
+        }
+    }
+
+    end
+    {
+        $orgLogin = $Session.OrganizationName
+        $org = Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin"
+        $orgNodeId = $org.node_id
 
         # List organization secrets
         # https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-organization-secrets
-        # "Secrets" organization permissions (read)
-        foreach($secret in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($org.login)/actions/secrets").secrets)
-        {
-            $secretId = "GHOrgSecret_$($org.node_id)_$($secret.name)"
+        $orgSecrets = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/secrets").secrets)
+
+        $allCount = 0
+        $privateCount = 0
+        $selectedCount = 0
+
+        foreach ($secret in $orgSecrets) {
+            switch ($secret.visibility) {
+                'all'      { $allCount++ }
+                'private'  { $privateCount++ }
+                'selected' { $selectedCount++ }
+            }
+        }
+
+        Write-Host "[*] Git-HoundOrganizationSecret: Found $($orgSecrets.Count) org secrets (all: $allCount, private: $privateCount, selected: $selectedCount) across $($repoNodes.Count) repos"
+
+        # Pre-compute repo lookup sets for "all" and "private" visibility
+        $allRepoNodeIds = @($repoNodes | ForEach-Object { $_.properties.node_id })
+        $privateRepoNodeIds = @($repoNodes | Where-Object { $_.properties.visibility -eq 'private' -or $_.properties.visibility -eq 'internal' } | ForEach-Object { $_.properties.node_id })
+
+        $selectedProcessed = 0
+
+        foreach ($secret in $orgSecrets) {
+            $secretId = "GH_OrgSecret_$($orgNodeId)_$($secret.name)"
             $properties = @{
                 # Common Properties
                 id                   = Normalize-Null $secretId
                 name                 = Normalize-Null $secret.name
                 # Relational Properties
-                organization_name    = Normalize-Null $org.login
-                organization_id      = Normalize-Null $org.node_id
+                environment_name    = Normalize-Null $orgLogin
+                environment_id      = Normalize-Null $orgNodeId
                 # Node Specific Properties
                 created_at           = Normalize-Null $secret.created_at
                 updated_at           = Normalize-Null $secret.updated_at
@@ -1406,825 +2975,288 @@ function Git-HoundSecret
                 # Accordion Panel Queries
             }
 
-            $null = $nodes.Add((New-GitHoundNode -Id $secretId -Kind 'GHOrgSecret' -Properties $properties))
-            $null = $edges.Add((New-GitHoundEdge -Kind 'GHContains' -StartId $org.node_id -EndId $secretId -Properties @{ traversable = $false }))
+            $null = $nodes.Add((New-GitHoundNode -Id $secretId -Kind 'GH_OrgSecret' -Properties $properties))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $orgNodeId -EndId $secretId -Properties @{ traversable = $false }))
+
+            # Resolve repository access based on visibility
+            switch ($secret.visibility) {
+                'all' {
+                    foreach ($repoNodeId in $allRepoNodeIds) {
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecret' -StartId $repoNodeId -EndId $secretId -Properties @{ traversable = $false }))
+                    }
+                }
+                'private' {
+                    foreach ($repoNodeId in $privateRepoNodeIds) {
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecret' -StartId $repoNodeId -EndId $secretId -Properties @{ traversable = $false }))
+                    }
+                }
+                'selected' {
+                    $selectedProcessed++
+                    Write-Host "[*]   Fetching selected repos for secret '$($secret.name)' ($selectedProcessed/$selectedCount)"
+                    # https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-selected-repositories-for-an-organization-secret
+                    $selectedRepos = (Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/secrets/$($secret.name)/repositories").repositories
+                    foreach ($selectedRepo in $selectedRepos) {
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecret' -StartId $selectedRepo.node_id -EndId $secretId -Properties @{ traversable = $false }))
+                    }
+                }
+            }
         }
+
+        Write-Host "[+] Git-HoundOrganizationSecret complete. $($nodes.Count) nodes, $($edges.Count) edges."
+
+        $output = [PSCustomObject]@{
+            Nodes = $nodes
+            Edges = $edges
+        }
+
+        Write-Output $output
+    }
+}
+
+function Git-HoundSecret
+{
+    <#
+    .SYNOPSIS
+        Fetches and processes GitHub repository-level Actions secrets.
+
+    .DESCRIPTION
+        This function retrieves repository-level Actions secrets (not org secrets — those are handled
+        by Git-HoundOrganizationSecret). Uses chunked parallel execution with rate limit awareness
+        and checkpoint files for crash recovery.
+
+        API Reference:
+        - List repository secrets: https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-repository-secrets
+
+        Fine Grained Permissions Reference:
+        - "Secrets" repository permissions (read)
+
+    .PARAMETER Session
+        A GitHound.Session object used for authentication and API requests.
+
+    .PARAMETER Repository
+        An array of repository objects to process.
+
+    .PARAMETER StartIndex
+        Index to resume processing from (default 0). Use this to resume after an interruption.
+
+    .PARAMETER CheckpointPath
+        Directory to write checkpoint files to (default current directory).
+
+    .PARAMETER ChunkSize
+        Number of repos to process per chunk (default 50).
+
+    .OUTPUTS
+        A PSObject containing arrays of nodes and edges representing the repository secrets and their relationships.
+
+    .EXAMPLE
+        $secrets = $repos | Git-HoundSecret -Session $Session
+
+    #>
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session,
+
+        [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline)]
+        [psobject[]]
+        $Repository,
+
+        [Parameter()]
+        [int]
+        $StartIndex = 0,
+
+        [Parameter()]
+        [string]
+        $CheckpointPath = ".",
+
+        [Parameter()]
+        [int]
+        $ChunkSize = 50
+    )
+
+    begin
+    {
+        $allNodes = New-Object System.Collections.ArrayList
+        $allEdges = New-Object System.Collections.ArrayList
     }
 
     process
     {
-        $Repository.nodes | Where-Object {$_.kinds -eq 'GHRepository'} | ForEach-Object -Parallel {
-            $nodes = $using:nodes
-            $edges = $using:edges
-            $Session = $using:Session
-            $functionBundle = $using:GitHoundFunctionBundle
-            foreach($funcName in $functionBundle.Keys) {
-                Set-Item -Path "function:$funcName" -Value ([scriptblock]::Create($functionBundle[$funcName]))
-            }
-            $repo = $_
+        $repoNodes = @($Repository.nodes | Where-Object {$_.kinds -eq 'GH_Repository'})
+        $totalRepos = $repoNodes.Count
+        $callsPerRepo = 1
+        $rateLimitBuffer = 50
 
-            # List repository organization secrets
-            # https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-repository-organization-secrets
-            # "Secrets" repository permissions (read)
-            foreach($secret in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/actions/organization-secrets").secrets)
-            {
-                $secretId = "GHOrgSecret_$($orgId)_$($secret.name)"
-                $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasSecret' -StartId $repo.properties.node_id -EndId $secretId -Properties @{ traversable = $false }))
-            }
+        $currentIndex = $StartIndex
 
-            # List repository secrets
-            # https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-repository-secrets
-            # "Secrets" repository permissions (read)
-            foreach($secret in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/actions/secrets").secrets)
-            {
-                $secretId = "GHSecret_$($repo.properties.node_id)_$($secret.name)"
-                $properties = @{
-                    # Common Properties
-                    id                   = Normalize-Null $secretId
-                    name                 = Normalize-Null $secret.name
-                    # Relational Properties
-                    organization_name    = Normalize-Null $Organization.Properties.login
-                    organization_id      = Normalize-Null $Organization.Properties.node_id
-                    repository_name      = Normalize-Null $repo.properties.name
-                    repository_id        = Normalize-Null $repo.properties.node_id
-                    # Node Specific Properties
-                    created_at           = Normalize-Null $secret.created_at
-                    updated_at           = Normalize-Null $secret.updated_at
-                    visibility           = Normalize-Null $secret.visibility
-                    # Accordion Panel Queries
+        # Auto-detect resume from existing chunk files
+        if ($currentIndex -eq 0) {
+            $existingChunks = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Secret_chunk_*.json" -ErrorAction SilentlyContinue | Sort-Object Name)
+            if ($existingChunks.Count -gt 0) {
+                foreach ($chunk in $existingChunks) {
+                    try {
+                        $chunkData = Get-Content $chunk.FullName -Raw | ConvertFrom-Json
+                        if ($chunkData.graph.nodes) { $null = $allNodes.AddRange(@($chunkData.graph.nodes)) }
+                        if ($chunkData.graph.edges) { $null = $allEdges.AddRange(@($chunkData.graph.edges)) }
+                        $currentIndex = $chunkData.metadata.next_index
+                    }
+                    catch {
+                        Write-Warning "Skipping corrupt chunk file: $($chunk.Name)"
+                    }
                 }
-
-                $null = $nodes.Add((New-GitHoundNode -Id $secretId -Kind 'GHRepoSecret' -Properties $properties))
-                $null = $edges.Add((New-GitHoundEdge -Kind 'GHContains' -StartId $repo.properties.node_id -EndId $secretId -Properties @{ traversable = $false }))
-                $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasSecret' -StartId $repo.properties.node_id -EndId $secretId -Properties @{ traversable = $false }))
+                Write-Host "[*] Auto-resuming Git-HoundSecret from index $currentIndex ($($existingChunks.Count) chunks loaded, $($allNodes.Count) nodes, $($allEdges.Count) edges recovered)"
             }
-        } -ThrottleLimit 25
+        }
+
+        if ($currentIndex -gt 0 -and $existingChunks.Count -eq 0) {
+            Write-Host "[*] Resuming Git-HoundSecret from index $StartIndex of $totalRepos repos"
+        } elseif ($currentIndex -eq 0) {
+            Write-Host "[*] Git-HoundSecret: Enumerating repo-level secrets for $totalRepos repos"
+        }
+
+        while ($currentIndex -lt $totalRepos) {
+
+            # Check rate limit and determine chunk size
+            $rateLimitInfo = (Get-RateLimitInformation -Session $Session).core
+            $remaining = $rateLimitInfo.remaining
+            $resetTime = $rateLimitInfo.reset
+
+            $availableBudget = [Math]::Max(0, $remaining - $rateLimitBuffer)
+            $maxReposForBudget = [Math]::Floor($availableBudget / $callsPerRepo)
+
+            if ($maxReposForBudget -eq 0) {
+                # Not enough budget — sleep until reset
+                $timeNow = [DateTimeOffset]::Now.ToUnixTimeSeconds()
+                $sleepSeconds = [Math]::Max(1, $resetTime - $timeNow + 5)
+                $resetLocal = ([DateTimeOffset]::FromUnixTimeSeconds($resetTime)).LocalDateTime.ToString("HH:mm:ss")
+                Write-Host "[!] Rate limit exhausted ($remaining remaining). Sleeping $sleepSeconds seconds until reset at $resetLocal..."
+                Start-Sleep -Seconds $sleepSeconds
+                continue
+            }
+
+            # Size the chunk: minimum of configured ChunkSize, budget, and remaining repos
+            $reposRemaining = $totalRepos - $currentIndex
+            $thisChunkSize = [Math]::Min($ChunkSize, [Math]::Min($maxReposForBudget, $reposRemaining))
+
+            $chunkEnd = $currentIndex + $thisChunkSize - 1
+            Write-Host "[*] Processing repos $currentIndex..$chunkEnd of $totalRepos ($thisChunkSize repos, ~$($thisChunkSize * $callsPerRepo) API calls, $remaining calls remaining)"
+
+            $chunkRepos = $repoNodes[$currentIndex..$chunkEnd]
+            # ConcurrentBag is thread-safe for parallel ForEach-Object blocks
+            $chunkNodes = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
+            $chunkEdges = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
+            $orgName = $Session.OrganizationName
+
+            $chunkRepos | ForEach-Object -Parallel {
+                $nodes = $using:chunkNodes
+                $edges = $using:chunkEdges
+                $Session = $using:Session
+                $orgName = $using:orgName
+                $functionBundle = $using:GitHoundFunctionBundle
+                foreach($funcName in $functionBundle.Keys) {
+                    Set-Item -Path "function:$funcName" -Value ([scriptblock]::Create($functionBundle[$funcName]))
+                }
+                $repo = $_
+
+                # List repository secrets
+                # https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-repository-secrets
+                foreach($secret in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/actions/secrets").secrets)
+                {
+                    $secretId = "GH_Secret_$($repo.properties.node_id)_$($secret.name)"
+                    $properties = @{
+                        # Common Properties
+                        id                   = Normalize-Null $secretId
+                        name                 = Normalize-Null $secret.name
+                        # Relational Properties
+                        environment_name    = Normalize-Null $orgName
+                        environment_id      = Normalize-Null $repo.properties.environment_id
+                        repository_name      = Normalize-Null $repo.properties.name
+                        repository_id        = Normalize-Null $repo.properties.node_id
+                        # Node Specific Properties
+                        created_at           = Normalize-Null $secret.created_at
+                        updated_at           = Normalize-Null $secret.updated_at
+                        visibility           = Normalize-Null $secret.visibility
+                        # Accordion Panel Queries
+                    }
+
+                    $null = $nodes.Add((New-GitHoundNode -Id $secretId -Kind 'GH_RepoSecret' -Properties $properties))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $repo.properties.node_id -EndId $secretId -Properties @{ traversable = $false }))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecret' -StartId $repo.properties.node_id -EndId $secretId -Properties @{ traversable = $false }))
+                }
+            } -ThrottleLimit 25
+
+            # Accumulate chunk results
+            if ($chunkNodes.Count -gt 0) {
+                $null = $allNodes.AddRange(@($chunkNodes))
+            }
+            if ($chunkEdges.Count -gt 0) {
+                $null = $allEdges.AddRange(@($chunkEdges))
+            }
+
+            # Checkpoint to disk
+            $chunkPayload = [PSCustomObject]@{
+                metadata = [PSCustomObject]@{
+                    source_kind  = "GitHub"
+                    chunk_start  = $currentIndex
+                    chunk_end    = $chunkEnd
+                    total_repos  = $totalRepos
+                    next_index   = $currentIndex + $thisChunkSize
+                    timestamp    = (Get-Date -Format "o")
+                }
+                graph = [PSCustomObject]@{
+                    nodes = @($chunkNodes)
+                    edges = @($chunkEdges)
+                }
+            }
+            $chunkFile = Join-Path $CheckpointPath "githound_Secret_chunk_$($currentIndex).json"
+            $chunkPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath $chunkFile
+            Write-Host "[+] Checkpoint saved: $chunkFile ($($chunkNodes.Count) nodes, $($chunkEdges.Count) edges, next index: $($currentIndex + $thisChunkSize))"
+
+            $currentIndex += $thisChunkSize
+        }
+
+        # Write final consolidated output and clean up chunk files
+        $finalPayload = [PSCustomObject]@{
+            metadata = [PSCustomObject]@{
+                source_kind  = "GitHub"
+                total_repos  = $totalRepos
+                total_nodes  = $allNodes.Count
+                total_edges  = $allEdges.Count
+                timestamp    = (Get-Date -Format "o")
+            }
+            graph = [PSCustomObject]@{
+                nodes = @($allNodes)
+                edges = @($allEdges)
+            }
+        }
+        $finalFile = Join-Path $CheckpointPath "githound_Secret_complete.json"
+        $finalPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath $finalFile
+
+        # Clean up intermediate chunk files
+        $intermediateFiles = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Secret_chunk_*.json" -ErrorAction SilentlyContinue)
+        if ($intermediateFiles.Count -gt 0) {
+            $intermediateFiles | Remove-Item -Force
+            Write-Host "[+] Cleaned up $($intermediateFiles.Count) intermediate checkpoint files."
+        }
+
+        Write-Host "[+] Git-HoundSecret complete. Processed $totalRepos repos, collected $($allNodes.Count) nodes, $($allEdges.Count) edges. Final output: $finalFile"
     }
 
     end
     {
         $output = [PSCustomObject]@{
-            Nodes = $nodes
-            Edges = $edges
+            Nodes = $allNodes
+            Edges = $allEdges
         }
-    
+
         Write-Output $output
     }
 }
 
-function Git-HoundOrganizationRole
-{
-    <#
-    .SYNOPSIS
-        Fetches and processes GitHub Organization Roles for an organization.
-
-    .DESCRIPTION
-        This function retrieves custom organization roles for a given organization. It creates nodes and edges representing the roles and their relationships to users and teams.
-
-        API Reference:
-        - Get all organization roles for an organization: https://docs.github.com/en/rest/orgs/organization-roles?apiVersion=2022-11-28#get-all-organization-roles-for-an-organization
-        - List teams that are assigned to an organization role: https://docs.github.com/en/rest/orgs/organization-roles?apiVersion=2022-11-28#list-teams-that-are-assigned-to-an-organization-role
-        - List users that are assigned to an organization role: https://docs.github.com/en/rest/orgs/organization-roles?apiVersion=2022-11-28#list-users-that-are-assigned-to-an-organization-role
-        - List organization members: https://docs.github.com/en/rest/orgs/members?apiVersion=2022-11-28#list-organization-members
-        - Get organization membership for a user: https://docs.github.com/en/rest/orgs/members?apiVersion=2022-11-28#get-organization-membership-for-a-user
-
-        Fine Grained Permissions Reference:
-        - "Custom organization roles" organization permissions (read)
-        - "Members" organization permissions (read)
-
-    .PARAMETER Session
-        A GitHound.Session object used for authentication and API requests.
-
-    .PARAMETER Organization
-        An organization object to process.
-
-    .OUTPUTS
-        A PSObject containing arrays of nodes and edges representing the organization roles and their relationships.
-
-    .EXAMPLE
-        $orgRoles = Git-HoundOrganization | Git-HoundOrganizationRole
-    #>
-    Param(
-        [Parameter(Position = 0, Mandatory = $true)]
-        [PSTypeName('GitHound.Session')]
-        $Session,
-
-        [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
-        [PSObject]
-        $Organization
-    )
-
-    $nodes = New-Object System.Collections.ArrayList
-    $edges = New-Object System.Collections.ArrayList
-
-    $orgAllRepoReadId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_read"))
-    $orgAllRepoTriageId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_triage"))
-    $orgAllRepoWriteId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_write"))
-    $orgAllRepoMaintainId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_maintain"))
-    $orgAllRepoAdminId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_admin"))
-
-    # In general parallelizing this is a bad idea, because most organizations have a small number of custom roles
-    foreach($customrole in (Invoke-GithubRestMethod -Session $session -Path "orgs/$($Organization.Properties.login)/organization-roles").roles)
-    {
-        $customRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_$($customrole.name)"))
-        $customRoleProps = [pscustomobject]@{
-            # Common Properties
-            id                     = Normalize-Null $customRoleId
-            name                   = Normalize-Null "$($Organization.Properties.login)/$($customrole.name)"
-            # Relational Properties
-            organization_name      = Normalize-Null $Organization.properties.login
-            organization_id        = Normalize-Null $Organization.properties.node_id
-            # Node Specific Properties
-            short_name             = Normalize-Null $customrole.name
-            type                   = Normalize-Null 'custom'
-            # Accordion Panel Queries
-            query_explicit_members = "MATCH p=(:GHUser)-[:GHHasRole]->(:GHOrgRole {id:'$($customRoleId)'}) RETURN p"
-            query_unrolled_members = "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHOrgRole {id:'$($customRoleId)'}) RETURN p"
-            query_repositories     = "MATCH p=(:GHOrgRole {id:'$($customRoleId)'})-[*]->(:GHRepository) RETURN p"
-        }
-        $null = $nodes.Add((New-GitHoundNode -Id $customRoleId -Kind 'GHOrgRole', 'GHRole' -Properties $customRoleProps))
-
-        foreach($team in (Invoke-GithubRestMethod -Session $session -Path "orgs/$($Organization.Properties.login)/organization-roles/$($customRole.id)/teams"))
-        {
-            $null = $edges.Add((New-GitHoundEdge -Kind GHHasRole -StartId $team.node_id -EndId $customRoleId -Properties @{traversable=$true}))
-        }
-
-        foreach($user in (Invoke-GithubRestMethod -Session $session -Path "orgs/$($Organization.Properties.login)/organization-roles/$($customRole.id)/users"))
-        {
-            $null = $edges.Add((New-GitHoundEdge -Kind GHHasRole -StartId $user.node_id -EndId $customRoleId -Properties @{traversable=$true}))
-        }
-
-        if($null -ne $customrole.base_role)
-        {
-            switch($customrole.base_role)
-            {
-                'read' {$baseId = $orgAllRepoReadId}
-                'triage' {$baseId = $orgAllRepoTriageId}
-                'write' {$baseId = $orgAllRepoWriteId}
-                'maintain' {$baseId = $orgAllRepoMaintainId}
-                'admin' {$baseId = $orgAllRepoAdminId}
-            }
-
-            $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasBaseRole' -StartId $customRoleId -EndId $baseId -Properties @{traversable=$true}))
-        }
-
-        # Need to add support for custom permissions here
-        foreach($premission in $customrole.permissions)
-        {
-            switch($premission)
-            {
-                #'delete_alerts_code_scanning' {$kind = 'GHDeleteAlertCodeScanning'}
-                #'edit_org_custom_properties_values' {$kind = 'GHEditOrgCustomPropertiesValues'}
-                #'manage_org_custom_properties_definitions' {$kind = 'GHManageOrgCustomPropertiesDefinitions'}
-                #'manage_organization_oauth_application_policy' {$kind = 'GHManageOrganizationOAuthApplicationPolicy'}
-                #'manage_organization_ref_rules' {$kind = 'GHManageOrganizationRefRules'}
-                'manage_organization_webhooks' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHManageOrganizationWebhooks' -StartId $customRoleId -EndId $Organization.id -Properties @{traversable=$false})) }
-                'org_bypass_code_scanning_dismissal_requests' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHOrgBypassCodeScanningDismissalRequests' -StartId $customRoleId -EndId $Organization.id -Properties @{traversable=$false})) }
-                'org_bypass_secret_scanning_closure_requests' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHOrgBypassSecretScanningClosureRequests' -StartId $customRoleId -EndId $Organization.id -Properties @{traversable=$false})) }
-                'org_review_and_manage_secret_scanning_bypass_requests' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHOrgReviewAndManageSecretScanningBypassRequests' -StartId $customRoleId -EndId $Organization.id -Properties @{traversable=$false})) }
-                'org_review_and_manage_secret_scanning_closure_requests' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHOrgReviewAndManageSecretScanningClosureRequests' -StartId $customRoleId -EndId $Organization.id -Properties @{traversable=$false})) }
-                #'read_audit_logs' {$kind = 'GHReadAuditLogs'}
-                #'read_code_quality' {$kind = 'GHReadCodeQuality'}
-                #'read_code_scanning' {$kind = 'GHReadCodeScanning'}
-                'read_organization_actions_usage_metrics' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHReadOrganizationActionsUsageMetrics' -StartId $customRoleId -EndId $Organization.id -Properties @{traversable=$false})) }
-                'read_organization_custom_org_role' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHReadOrganizationCustomOrgRole' -StartId $customRoleId -EndId $Organization.id -Properties @{traversable=$false})) }
-                'read_organization_custom_repo_role' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHReadOrganizationCustomRepoRole' -StartId $customRoleId -EndId $Organization.id -Properties @{traversable=$false})) }
-                #'resolve_dependabot_alerts' {$kind = 'GHResolveDependabotAlerts'}
-                'resolve_secret_scanning_alerts' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHResolveSecretScanningAlerts' -StartId $customRoleId -EndId $Organization.id -Properties @{traversable=$false})) }
-                #'review_org_code_scanning_dismissal_requests' {$kind = 'GHReviewOrgCodeScanningDismissalRequests'}
-                #'view_dependabot_alerts' {$kind = 'GHViewDependabotAlerts'}
-                #'view_org_code_scanning_dismissal_requests' {$kind = 'GHViewOrgCodeScanningDismissalRequests'}
-                'view_secret_scanning_alerts' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHViewSecretScanningAlerts' -StartId $customRoleId -EndId $Organization.id -Properties @{traversable=$false})) }
-                'write_organization_actions_secrets' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHWriteOrganizationActionsSecrets' -StartId $customRoleId -EndId $Organization.id -Properties @{traversable=$false})) }
-                'write_organization_actions_settings' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHWriteOrganizationActionsSettings' -StartId $customRoleId -EndId $Organization.id -Properties @{traversable=$false})) }
-                #'write_organization_actions_variables' {$kind = 'GHWriteOrganizationActionsVariables'}
-                #'write_code_quality' {$kind = 'GHWriteCodeQuality'}
-                #'write_code_scanning' {$kind = 'GHWriteCodeScanning'}
-                'write_organization_custom_org_role' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHWriteOrganizationCustomOrgRole' -StartId $customRoleId -EndId $Organization.id -Properties @{traversable=$false})) }
-                'write_organization_custom_repo_role' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHWriteOrganizationCustomRepoRole' -StartId $customRoleId -EndId $Organization.id -Properties @{traversable=$false})) }
-                'write_organization_network_configurations' { $null = $edges.Add((New-GitHoundEdge -Kind 'GHWriteOrganizationNetworkConfigurations' -StartId $customRoleId -EndId $Organization.id -Properties @{traversable=$false})) }
-                #'write_organization_runner_custom_images' {$kind = 'GHWriteOrganizationRunnerCustomImages'}
-                #'write_organization_runners_and_runner_groups' {$kind = 'GHWriteOrganizationRunnersAndRunnerGroups'}
-            }
-        }
-    }
-
-    $orgOwnersId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($organization.id)_owners"))
-    $ownersProps = [pscustomobject]@{
-        # Common Properties
-        id                     = Normalize-Null $orgOwnersId
-        name                   = Normalize-Null "$($Organization.Properties.login)/owners"
-        # Relational Properties
-        organization_name      = Normalize-Null $Organization.properties.login
-        organization_id        = Normalize-Null $Organization.properties.node_id
-        # Node Specific Properties
-        short_name             = Normalize-Null 'owners'
-        type                   = Normalize-Null 'default'
-        # Accordion Panel Queries
-        query_explicit_members = "MATCH p=(:GHUser)-[:GHHasRole]->(:GHOrgRole {id:'$($orgOwnersId)'}) RETURN p"
-        query_unrolled_members = "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHOrgRole {id:'$($orgOwnersId)'}) RETURN p"
-        query_repositories     = "MATCH p=(:GHOrgRole {id:'$($orgOwnersId)'})-[*]->(:GHRepository) RETURN p"
-    }
-    $null = $nodes.Add((New-GitHoundNode -Id $orgOwnersId -Kind 'GHOrgRole', 'GHRole' -Properties $ownersProps))
-    $null = $edges.Add((New-GitHoundEdge -Kind 'GHCreateRepository' -StartId $orgOwnersId -EndId $Organization.id -Properties @{traversable=$false}))
-    $null = $edges.Add((New-GitHoundEdge -Kind 'GHInviteMember' -StartId $orgOwnersId -EndId $Organization.id -Properties @{traversable=$false}))
-    $null = $edges.Add((New-GitHoundEdge -Kind 'GHAddCollaborator' -StartId $orgOwnersId -EndId $Organization.id -Properties @{traversable=$false}))
-    $null = $edges.Add((New-GitHoundEdge -Kind 'GHCreateTeam' -StartId $orgOwnersId -EndId $Organization.id -Properties @{traversable=$false}))
-    $null = $edges.Add((New-GitHoundEdge -Kind 'GHTransferRepository' -StartId $orgOwnersId -EndId $Organization.id -Properties @{traversable=$false}))
-    $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasBaseRole' -StartId $orgOwnersId -EndId $orgAllRepoAdminId -Properties @{traversable=$true}))
-
-    $orgMembersId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($organization.id)_members"))
-    $membersProps = [pscustomobject]@{
-        # Common Properties
-        id                = Normalize-Null $orgMembersId
-        name              = Normalize-Null "$($Organization.Properties.login)/members"
-        # Relational Properties
-        organization_name = Normalize-Null $Organization.properties.login
-        organization_id   = Normalize-Null $Organization.properties.node_id
-        # Node Specific Properties
-        short_name        = Normalize-Null 'members'
-        type              = Normalize-Null 'default'
-        # Accordion Panel Queries
-        query_explicit_members = "MATCH p=(:GHUser)-[:GHHasRole]->(:GHOrgRole {id:'$($orgMembersId)'}) RETURN p"
-        query_unrolled_members = "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHOrgRole {id:'$($orgMembersId)'}) RETURN p"
-        query_repositories     = "MATCH p=(:GHOrgRole {id:'$($orgMembersId)'})-[*]->(:GHRepository) RETURN p"
-    }
-    $null = $nodes.Add((New-GitHoundNode -Id $orgMembersId -Kind 'GHOrgRole', 'GHRole' -Properties $membersProps))
-    $null = $edges.Add((New-GitHoundEdge -Kind 'GHCreateRepository' -StartId $orgMembersId -EndId $Organization.id -Properties @{traversable=$false}))
-    $null = $edges.Add((New-GitHoundEdge -Kind 'GHCreateTeam' -StartId $orgMembersId -EndId $Organization.id -Properties @{traversable=$false}))
-
-    if($Organization.Properties.default_repository_permission -ne 'none')
-    {
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasBaseRole' -StartId $orgMembersId -EndId ([Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_$($Organization.properties.default_repository_permission)"))) -Properties @{traversable=$true}))
-    }
-
-    # Need to add custom role membership here
-    # This is a great place to parallelize, because we must enumerate users and then check their memberships individually
-    Invoke-GithubRestMethod -Session $Session -Path "orgs/$($organization.Properties.login)/members" | ForEach-Object -Parallel {
-        
-        $edges = $using:edges
-        $Session = $using:Session
-        $Organization = $using:Organization
-        $orgOwnersId = $using:orgOwnersId
-        $orgMembersId = $using:orgMembersId
-        $functionBundle = $using:GitHoundFunctionBundle
-        foreach($funcName in $functionBundle.Keys) {
-            Set-Item -Path "function:$funcName" -Value ([scriptblock]::Create($functionBundle[$funcName]))
-        }
-        $user = $_
-        
-        switch((Invoke-GithubRestMethod -Session $Session -Path "orgs/$($organization.Properties.login)/memberships/$($user.login)").role)
-        {
-            'admin' { $destId = $orgOwnersId}
-            'member' { $destId = $orgMembersId }
-            #'moderator' { $orgmoderatorsList.Add($m) }
-            #'security admin' { $orgsecurityList.Add($m) }
-        }
-        $null = $edges.Add($(New-GitHoundEdge -Kind 'GHHasRole' -StartId $user.node_id -EndId $destId -Properties @{traversable=$true}))
-    } -ThrottleLimit 25
-
-    $output = [PSCustomObject]@{
-        Nodes = $nodes
-        Edges = $edges
-    }
-
-    Write-Output $output
-}
-
-# This is a third order data type after GHOrganization and GHTeam
-# I think this should work by passing in the GHTeam output from Git-HoundTeam
-# The question is whether this hinders its standalone nature, of course we can evaluate whether the input is provided from the pipeline or not
-function Git-HoundTeamRole
-{
-    <#
-    .SYNOPSIS
-        Fetches and processes GitHub Team Roles for a given organization.
-
-    .DESCRIPTION
-        This function retrieves team roles for a given organization. It creates nodes and edges representing the roles and their relationships to users and teams.
-
-        API Reference: 
-        - List teams: https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#list-teams
-        - List team members: https://docs.github.com/en/rest/teams/members?apiVersion=2022-11-28#list-team-members
-        - Get team membership for a user: https://docs.github.com/en/rest/teams/members?apiVersion=2022-11-28#get-team-membership-for-a-user
-
-        Fine Grained Permissions Reference:
-        - "Members" organization permissions (read)
-
-    .PARAMETER Session
-        A GitHound.Session object used for authentication and API requests.
-
-    .PARAMETER Organization
-        An organization object to process.
-
-    .OUTPUTS
-        A PSObject containing arrays of nodes and edges representing the team roles and their relationships.
-
-    .EXAMPLE
-        $teamRoles = Git-HoundOrganization | Git-HoundTeamRole
-    #>
-    Param(
-        [Parameter(Position = 0, Mandatory = $true)]
-        [PSTypeName('GitHound.Session')]
-        $Session,
-
-        [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
-        [PSObject[]]
-        $Team
-    )
-
-    $nodes = New-Object System.Collections.ArrayList
-    $edges = New-Object System.Collections.ArrayList
-
-    $Team.Nodes | ForEach-Object -Parallel {
-        
-        $nodes = $using:nodes
-        $edges = $using:edges
-        $Session = $using:Session
-
-        $functionBundle = $using:GitHoundFunctionBundle
-        foreach($funcName in $functionBundle.Keys) {
-            Set-Item -Path "function:$funcName" -Value ([scriptblock]::Create($functionBundle[$funcName]))
-        }
-        $team = $_
-
-        $memberId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($team.id)_members"))
-        $memberProps = [pscustomobject]@{
-            # Common Properties
-            id                 = Normalize-Null $memberId
-            name               = Normalize-Null "$($team.properties.organization_name)/$($team.properties.slug)/members"
-            # Relational Properties
-            organization_name  = Normalize-Null $team.properties.organization_name
-            organization_id    = Normalize-Null $team.properties.organization_id
-            team_name          = Normalize-Null $team.properties.name
-            team_id            = Normalize-Null $team.id
-            # Node Specific Properties
-            short_name         = Normalize-Null 'members'
-            type               = Normalize-Null 'team'
-            # Accordion Panel Queries
-            query_members      = "MATCH p=(:GHUser)-[GHHasRole]->(:GHTeamRole {id:'$($memberId)'}) RETURN p"
-            query_repositories = "MATCH p=(:GHTeamRole {id:'$($memberId)'})-[*]->(:GHRepository) RETURN p"
-        }
-        $null = $nodes.Add((New-GitHoundNode -Id $memberId -Kind 'GHTeamRole','GHRole' -Properties $memberProps))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHMemberOf' -StartId $memberId -EndId $team.id -Properties @{traversable=$true}))
-
-        $maintainerId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($team.id)_maintainers"))
-        $maintainerProps = [pscustomobject]@{
-            # Common Properties
-            id                 = Normalize-Null $maintainerId
-            name               = Normalize-Null "$($team.properties.organization_name)/$($team.properties.slug)/maintainers"
-            # Relational Properties
-            organization_name  = Normalize-Null $team.properties.organization_name
-            organization_id    = Normalize-Null $team.properties.organization_id
-            team_name          = Normalize-Null $team.properties.name
-            team_id            = Normalize-Null $team.id
-            # Node Specific Properties
-            short_name         = Normalize-Null 'maintainers'
-            type               = Normalize-Null 'team'
-            # Accordion Panel Queries
-            query_members      = "MATCH p=(:GHUser)-[:GHHasRole]->(:GHTeamRole {id:'$($maintainerId)'}) RETURN p"
-            query_repositories = "MATCH p=(:GHTeamRole {id:'$($maintainerId)'})-[*]->(:GHRepository) RETURN p"
-        }
-        $null = $nodes.Add((New-GitHoundNode -Id $maintainerId -Kind 'GHTeamRole','GHRole' -Properties $maintainerProps))
-
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHMemberOf' -StartId $maintainerId -EndId $team.id -Properties @{traversable=$true}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHAddMember' -StartId $maintainerId -EndId $team.id -Properties @{traversable=$true}))
-
-        foreach($member in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($team.properties.organization_name)/teams/$($team.properties.slug)/members?role=member"))
-        {
-            # By removing this step I saved exponential API Requests, but the new approach returns nested role membership as if it is direct
-            <#
-            switch((Invoke-GithubRestMethod -Session $Session -Path "orgs/$($team.properties.organization_name)/teams/$($team.properties.slug)/memberships/$($member.login)").role)
-            {
-                'member' { $targetId = $memberId }
-                'maintainer' { $targetId = $maintainerId }
-            }
-            #>
-
-            $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasRole' -StartId $member.node_id -EndId $memberId -Properties @{traversable=$true}))
-        }
-
-        foreach($maintainer in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($team.properties.organization_name)/teams/$($team.properties.slug)/members?role=maintainer"))
-        {
-            $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasRole' -StartId $maintainer.node_id -EndId $maintainerId -Properties @{traversable=$true}))
-        }
-    } -ThrottleLimit 25
-
-    $output = [PSCustomObject]@{
-        Nodes = $nodes
-        Edges = $edges
-    }
-
-    Write-Output $output
-}
-
-# This is a third order data type after GHOrganization and GHRepository
-function Git-HoundRepositoryRole
-{
-    <#
-    .SYNOPSIS
-        Fetches and processes GitHub Repository Roles for a given organization.
-
-    .DESCRIPTION
-        This function retrieves custom repository roles for a given organization. It creates nodes and edges representing the roles and their relationships to users and teams.
-
-        API Reference:
-        - List custom repository roles in an organization: https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/custom-roles?apiVersion=2022-11-28#list-custom-repository-roles-in-an-organization
-        - List organization repositories: https://docs.github.com/en/enterprise-cloud@latest/rest/repos/repos?apiVersion=2022-11-28#list-organization-repositories
-        - List repository collaborators: https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#list-repository-collaborators
-        - List repository teams: https://docs.github.com/en/enterprise-cloud@latest/rest/repos/repos?apiVersion=2022-11-28#list-repository-teams
-
-        Fine Grained Permissions Reference:
-        - "Custom repository roles" organization permissions (read)
-        - "Administration" organization permissions (read)
-        - "Metadata" repository permissions (read)
-        - "Administration" repository permissions (read)
-
-    .PARAMETER Session
-        A GitHound.Session object used for authentication and API requests.
-
-    .PARAMETER Organization
-        An organization object to process.
-
-    .OUTPUTS
-        A PSObject containing arrays of nodes and edges representing the repository roles and their relationships.
-
-    .EXAMPLE
-        $repoRoles = Git-HoundOrganization | Git-HoundRepositoryRole
-    #>
-    [CmdletBinding()]
-    Param(
-        [Parameter(Position = 0, Mandatory = $true)]
-        [PSTypeName('GitHound.Session')]
-        $Session,
-
-        [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
-        [PSObject]
-        $Organization
-    )
-
-    $nodes = New-Object System.Collections.ArrayList
-    $edges = New-Object System.Collections.ArrayList
-
-    $orgAllRepoReadId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_read"))
-    $orgAllRepoTriageId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_triage"))
-    $orgAllRepoWriteId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_write"))
-    $orgAllRepoMaintainId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_maintain"))
-    $orgAllRepoAdminId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_admin"))
-
-    $customRepoRoles = (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/custom-repository-roles").custom_roles
-
-
-    Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.properties.login)/repos" | ForEach-Object -Parallel{
-        
-        $nodes = $using:nodes
-        $edges = $using:edges
-        $Session = $using:Session
-        $Organization = $using:Organization
-        $orgAllRepoReadId = $using:orgAllRepoReadId
-        $orgAllRepoTriageId = $using:orgAllRepoTriageId
-        $orgAllRepoWriteId = $using:orgAllRepoWriteId
-        $orgAllRepoMaintainId = $using:orgAllRepoMaintainId
-        $orgAllRepoAdminId = $using:orgAllRepoAdminId
-        $customRepoRoles = $using:customRepoRoles
-
-        $functionBundle = $using:GitHoundFunctionBundle
-        foreach($funcName in $functionBundle.Keys) {
-            Set-Item -Path "function:$funcName" -Value ([scriptblock]::Create($functionBundle[$funcName]))
-        }
-        $repo = $_
-
-        # Create $repo Read Role
-        $repoReadId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_read"))
-        $repoReadProps = [pscustomobject]@{
-            # Common Properties
-            id                     = Normalize-Null $repoReadId
-            name                   = Normalize-Null "$($repo.full_name)/read"
-            # Relational Properties
-            organization_name      = Normalize-Null $Organization.properties.login
-            organization_id        = Normalize-Null $Organization.properties.node_id
-            repository_name        = Normalize-Null $repo.name
-            repository_id          = Normalize-Null $repo.node_id
-            # Node Specific Properties
-            short_name             = Normalize-Null 'read'
-            type                   = Normalize-Null 'default'
-            # Accordion Panel Queries
-            query_explicit_members = "MATCH p=(:GHUser)-[:GHHasRole]->(:GHRepoRole {id:'$($repoReadId)'}) RETURN p"
-            query_unrolled_members = "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHRepoRole {id:'$($repoReadId)'}) RETURN p"
-            query_repository       = "MATCH p=(:GHRepoRole {id:'$($repoReadId)'})-[*]->(:GHRepository) RETURN p"
-        }
-        $null = $nodes.Add((New-GitHoundNode -Id $repoReadId -Kind 'GHRepoRole', 'GHRole' -Properties $repoReadProps))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHReadRepoMetadata' -StartId $repoReadId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHReadRepoContents' -StartId $repoReadId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHReadRepoPullRequests' -StartId $repoReadId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasBaseRole' -StartId $orgAllRepoReadId -EndId $repoReadId -Properties @{traversable=$true}))
-
-        # Create $repo Write Role
-        $repoWriteId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_write"))
-        $repoWriteProps = [pscustomobject]@{
-            # Common Properties
-            id                     = Normalize-Null $repoWriteId
-            name                   = Normalize-Null "$($repo.full_name)/write"
-            # Relational Properties
-            organization_name      = Normalize-Null $Organization.properties.login
-            organization_id        = Normalize-Null $Organization.properties.node_id
-            repository_name        = Normalize-Null $repo.name
-            repository_id          = Normalize-Null $repo.node_id
-            # Node Specific Properties
-            short_name             = Normalize-Null 'write'
-            type                   = Normalize-Null 'default'
-            # Accordion Panel Queries
-            query_explicit_members = "MATCH p=(:GHUser)-[:GHHasRole]->(:GHRepoRole {id:'$($repoWriteId)'}) RETURN p"
-            query_unrolled_members = "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHRepoRole {id:'$($repoWriteId)'}) RETURN p"
-            query_repository       = "MATCH p=(:GHRepoRole {id:'$($repoWriteId)'})-[*]->(:GHRepository) RETURN p"
-        }
-        $null = $nodes.Add((New-GitHoundNode -Id $repoWriteId -Kind 'GHRepoRole', 'GHRole' -Properties $repoWriteProps))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHReadRepoMetadata' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHReadRepoContents' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHWriteRepoContents' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHAddLabel' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHRemoveLabel' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHCloseIssue' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHReopenIssue' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHReadRepoPullRequests' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHWriteRepoPullRequests' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHClosePullRequest' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHReopenPullRequest' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHAddAssignee' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHSetIssueType' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHRemoveAssignee' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHRequestPrReview' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHMarkAsDuplicate' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHSetMilestone' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHReadCodeScanning' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHWriteCodeScanning' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHCreateDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHDeleteDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHToggleDiscussionAnswer' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHToggleDiscussionCommentMinimize' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHManageDiscussionSpotlights' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHCreateDiscussionCategory' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHEditDiscussionCategory' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHConvertIssuesToDiscussions' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHCloseDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHReopenDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHEditCategoryOnDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHEditDiscussionComment' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHDeleteDiscussionComment' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHViewDependabotAlerts' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHResolveDependabotAlerts' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHManageDiscussionBadges' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasBaseRole' -StartId $orgAllRepoWriteId -EndId $repoWriteId -Properties @{traversable=$true}))
-
-        # Create $repo Admin Role
-        $repoAdminId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_admin"))
-        $repoAdminProps = [pscustomobject]@{
-            # Common Properties
-            id                     = Normalize-Null $repoAdminId
-            name                   = Normalize-Null "$($repo.full_name)/admin"
-            # Relational Properties
-            organization_name      = Normalize-Null $Organization.properties.login
-            organization_id        = Normalize-Null $Organization.properties.node_id
-            repository_name        = Normalize-Null $repo.name
-            repository_id          = Normalize-Null $repo.node_id
-            # Node Specific Properties
-            short_name             = Normalize-Null 'admin'
-            type                   = Normalize-Null 'default'
-            # Accordion Panel Queries
-            query_explicit_members = "MATCH p=(:GHUser)-[:GHHasRole]->(:GHRepoRole {id:'$($repoAdminId)'}) RETURN p"
-            query_unrolled_members = "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHRepoRole {id:'$($repoAdminId)'}) RETURN p"
-            query_repository       = "MATCH p=(:GHRepoRole {id:'$($repoAdminId)'})-[*]->(:GHRepository) RETURN p"
-        }
-        $null = $nodes.Add((New-GitHoundNode -Id $repoAdminId -Kind 'GHRepoRole', 'GHRole' -Properties $repoAdminProps))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHAdminTo' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHReadRepoMetadata' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHReadRepoContents' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHWriteRepoContents' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHAddLabel' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHRemoveLabel' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHCloseIssue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHReopenIssue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHReadRepoPullRequests' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHWriteRepoPullRequests' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHClosePullRequest' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHReopenPullRequest' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHAddAssignee' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHDeleteIssue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHRemoveAssignee' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHRequestPrReview' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHMarkAsDuplicate' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHSetMilestone' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHSetIssueType' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHManageTopics' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHManageSettingsDiscussions' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHManageSettingsWiki' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHManageSettingsProjects' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHManageSettingsMergeTypes' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHManageSettingsPages' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHManageWebhooks' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHManageDeployKeys' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHEditRepoMetadata' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHSetInteractionLimits' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHSetSocialPreview' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHPushProtectedBranch' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHReadCodeScanning' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHWriteCodeScanning' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHDeleteAlertsCodeScanning' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHViewSecretScanningAlerts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHResolveSecretScanningAlerts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHRunOrgMigration' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHCreateDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHCreateDiscussionAnnouncement' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHCreateDiscussionCategory' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHEditDiscussionCategory' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHDeleteDiscussionCategory' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHDeleteDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHManageDiscussionSpotlights' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHToggleDiscussionAnswer' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHToggleDiscussionCommentMinimize' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHConvertIssuesToDiscussions' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHCreateTag' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHDeleteTag' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHViewDependabotAlerts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHResolveDependabotAlerts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHBypassBranchProtection' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHManageSecurityProducts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHManageRepoSecurityProducts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHEditRepoProtections' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHEditRepoAnnouncementBanners' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHCloseDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHReopenDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHEditCategoryOnDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHManageDiscussionBadges' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHEditDiscussionComment' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHDeleteDiscussionComment' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHJumpMergeQueue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHCreateSoloMergeQueueEntry' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHEditRepoCustomPropertiesValue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasBaseRole' -StartId $orgAllRepoAdminId -EndId $repoAdminId -Properties @{traversable=$true}))
-
-        # Create $repo Triage Role
-        $repoTriageId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_triage"))
-        $repoTriageProps = [pscustomobject]@{
-            # Common Properties
-            id                     = Normalize-Null $repoTriageId
-            name                   = Normalize-Null "$($repo.full_name)/triage"
-            # Relational Properties
-            organization_name      = Normalize-Null $Organization.properties.login
-            organization_id        = Normalize-Null $Organization.properties.node_id
-            repository_name        = Normalize-Null $repo.name
-            repository_id          = Normalize-Null $repo.node_id
-            # Node Specific Properties
-            short_name             = Normalize-Null 'triage'
-            type                   = Normalize-Null 'default'
-            # Accordion Panel Queries
-            query_explicit_members = "MATCH p=(:GHUser)-[:GHHasRole]->(:GHRepoRole {id:'$($repoTriageId)'}) RETURN p"
-            query_unrolled_members = "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHRepoRole {id:'$($repoTriageId)'}) RETURN p"
-            query_repository       = "MATCH p=(:GHRepoRole {id:'$($repoTriageId)'})-[*]->(:GHRepository) RETURN p"
-        }
-        $null = $nodes.Add((New-GitHoundNode -Id $repoTriageId -Kind 'GHRepoRole', 'GHRole' -Properties $repoTriageProps))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHAddLabel' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHRemoveLabel' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHCloseIssue' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHReopenIssue' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHClosePullRequest' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHReopenPullRequest' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHAddAssignee' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHRemoveAssignee' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHRequestPrReview' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHMarkAsDuplicate' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHSetMilestone' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHSetIssueType' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHCreateDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHDeleteDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHToggleDiscussionAnswer' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHToggleDiscussionCommentMinimize' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHEditDiscussionCategory' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHCreateDiscussionCategory' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHConvertIssuesToDiscussions' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHCloseDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHReopenDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHEditCategoryOnDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHEditDiscussionComment' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHDeleteDiscussionComment' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasBaseRole' -StartId $repoTriageId -EndId $repoReadId -Properties @{traversable=$true}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasBaseRole' -StartId $orgAllRepoTriageId -EndId $repoTriageId -Properties @{traversable=$true}))
-
-        # Create $repo Maintain Role
-        $repoMaintainId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_maintain"))
-        $repoMaintainProps = [pscustomobject]@{
-            # Common Properties
-            id                     = Normalize-Null $repoMaintainId
-            name                   = Normalize-Null "$($repo.full_name)/maintain"
-            # Relational Properties
-            organization_name      = Normalize-Null $Organization.properties.login
-            organization_id        = Normalize-Null $Organization.properties.node_id
-            repository_name        = Normalize-Null $repo.name
-            repository_id          = Normalize-Null $repo.node_id
-            # Node Specific Properties
-            short_name             = Normalize-Null 'maintain'
-            type                   = Normalize-Null 'default'
-            # Accordion Panel Queries
-            query_explicit_members = "MATCH p=(:GHUser)-[:GHHasRole]->(:GHRepoRole {id:'$($repoMaintainId)'}) RETURN p"
-            query_unrolled_members = "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHRepoRole {id:'$($repoMaintainId)'}) RETURN p"
-            query_repository       = "MATCH p=(:GHRepoRole {id:'$($repoMaintainId)'})-[*]->(:GHRepository) RETURN p"
-        }
-        $null = $nodes.Add((New-GitHoundNode -Id $repoMaintainId -Kind 'GHRepoRole', 'GHRole' -Properties $repoMaintainProps))
-
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHManageTopics' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHManageSettingsWiki' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHManageSettingsProjects' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHManageSettingsMergeTypes' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHManageSettingsPages' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHEditRepoMetadata' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHSetInteractionLimits' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHSetSocialPreview' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHPushProtectedBranch' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHCreateDiscussionAnnouncement' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHDeleteDiscussionCategory' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHManageSettingsDiscussion' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasBaseRole' -StartId $repoMaintainId -EndId $repoWriteId -Properties @{traversable=$true}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasBaseRole' -StartId $orgAllRepoMaintainId -EndId $repoMaintainId -Properties @{traversable=$true}))
-
-        # Custom Repository Roles
-        foreach($customRepoRole in $customRepoRoles)
-        {
-            $customRepoRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_$($customRepoRole.name)"))
-            $customRepoRoleProps = [pscustomobject]@{
-                # Common Properties
-                id                     = Normalize-Null $customRepoRoleId
-                name                   = Normalize-Null "$($repo.full_name)/$($customRepoRole.name)"
-                # Relational Properties
-                organization_name      = Normalize-Null $Organization.properties.login
-                organization_id        = Normalize-Null $Organization.properties.node_id
-                repository_name        = Normalize-Null $repo.name
-                repository_id          = Normalize-Null $repo.node_id
-                # Node Specific Properties
-                short_name             = Normalize-Null $customRepoRole.name
-                type                   = Normalize-Null 'custom'
-                # Accordion Panel Queries
-                query_explicit_members = "MATCH p=(:GHUser)-[:GHHasRole]->(:GHRepoRole {id:'$($customRepoRoleId)'}) RETURN p"
-                query_unrolled_members = "MATCH p=(:GHUser)-[:GHHasRole|GHHasBaseRole|GHMemberOf*1..]->(:GHRepoRole {id:'$($customRepoRoleId)'}) RETURN p"
-                query_repository       = "MATCH p=(:GHRepoRole {id:'$($customRepoRoleId)'})-[*]->(:GHRepository) RETURN p"
-            }
-            $null = $nodes.Add((New-GitHoundNode -Id $customRepoRoleId -Kind 'GHRepoRole', 'GHRole' -Properties $customRepoRoleProps))
-            
-            if($null -ne $customRepoRole.base_role)
-            {
-                $targetBaseRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_$($customRepoRole.base_role)"))
-                $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasBaseRole' -StartId $customRepoRoleId -EndId $targetBaseRoleId -Properties @{traversable=$true}))
-            }
-            
-            foreach($permission in $customRepoRole.permissions)
-            {
-                $null = $edges.Add((New-GitHoundEdge -Kind "GH$(ConvertTo-PascalCase -String $permission)" -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false}))
-            }
-        }
-
-        # Finding Members...
-        ## GHUser Members
-        foreach($collaborator in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($Organization.Properties.login)/$($repo.name)/collaborators?affiliation=direct"))
-        {
-            switch($collaborator.role_name)
-            {
-                'admin' { $repoRoleId = $repoAdminId }
-                'maintain' { $repoRoleId = $repoMaintainId }
-                'write' { $repoRoleId = $repoWriteId }
-                'triage' { $repoRoleId = $repoTriageId }
-                'read' { $repoRoleId = $repoReadId }
-                default { $repoRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_$($collaborator.role_name)"))}
-            }
-            $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasRole' -StartId $collaborator.node_id -EndId $repoRoleId -Properties @{traversable=$true}))
-        }
-
-        ## GHTeam Members
-        foreach($team in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($Organization.Properties.login)/$($repo.name)/teams"))
-        {
-            switch($team.permission)
-            {
-                'admin' { $repoRoleId =  $repoAdminId }
-                'maintain' { $repoRoleId =  $repoMaintainId }
-                'push' { $repoRoleId = $repoWriteId }
-                'triage' { $repoRoleId = $repoTriageId }
-                'pull' { $repoRoleId = $repoReadId }
-                default { $repoRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_$($team.permission)")) }
-            }
-            $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasRole' -StartId $team.node_id -EndId $repoRoleId -Properties @{traversable=$true}))
-        }
-    } -ThrottleLimit 25
-
-    $output = [PSCustomObject]@{
-        Nodes = $nodes
-        Edges = $edges
-    }
-
-    Write-Output $output
-}
-
-# This is a second order data type after GHOrganization
+# This is a second order data type after GH_Organization
 # Inspired by https://github.com/SpecterOps/GitHound/issues/3
-# The GHHasSecretScanningAlert edge is used to link the alert to the repository
-# However, that edge is not traversable because the GHReadSecretScanningAlerts permission is necessary to read the alerts and the GHReadRepositoryContents permission is necessary to read the repository
+# The GH_HasSecretScanningAlert edge is used to link the alert to the repository
+# However, that edge is not traversable because the GH_ReadSecretScanningAlerts permission is necessary to read the alerts and the GH_ReadRepositoryContents permission is necessary to read the repository
 function Git-HoundSecretScanningAlert
 {
     <#
@@ -2234,7 +3266,7 @@ function Git-HoundSecretScanningAlert
     .DESCRIPTION
         This function fetches secret scanning alerts for the specified organization using the provided GitHound session and constructs nodes and edges representing the alerts and their relationships to repositories.
 
-        Requires the GitHub API permission: GHReadSecretScanningAlerts on the organization and GHReadRepositoryContents on the repository.
+        Requires the GitHub API permission: GH_ReadSecretScanningAlerts on the organization and GH_ReadRepositoryContents on the repository.
 
         API Reference: 
         - List secret scanning alerts for an organization: https://docs.github.com/en/rest/secret-scanning/secret-scanning?apiVersion=2022-11-28#list-secret-scanning-alerts-for-an-organization
@@ -2249,7 +3281,7 @@ function Git-HoundSecretScanningAlert
         A PSObject representing the GitHub organization for which to retrieve secret scanning alerts.
 
     .OUTPUTS
-        A PSObject containing two properties: Nodes and Edges. Nodes is an array of GHSecretScanningAlert nodes, and Edges is an array of GHHasSecretScanningAlert edges.
+        A PSObject containing two properties: Nodes and Edges. Nodes is an array of GH_SecretScanningAlert nodes, and Edges is an array of GH_HasSecretScanningAlert edges.
 
     .EXAMPLE
         $session = New-GitHoundSession -Token "your_github_token"
@@ -2292,8 +3324,8 @@ function Git-HoundSecretScanningAlert
             # Accordion Panel Queries
         }
 
-        $null = $nodes.Add((New-GitHoundNode -Id $alertId -Kind 'GHSecretScanningAlert' -Properties $properties))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasSecretScanningAlert' -StartId $alert.repository.node_id -EndId $alertId -Properties @{ traversable = $false }))
+        $null = $nodes.Add((New-GitHoundNode -Id $alertId -Kind 'GH_SecretScanningAlert' -Properties $properties))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecretScanningAlert' -StartId $alert.repository.node_id -EndId $alertId -Properties @{ traversable = $false }))
     }
 
     $output = [PSCustomObject]@{
@@ -2326,7 +3358,7 @@ function Git-HoundAppInstallation
         A PSObject representing the GitHub organization for which to retrieve GitHub App installations.
 
     .OUTPUTS
-        A PSObject containing two properties: Nodes and Edges. Nodes is an array of GHAppInstallation nodes, and Edges is an array of edges (currently empty).
+        A PSObject containing two properties: Nodes and Edges. Nodes is an array of GH_AppInstallation nodes, and Edges is an array of edges (currently empty).
     
     .EXAMPLE
         $session = New-GitHoundSession -Token "your_github_token"
@@ -2354,8 +3386,8 @@ function Git-HoundAppInstallation
             id                   = Normalize-Null $app.client_id
             name                 = Normalize-Null $app.app_slug
             # Relational Properties
-            organization_name    = Normalize-Null $app.account.login
-            organization_id      = Normalize-Null $app.account.node_id
+            environment_name    = Normalize-Null $app.account.login
+            environment_id      = Normalize-Null $app.account.node_id
             repositories_url     = Normalize-Null $app.repositories_url
             # Node Specific Properties
             repository_selection = Normalize-Null $app.repository_selection
@@ -2369,8 +3401,8 @@ function Git-HoundAppInstallation
             # Accordion Panel Queries
         }
 
-        $null = $nodes.Add((New-GitHoundNode -Id $app.client_id -Kind 'GHAppInstallation' -Properties $properties))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GHContains' -StartId $app.account.node_id -EndId $app.client_id -Properties @{ traversable = $false }))
+        $null = $nodes.Add((New-GitHoundNode -Id $app.client_id -Kind 'GH_AppInstallation' -Properties $properties))
+        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $app.account.node_id -EndId $app.client_id -Properties @{ traversable = $false }))
     }
 
     Write-Output ([PSCustomObject]@{
@@ -2434,7 +3466,159 @@ function Git-HoundScimUser
     Write-Output $output
 }
 
-# This is a second order data type after GHOrganization
+function Parse-GitHoundOIDCSubject
+{
+    <#
+    .SYNOPSIS
+        Parses GitHub OIDC subject claims from AZFederatedIdentityCredential nodes and creates CanAssumeIdentity edges.
+
+    .DESCRIPTION
+        This function processes AZFederatedIdentityCredential nodes that have GitHub OIDC subject claims
+        (subjects beginning with "repo:") and creates CanAssumeIdentity edges from the appropriate GitHub
+        node (GH_Branch, GH_Environment, or GH_Repository) to the AZFederatedIdentityCredential node.
+
+        GitHub OIDC subject claim format: repo:{org}/{repo}:{qualifier}
+
+        Supported qualifiers:
+          - ref:refs/heads/{branch}    → GH_Branch    (name: {repo}\{branch})
+          - ref:refs/tags/{tag}        → GH_Repository (name: {repo}) [tag-level not tracked, falls back to repo]
+          - environment:{envName}      → GH_Environment (name: {repo}\{envName})
+          - *                          → GH_Repository (name: {repo})
+          - pull_request               → GH_Repository (name: {repo}) [PR-level not tracked, falls back to repo]
+          - job_workflow_ref:{path}    → GH_Repository (name: {repo}) [workflow ref not tracked, falls back to repo]
+
+    .PARAMETER FederatedIdentityCredentials
+        An array of AZFederatedIdentityCredential node objects. Each node must have:
+          - id: The objectid of the federated identity credential
+          - properties.subject: The OIDC subject claim string
+
+    .EXAMPLE
+        $fidcNodes = @(
+            [PSCustomObject]@{
+                id = '6739d77d-ec59-468d-8505-bd9f9f139183'
+                properties = @{ subject = 'repo:SpecterTst/oidc-actions-test-1:ref:refs/heads/prod' }
+            }
+        )
+        $result = Parse-GitHoundOIDCSubject -FederatedIdentityCredentials $fidcNodes
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSObject[]]
+        $FederatedIdentityCredentials
+    )
+
+    $edges = New-Object System.Collections.ArrayList
+
+    $ghSubjects = @($FederatedIdentityCredentials | Where-Object { $_.properties.subject -like 'repo:*' })
+
+    if($ghSubjects.Count -eq 0)
+    {
+        Write-Host "[*] OIDC Subject Parser: No GitHub OIDC subjects found"
+        Write-Output ([PSCustomObject]@{
+            Nodes = @()
+            Edges = $edges
+        })
+        return
+    }
+
+    Write-Host "[*] OIDC Subject Parser: Processing $($ghSubjects.Count) GitHub OIDC subject(s)"
+
+    $parsed = 0
+    $skipped = 0
+
+    foreach($fidc in $ghSubjects)
+    {
+        $subject = $fidc.properties.subject
+        $fidcId = $fidc.id
+
+        # Parse: repo:{org}/{repo}:{qualifier}
+        # The subject always starts with "repo:" and the org/repo is separated by "/"
+        # The qualifier follows after the second ":"
+        $withoutPrefix = $subject.Substring(5)  # Remove "repo:"
+        $slashIndex = $withoutPrefix.IndexOf('/')
+        if($slashIndex -lt 0)
+        {
+            Write-Verbose "OIDC Subject Parser: Skipping malformed subject (no org/repo separator): $subject"
+            $skipped++
+            continue
+        }
+
+        $org = $withoutPrefix.Substring(0, $slashIndex)
+        $remainder = $withoutPrefix.Substring($slashIndex + 1)
+
+        # Find the colon that separates repo from qualifier
+        $colonIndex = $remainder.IndexOf(':')
+        if($colonIndex -lt 0)
+        {
+            Write-Verbose "OIDC Subject Parser: Skipping malformed subject (no qualifier separator): $subject"
+            $skipped++
+            continue
+        }
+
+        $repo = $remainder.Substring(0, $colonIndex)
+        $qualifier = $remainder.Substring($colonIndex + 1)
+
+        # Determine the start node kind and value based on the qualifier
+        $startKind = $null
+        $startValue = $null
+
+        switch -Wildcard ($qualifier)
+        {
+            'ref:refs/heads/*' {
+                # Branch reference: repo:{org}/{repo}:ref:refs/heads/{branch}
+                $branch = $qualifier.Substring(15)  # Remove "ref:refs/heads/"
+                $startKind = 'GH_Branch'
+                $startValue = "$repo\$branch"
+                break
+            }
+            'environment:*' {
+                # Environment reference: repo:{org}/{repo}:environment:{envName}
+                $envName = $qualifier.Substring(12)  # Remove "environment:"
+                $startKind = 'GH_Environment'
+                $startValue = "$repo\$envName"
+                break
+            }
+            default {
+                # Wildcard or any other qualifier falls back to repository
+                # This handles: *, pull_request, ref:refs/tags/*, job_workflow_ref:*, etc.
+                $startKind = 'GH_Repository'
+                $startValue = $repo
+            }
+        }
+
+        if($null -eq $startKind)
+        {
+            Write-Verbose "OIDC Subject Parser: Skipping unrecognized qualifier in subject: $subject"
+            $skipped++
+            continue
+        }
+
+        $null = $edges.Add((New-GitHoundEdge `
+            -Kind 'CanAssumeIdentity' `
+            -StartId $startValue `
+            -StartKind $startKind `
+            -StartMatchBy 'name' `
+            -EndId $fidcId `
+            -EndKind 'AZFederatedIdentityCredential' `
+            -Properties @{
+                traversable = $true
+                subject     = $subject
+            }
+        ))
+
+        $parsed++
+    }
+
+    Write-Host "[*] OIDC Subject Parser: Created $parsed edge(s), skipped $skipped subject(s)"
+
+    Write-Output ([PSCustomObject]@{
+        Nodes = @()
+        Edges = $edges
+    })
+}
+
+# This is a second order data type after GH_Organization
 function Git-HoundGraphQlSamlProvider
 {
     <#
@@ -2550,7 +3734,7 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                     $ForeignUserNodeKind = 'OktaUser'
                     $ForeginEnvironmentNodeKind = 'OktaOrganization'
                     $ForeignEnvironmentId = $result.data.organization.samlIdentityProvider.ssoUrl.Split('/')[2]
-                    #$null = $edges.Add((New-GitHoundEdge -Kind 'GHSyncedToEnvironment' -StartId $result.data.organization.samlIdentityProvider.id -EndId $ForeignEnvironmentName -EndKind $ForeginEnvironmentNodeKind -EndMatchBy name -Properties @{traversable=$false}))
+                    #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SyncedToEnvironment' -StartId $result.data.organization.samlIdentityProvider.id -EndId $ForeignEnvironmentName -EndKind $ForeginEnvironmentNodeKind -EndMatchBy name -Properties @{traversable=$false}))
                 }
                 default { Write-Verbose "Issuer: $($_)"; break }
             }
@@ -2562,8 +3746,8 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                 name                      = $result.data.organization.samlIdentityProvider.id
                 node_id                   = $result.data.organization.samlIdentityProvider.id
                 # Relational Properties
-                organization_name         = $result.data.organization.name
-                organization_id           = $result.data.organization.id
+                environment_name         = $result.data.organization.name
+                environment_id           = $result.data.organization.id
                 foreign_environment_id   = $ForeignEnvironmentId
                 # Node Specific Properties
                 digest_method             = $result.data.organization.samlIdentityProvider.digestMethod
@@ -2572,17 +3756,17 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                 signature_method          = $result.data.organization.samlIdentityProvider.signatureMethod
                 sso_url                   = $result.data.organization.samlIdentityProvider.ssoUrl
                 # Accordion Panel Queries
-                query_environments        = "MATCH p=(:GHSamlIdentityProvider {objectid: '$($result.data.organization.samlIdentityProvider.id.ToUpper())'})<-[:GHHasSamlIdentityProvider]->(:GHOrganization) RETURN p"
-                query_external_identities = "MATCH p=(:GHSamlIdentityProvider {objectid: '$($result.data.organization.samlIdentityProvider.id.ToUpper())'})-[:GHHasExternalIdentity]->() RETURN p"
+                query_environments        = "MATCH p=(:GH_SamlIdentityProvider {objectid: '$($result.data.organization.samlIdentityProvider.id.ToUpper())'})<-[:GH_HasSamlIdentityProvider]->(:GH_Organization) RETURN p"
+                query_external_identities = "MATCH p=(:GH_SamlIdentityProvider {objectid: '$($result.data.organization.samlIdentityProvider.id.ToUpper())'})-[:GH_HasExternalIdentity]->() RETURN p"
             }
 
-            $null = $nodes.Add((New-GitHoundNode -Id $result.data.organization.samlIdentityProvider.id -Kind 'GHSamlIdentityProvider' -Properties $identityProviderProps))
-            $null = $edges.Add((New-GitHoundEdge -Kind 'GHHasSamlIdentityProvider' -StartId $result.data.organization.id -EndId $result.data.organization.samlIdentityProvider.id -Properties @{traversable=$false}))
+            $null = $nodes.Add((New-GitHoundNode -Id $result.data.organization.samlIdentityProvider.id -Kind 'GH_SamlIdentityProvider' -Properties $identityProviderProps))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSamlIdentityProvider' -StartId $result.data.organization.id -EndId $result.data.organization.samlIdentityProvider.id -Properties @{traversable=$false}))
 
-            # Iterate through each External Identity and create GHExternalIdentity Nodes and relevant Edges
+            # Iterate through each External Identity and create GH_ExternalIdentity Nodes and relevant Edges
             foreach($identity in $result.data.organization.samlIdentityProvider.externalIdentities.nodes)
             {
-                # Create GHExternalIdentity Node and Connect it to GHSamlIdentityProvider Node via GHHasExternalIdentity Edge
+                # Create GH_ExternalIdentity Node and Connect it to GH_SamlIdentityProvider Node via GH_HasExternalIdentity Edge
                 # We may discover in the future that we need to capture more properties from the external identity
 
                 $EIprops = [pscustomobject]@{
@@ -2590,8 +3774,8 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                     name                      = Normalize-Null $identity.id
                     guid                      = Normalize-Null $identity.guid
                     # Relational Properties
-                    organization_id           = Normalize-Null $result.data.organization.id
-                    organization_name         = Normalize-Null $result.data.organization.name
+                    environment_id           = Normalize-Null $result.data.organization.id
+                    environment_name         = Normalize-Null $result.data.organization.name
                     # Node Specific Properties
                     saml_identity_family_name = Normalize-Null $identity.samlIdentity.familyName
                     saml_identity_given_name  = Normalize-Null $identity.samlIdentity.givenName
@@ -2603,28 +3787,28 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                     github_username           = Normalize-Null $identity.user.login
                     github_user_id            = Normalize-Null $identity.user.id
                     # Accordion Panel Queries
-                    query_mapped_users = "MATCH p=(:GHExternalIdentity {objectid: '$($identity.id.ToUpper())'})-[:GHMapsToUser]->() RETURN p"
+                    query_mapped_users = "MATCH p=(:GH_ExternalIdentity {objectid: '$($identity.id.ToUpper())'})-[:GH_MapsToUser]->() RETURN p"
                 }
 
-                $null = $nodes.Add((New-GitHoundNode -Id $identity.id -Kind 'GHExternalIdentity' -Properties $EIprops))
-                $null = $edges.Add((New-GitHoundEdge -Kind GHHasExternalIdentity -StartId $result.data.organization.samlIdentityProvider.id -EndId $identity.id -Properties @{traversable=$false}))
+                $null = $nodes.Add((New-GitHoundNode -Id $identity.id -Kind 'GH_ExternalIdentity' -Properties $EIprops))
+                $null = $edges.Add((New-GitHoundEdge -Kind GH_HasExternalIdentity -StartId $result.data.organization.samlIdentityProvider.id -EndId $identity.id -Properties @{traversable=$false}))
                 
                 if($identity.samlIdentity.username -ne $null)
                 {
-                    $null = $edges.Add((New-GitHoundEdge -Kind GHMapsToUser -StartId $identity.id -EndId $identity.samlIdentity.username -EndKind $ForeignUserNodeKind -EndMatchBy name -Properties @{traversable=$false}))
+                    $null = $edges.Add((New-GitHoundEdge -Kind GH_MapsToUser -StartId $identity.id -EndId $identity.samlIdentity.username -EndKind $ForeignUserNodeKind -EndMatchBy name -Properties @{traversable=$false}))
                 }
                 elseif($identity.scimIdentity.username -ne $null)
                 {
-                    $null = $edges.Add((New-GitHoundEdge -Kind GHMapsToUser -StartId $identity.id -EndId $identity.scimIdentity.username -EndKind $ForeignUserNodeKind -EndMatchBy name -Properties @{traversable=$false}))
+                    $null = $edges.Add((New-GitHoundEdge -Kind GH_MapsToUser -StartId $identity.id -EndId $identity.scimIdentity.username -EndKind $ForeignUserNodeKind -EndMatchBy name -Properties @{traversable=$false}))
                 }
 
                 if($identity.user.id -ne $null)
                 {
-                    $null = $edges.Add((New-GitHoundEdge -Kind GHMapsToUser -StartId $identity.id -EndId $identity.user.id -Properties @{traversable=$false}))
+                    $null = $edges.Add((New-GitHoundEdge -Kind GH_MapsToUser -StartId $identity.id -EndId $identity.user.id -Properties @{traversable=$false}))
                     
-                    # Create SyncedToGHUser Edge from Foreign Identity to GHUser
+                    # Create SyncedToGHUser Edge from Foreign Identity to GH_User
                     # This might need to be something that happens during post-processing since we do not control whether the foreign user node already exists in the graph
-                    $null = $edges.Add((New-GitHoundEdge -Kind SyncedToGHUser -StartId $identity.samlIdentity.username -StartKind $ForeignUserNodeKind -StartMatchBy name -EndId $identity.user.id -Properties @{traversable=$true; composition="MATCH p=()<-[:GHSyncedToEnvironment]-(:GHSamlIdentityProvider)-[:GHHasExternalIdentity]->(:GHExternalIdentity)-[:GHMapsToUser]->(n) WHERE n.objectid = '$($identity.user.id.ToUpper())' OR n.name = '$($identity.samlIdentity.username.ToUpper())' RETURN p"}))
+                    $null = $edges.Add((New-GitHoundEdge -Kind SyncedToGHUser -StartId $identity.samlIdentity.username -StartKind $ForeignUserNodeKind -StartMatchBy name -EndId $identity.user.id -Properties @{traversable=$true; composition="MATCH p=()<-[:GH_SyncedToEnvironment]-(:GH_SamlIdentityProvider)-[:GH_HasExternalIdentity]->(:GH_ExternalIdentity)-[:GH_MapsToUser]->(n) WHERE n.objectid = '$($identity.user.id.ToUpper())' OR n.name = '$($identity.samlIdentity.username.ToUpper())' RETURN p"}))
                 }
             }
         }
@@ -2643,94 +3827,350 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
 
 function Invoke-GitHound
 {
+    <#
+    .SYNOPSIS
+        Orchestrates a full GitHound collection for an organization.
+
+    .DESCRIPTION
+        Runs all collection functions sequentially, writing per-step output files to disk after each step.
+        Supports crash recovery via the -Resume switch: if a per-step file already exists on disk, that
+        step is loaded from the file instead of re-collected.
+
+        The final consolidated payload is written to githound_<orgId>.json, combining all per-step data
+        (except SAML/OIDC which remain in separate files).
+
+    .PARAMETER Session
+        A GitHound.Session object used for authentication and API requests.
+
+    .PARAMETER CheckpointPath
+        Directory for per-step output files and intermediate checkpoints. Defaults to the current directory.
+
+    .PARAMETER Resume
+        When set, detects existing per-step output files and skips completed steps instead of re-collecting.
+
+    .PARAMETER CleanupIntermediates
+        When set, deletes per-step output files after the final consolidated payload is written.
+
+    .EXAMPLE
+        Invoke-GitHound -Session $Session
+
+    .EXAMPLE
+        # Resume after a crash
+        Invoke-GitHound -Session $Session -Resume
+
+    .EXAMPLE
+        # Resume and clean up per-step files after consolidation
+        Invoke-GitHound -Session $Session -Resume -CleanupIntermediates
+    #>
     [CmdletBinding()]
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [PSTypeName('GitHound.Session')]
-        $Session
+        $Session,
+
+        [Parameter()]
+        [string]
+        $CheckpointPath = ".",
+
+        [Parameter()]
+        [switch]
+        $Resume,
+
+        [Parameter()]
+        [switch]
+        $CleanupIntermediates,
+
+        [Parameter()]
+        [switch]
+        $CollectAll
     )
 
     $nodes = New-Object System.Collections.ArrayList
     $edges = New-Object System.Collections.ArrayList
-    
+
     $Global:GitHoundFunctionBundle = Get-GitHoundFunctionBundle
 
     Write-Host "[*] Starting GitHound for $($Session.OrganizationName)"
-    $org = Git-HoundOrganization -Session $Session
+
+    # ── Step 1: Organization ───────────────────────────────────────────────
+    # Bootstrap: discover org ID for file naming. Check for existing file first on resume.
+    $orgId = $null
+    if ($Resume) {
+        $orgFiles = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Organization_*.json" -ErrorAction SilentlyContinue)
+        if ($orgFiles.Count -eq 1) {
+            $org = Import-GitHoundStepOutput -FilePath $orgFiles[0].FullName
+            if ($org) {
+                $orgId = $org.nodes[0].id
+                Write-Host "[*] Resuming: Loaded Organization from $($orgFiles[0].Name)"
+            }
+        }
+    }
+
+    if (-not $orgId) {
+        Write-Host "[*] Enumerating Organization"
+        $org = Git-HoundOrganization -Session $Session
+        $orgId = $org.nodes[0].id
+        Export-GitHoundStepOutput -StepResult $org -FilePath (Join-Path $CheckpointPath "githound_Organization_$orgId.json")
+        Write-Host "[+] Saved: githound_Organization_$orgId.json"
+    }
+
     if($org.nodes) { $nodes.AddRange(@($org.nodes)) }
     if($org.edges) { $edges.AddRange(@($org.edges)) }
 
-    Write-Host "[*] Enumerating Organization Users"
-    $users = $org.nodes[0] | Git-HoundUser -Session $Session
-    if($users) { $nodes.AddRange(@($users)) }
+    # ── Step 2: Users ──────────────────────────────────────────────────────
+    $stepFile = Join-Path $CheckpointPath "githound_User_$orgId.json"
+    if ($Resume -and (Test-Path $stepFile)) {
+        Write-Host "[*] Resuming: Loaded Users from githound_User_$orgId.json"
+        $users = Import-GitHoundStepOutput -FilePath $stepFile
+    } else {
+        Write-Host "[*] Enumerating Organization Users"
+        $users = $org.nodes[0] | Git-HoundUser -Session $Session
+        Export-GitHoundStepOutput -StepResult $users -FilePath $stepFile
+        Write-Host "[+] Saved: githound_User_$orgId.json"
+    }
+    if($users.nodes) { $nodes.AddRange(@($users.nodes)) }
+    if($users.edges) { $edges.AddRange(@($users.edges)) }
 
-    Write-Host "[*] Enumerating Organization Teams"
-    $teams = $org.nodes[0] | Git-HoundTeam -Session $Session
+    # ── Step 3: Teams ──────────────────────────────────────────────────────
+    $stepFile = Join-Path $CheckpointPath "githound_Team_$orgId.json"
+    if ($Resume -and (Test-Path $stepFile)) {
+        Write-Host "[*] Resuming: Loaded Teams from githound_Team_$orgId.json"
+        $teams = Import-GitHoundStepOutput -FilePath $stepFile
+    } else {
+        Write-Host "[*] Enumerating Organization Teams"
+        $teams = $org.nodes[0] | Git-HoundTeam -Session $Session
+        Export-GitHoundStepOutput -StepResult $teams -FilePath $stepFile
+        Write-Host "[+] Saved: githound_Team_$orgId.json"
+    }
     if($teams.nodes) { $nodes.AddRange(@($teams.nodes)) }
     if($teams.edges) { $edges.AddRange(@($teams.edges)) }
 
-    Write-Host "[*] Enumerating Organization Repositories"
-    $repos = $org.nodes[0] | Git-HoundRepository -Session $Session
+    # ── Step 4: Repositories ──────────────────────────────────────────────
+    $stepFile = Join-Path $CheckpointPath "githound_Repository_$orgId.json"
+    if ($Resume -and (Test-Path $stepFile)) {
+        Write-Host "[*] Resuming: Loaded Repositories from githound_Repository_$orgId.json"
+        $repos = Import-GitHoundStepOutput -FilePath $stepFile
+    } else {
+        Write-Host "[*] Enumerating Organization Repositories"
+        $repos = $org.nodes[0] | Git-HoundRepository -Session $Session
+        Export-GitHoundStepOutput -StepResult $repos -FilePath $stepFile
+        Write-Host "[+] Saved: githound_Repository_$orgId.json"
+    }
     if($repos.nodes) { $nodes.AddRange(@($repos.nodes)) }
     if($repos.edges) { $edges.AddRange(@($repos.edges)) }
 
-    Write-Host "[*] Enumerating Organization Branches"
-    $branches = $repos | Git-HoundBranch -Session $Session
+    # ── Step 5: Repository Roles ──────────────────────────────────────────
+    # Check for per-step file, then _complete.json from internal checkpointing
+    $stepFile = Join-Path $CheckpointPath "githound_RepoRole_$orgId.json"
+    $completeFile = Join-Path $CheckpointPath "githound_RepoRole_complete.json"
+    if ($Resume -and (Test-Path $stepFile)) {
+        Write-Host "[*] Resuming: Loaded Repository Roles from githound_RepoRole_$orgId.json"
+        $reporoles = Import-GitHoundStepOutput -FilePath $stepFile
+    } elseif ($Resume -and (Test-Path $completeFile)) {
+        Write-Host "[*] Resuming: Found RepoRole complete file, converting to per-step output"
+        $reporoles = Import-GitHoundStepOutput -FilePath $completeFile
+        Export-GitHoundStepOutput -StepResult $reporoles -FilePath $stepFile
+        Write-Host "[+] Saved: githound_RepoRole_$orgId.json"
+    } else {
+        Write-Host "[*] Enumerating Repository Roles"
+        $reporoles = $repos | Git-HoundRepositoryRole -Session $Session -CheckpointPath $CheckpointPath
+        Export-GitHoundStepOutput -StepResult $reporoles -FilePath $stepFile
+        Write-Host "[+] Saved: githound_RepoRole_$orgId.json"
+    }
+    if($reporoles.nodes) { $nodes.AddRange(@($reporoles.nodes)) }
+    if($reporoles.edges) { $edges.AddRange(@($reporoles.edges)) }
+
+    # ── Step 6: Branches ──────────────────────────────────────────────────
+    $stepFile = Join-Path $CheckpointPath "githound_Branch_$orgId.json"
+    $completeFile = Join-Path $CheckpointPath "githound_Branch_complete.json"
+    if ($Resume -and (Test-Path $stepFile)) {
+        Write-Host "[*] Resuming: Loaded Branches from githound_Branch_$orgId.json"
+        $branches = Import-GitHoundStepOutput -FilePath $stepFile
+    } elseif ($Resume -and (Test-Path $completeFile)) {
+        Write-Host "[*] Resuming: Found Branch complete file, converting to per-step output"
+        $branches = Import-GitHoundStepOutput -FilePath $completeFile
+        Export-GitHoundStepOutput -StepResult $branches -FilePath $stepFile
+        Write-Host "[+] Saved: githound_Branch_$orgId.json"
+    } else {
+        Write-Host "[*] Enumerating Organization Branches"
+        $branches = $org.nodes[0] | Git-HoundBranch -Session $Session -CheckpointPath $CheckpointPath
+        Export-GitHoundStepOutput -StepResult $branches -FilePath $stepFile
+        Write-Host "[+] Saved: githound_Branch_$orgId.json"
+    }
     if($branches.nodes) { $nodes.AddRange(@($branches.nodes)) }
     if($branches.edges) { $edges.AddRange(@($branches.edges)) }
 
-    Write-Host "[*] Enumerating Organization Workflows"
-    $workflows = $repos | Git-HoundWorkflow -Session $Session
-    if($workflows.nodes) { $nodes.AddRange(@($workflows.nodes)) }
-    if($workflows.edges) { $edges.AddRange(@($workflows.edges)) }
+    # ── Step 7: Workflows (requires -CollectAll) ────────────────────────────
+    if ($CollectAll) {
+        $stepFile = Join-Path $CheckpointPath "githound_Workflow_$orgId.json"
+        $completeFile = Join-Path $CheckpointPath "githound_Workflow_complete.json"
+        if ($Resume -and (Test-Path $stepFile)) {
+            Write-Host "[*] Resuming: Loaded Workflows from githound_Workflow_$orgId.json"
+            $workflows = Import-GitHoundStepOutput -FilePath $stepFile
+        } elseif ($Resume -and (Test-Path $completeFile)) {
+            Write-Host "[*] Resuming: Found Workflow complete file, converting to per-step output"
+            $workflows = Import-GitHoundStepOutput -FilePath $completeFile
+            Export-GitHoundStepOutput -StepResult $workflows -FilePath $stepFile
+            Write-Host "[+] Saved: githound_Workflow_$orgId.json"
+        } else {
+            Write-Host "[*] Enumerating Organization Workflows"
+            $workflows = $repos | Git-HoundWorkflow -Session $Session -CheckpointPath $CheckpointPath
+            Export-GitHoundStepOutput -StepResult $workflows -FilePath $stepFile
+            Write-Host "[+] Saved: githound_Workflow_$orgId.json"
+        }
+        if($workflows.nodes) { $nodes.AddRange(@($workflows.nodes)) }
+        if($workflows.edges) { $edges.AddRange(@($workflows.edges)) }
+    } else {
+        Write-Host "[*] Skipping Workflows (use -CollectAll to include)"
+    }
 
-    Write-Host "[*] Enumerating Organization Environments"
-    $environments = $repos | Git-HoundEnvironment -Session $Session
-    if($environments.nodes) { $nodes.AddRange(@($environments.nodes)) }
-    if($environments.edges) { $edges.AddRange(@($environments.edges)) }
+    # ── Step 8: Environments (requires -CollectAll) ───────────────────────
+    if ($CollectAll) {
+        $stepFile = Join-Path $CheckpointPath "githound_Environment_$orgId.json"
+        if ($Resume -and (Test-Path $stepFile)) {
+            Write-Host "[*] Resuming: Loaded Environments from githound_Environment_$orgId.json"
+            $environments = Import-GitHoundStepOutput -FilePath $stepFile
+        } else {
+            Write-Host "[*] Enumerating Organization Environments"
+            $environments = $repos | Git-HoundEnvironment -Session $Session
+            Export-GitHoundStepOutput -StepResult $environments -FilePath $stepFile
+            Write-Host "[+] Saved: githound_Environment_$orgId.json"
+        }
+        if($environments.nodes) { $nodes.AddRange(@($environments.nodes)) }
+        if($environments.edges) { $edges.AddRange(@($environments.edges)) }
+    } else {
+        Write-Host "[*] Skipping Environments (use -CollectAll to include)"
+    }
 
-    Write-Host "[*] Enumerating Organization Secrets"
-    $secrets = $repos | Git-HoundSecret -Session $Session
-    if($secrets.nodes) { $nodes.AddRange(@($secrets.nodes)) }
-    if($secrets.edges) { $edges.AddRange(@($secrets.edges)) }
+    # ── Step 9: Organization Secrets ───────────────────────────────────────
+    $stepFile = Join-Path $CheckpointPath "githound_OrgSecret_$orgId.json"
+    if ($Resume -and (Test-Path $stepFile)) {
+        Write-Host "[*] Resuming: Loaded Organization Secrets from githound_OrgSecret_$orgId.json"
+        $orgsecrets = Import-GitHoundStepOutput -FilePath $stepFile
+    } else {
+        Write-Host "[*] Enumerating Organization Secrets"
+        $orgsecrets = $repos | Git-HoundOrganizationSecret -Session $Session
+        Export-GitHoundStepOutput -StepResult $orgsecrets -FilePath $stepFile
+        Write-Host "[+] Saved: githound_OrgSecret_$orgId.json"
+    }
+    if($orgsecrets.nodes) { $nodes.AddRange(@($orgsecrets.nodes)) }
+    if($orgsecrets.edges) { $edges.AddRange(@($orgsecrets.edges)) }
 
-    Write-Host "[*] Enumerating Team Roles"
-    $teamroles = $org.nodes[0] | Git-HoundTeamRole -Session $Session
-    if($teamroles.nodes) { $nodes.AddRange(@($teamroles.nodes)) }
-    if($teamroles.edges) { $edges.AddRange(@($teamroles.edges)) }
+    # ── Step 10: Repository Secrets (requires -CollectAll) ─────────────────
+    if ($CollectAll) {
+        $stepFile = Join-Path $CheckpointPath "githound_Secret_$orgId.json"
+        $completeFile = Join-Path $CheckpointPath "githound_Secret_complete.json"
+        if ($Resume -and (Test-Path $stepFile)) {
+            Write-Host "[*] Resuming: Loaded Repository Secrets from githound_Secret_$orgId.json"
+            $secrets = Import-GitHoundStepOutput -FilePath $stepFile
+        } elseif ($Resume -and (Test-Path $completeFile)) {
+            Write-Host "[*] Resuming: Found Secret complete file, converting to per-step output"
+            $secrets = Import-GitHoundStepOutput -FilePath $completeFile
+            Export-GitHoundStepOutput -StepResult $secrets -FilePath $stepFile
+            Write-Host "[+] Saved: githound_Secret_$orgId.json"
+        } else {
+            Write-Host "[*] Enumerating Repository Secrets"
+            $secrets = $repos | Git-HoundSecret -Session $Session -CheckpointPath $CheckpointPath
+            Export-GitHoundStepOutput -StepResult $secrets -FilePath $stepFile
+            Write-Host "[+] Saved: githound_Secret_$orgId.json"
+        }
+        if($secrets.nodes) { $nodes.AddRange(@($secrets.nodes)) }
+        if($secrets.edges) { $edges.AddRange(@($secrets.edges)) }
+    } else {
+        Write-Host "[*] Skipping Repository Secrets (use -CollectAll to include)"
+    }
 
-    Write-Host "[*] Enumerating Organization Roles"
-    $orgroles = $org.nodes[0] | Git-HoundOrganizationRole -Session $Session
-    if($orgroles.nodes) { $nodes.AddRange(@($orgroles.nodes)) }
-    if($orgroles.edges) { $edges.AddRange(@($orgroles.edges)) }
-
-    Write-Host "[*] Enumerating Repository Roles"
-    $reporoles = $org.nodes[0] | Git-HoundRepositoryRole -Session $Session
-    if($reporoles.nodes) { $nodes.AddRange(@($reporoles.nodes)) }
-    if($reporoles.edges) { $edges.AddRange(@($reporoles.edges)) }
-    
-    Write-Host "[*] Enumerating Secret Scanning Alerts"
-    $secretalerts = $org.nodes[0] | Git-HoundSecretScanningAlert -Session $Session
+    # ── Step 11: Secret Scanning Alerts ─────────────────────────────────
+    $stepFile = Join-Path $CheckpointPath "githound_SecretAlerts_$orgId.json"
+    if ($Resume -and (Test-Path $stepFile)) {
+        Write-Host "[*] Resuming: Loaded Secret Scanning Alerts from githound_SecretAlerts_$orgId.json"
+        $secretalerts = Import-GitHoundStepOutput -FilePath $stepFile
+    } else {
+        Write-Host "[*] Enumerating Secret Scanning Alerts"
+        $secretalerts = $org.nodes[0] | Git-HoundSecretScanningAlert -Session $Session
+        Export-GitHoundStepOutput -StepResult $secretalerts -FilePath $stepFile
+        Write-Host "[+] Saved: githound_SecretAlerts_$orgId.json"
+    }
     if($secretalerts.nodes) { $nodes.AddRange(@($secretalerts.nodes)) }
     if($secretalerts.edges) { $edges.AddRange(@($secretalerts.edges)) }
 
-    Write-Host "[*] Enumerating App Installations"
-    $appInstallations = $org.nodes[0] | Git-HoundAppInstallation -Session $Session
-    if($appInstallations.nodes) { $nodes.AddRange(@($appInstallations.nodes)) }
-    if($appInstallations.edges) { $edges.AddRange(@($appInstallations.edges)) }
+    # ── Step 12: App Installations (requires -CollectAll) ──────────────────
+    if ($CollectAll) {
+        $stepFile = Join-Path $CheckpointPath "githound_AppInstallation_$orgId.json"
+        if ($Resume -and (Test-Path $stepFile)) {
+            Write-Host "[*] Resuming: Loaded App Installations from githound_AppInstallation_$orgId.json"
+            $appInstallations = Import-GitHoundStepOutput -FilePath $stepFile
+        } else {
+            Write-Host "[*] Enumerating App Installations"
+            $appInstallations = $org.nodes[0] | Git-HoundAppInstallation -Session $Session
+            Export-GitHoundStepOutput -StepResult $appInstallations -FilePath $stepFile
+            Write-Host "[+] Saved: githound_AppInstallation_$orgId.json"
+        }
+        if($appInstallations.nodes) { $nodes.AddRange(@($appInstallations.nodes)) }
+        if($appInstallations.edges) { $edges.AddRange(@($appInstallations.edges)) }
+    } else {
+        Write-Host "[*] Skipping App Installations (use -CollectAll to include)"
+    }
 
-    Write-Host "[*] Converting to OpenGraph JSON Payload"
+    # ── Final Consolidation ───────────────────────────────────────────────
+    Write-Host "[*] Consolidating to OpenGraph JSON Payload"
+    # Filter out any null entries that may have been introduced by thread-safety issues or API errors
+    $filteredNodes = @($nodes | Where-Object { $_ -ne $null })
+    $filteredEdges = @($edges | Where-Object { $_ -ne $null })
+    $nullNodes = $nodes.Count - $filteredNodes.Count
+    $nullEdges = $edges.Count - $filteredEdges.Count
+    if ($nullNodes -gt 0 -or $nullEdges -gt 0) {
+        Write-Warning "Filtered out $nullNodes null node(s) and $nullEdges null edge(s) from payload"
+    }
+    $consolidatedFile = Join-Path $CheckpointPath "githound_$orgId.json"
     $payload = [PSCustomObject]@{
+        '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
         metadata = [PSCustomObject]@{
             source_kind = "GitHub"
         }
         graph = [PSCustomObject]@{
-            nodes = $nodes.ToArray()
-            edges = $edges.ToArray()
+            nodes = $filteredNodes
+            edges = $filteredEdges
         }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_$($org.nodes[0].id).json"
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath $consolidatedFile
+    Write-Host "[+] Consolidated payload: $consolidatedFile ($($filteredNodes.Count) nodes, $($filteredEdges.Count) edges)"
 
+    # ── Cleanup Intermediates ─────────────────────────────────────────────
+    if ($CleanupIntermediates) {
+        $stepFileNames = @(
+            "githound_Organization_$orgId.json",
+            "githound_User_$orgId.json",
+            "githound_Team_$orgId.json",
+            "githound_Repository_$orgId.json",
+            "githound_RepoRole_$orgId.json",
+            "githound_Branch_$orgId.json",
+            "githound_Workflow_$orgId.json",
+            "githound_Environment_$orgId.json",
+            "githound_OrgSecret_$orgId.json",
+            "githound_Secret_$orgId.json",
+            "githound_SecretAlerts_$orgId.json",
+            "githound_AppInstallation_$orgId.json"
+        )
+        $completeFilePatterns = @(
+            "githound_RepoRole_complete.json",
+            "githound_Branch_complete.json",
+            "githound_Workflow_complete.json",
+            "githound_Secret_complete.json"
+        )
+        $cleanedCount = 0
+        foreach ($fileName in ($stepFileNames + $completeFilePatterns)) {
+            $filePath = Join-Path $CheckpointPath $fileName
+            if (Test-Path $filePath) {
+                Remove-Item $filePath -Force
+                $cleanedCount++
+            }
+        }
+        if ($cleanedCount -gt 0) {
+            Write-Host "[+] Cleaned up $cleanedCount intermediate file(s)."
+        }
+    }
 
+    # ── SAML (separate output, not included in consolidated payload) ──────
     Write-Host "[*] Enumerating SAML Identity Provider"
     $samlNodes = New-Object System.Collections.ArrayList
     $samlEdges = New-Object System.Collections.ArrayList
@@ -2740,233 +4180,37 @@ function Invoke-GitHound
 
     $payload = [PSCustomObject]@{
         graph = [PSCustomObject]@{
-            nodes = $samlNodes.ToArray()
-            edges = $samlEdges.ToArray()
+            nodes = @($samlNodes | Where-Object { $_ -ne $null })
+            edges = @($samlEdges | Where-Object { $_ -ne $null })
         }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_saml_$($org.nodes[0].id).json"
-}
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_saml_$orgId.json")
 
-function Invoke-GitHoundIndependent
-{
-    [CmdletBinding()]
-    Param(
-        [Parameter(Position = 0, Mandatory = $true)]
-        [PSTypeName('GitHound.Session')]
-        $Session
-    )
-
-    $nodes = New-Object System.Collections.ArrayList
-    $edges = New-Object System.Collections.ArrayList
-    
-    $Global:GitHoundFunctionBundle = Get-GitHoundFunctionBundle
-
-    Write-Host "[*] Starting GitHound for $($Session.OrganizationName)"
-    $org = Git-HoundOrganization -Session $Session
-    if($org.nodes) { $nodes.AddRange(@($org.nodes)) }
-    if($org.edges) { $edges.AddRange(@($org.edges)) }
-
-    $payload = [PSCustomObject]@{
-        metadata = [PSCustomObject]@{
-            source_kind = "GitHub"
+    # ── OIDC (separate output, not included in consolidated payload) ──────
+    $fidcJsonPath = Join-Path $CheckpointPath "azurehound_federatedidentitycredentials.json"
+    if(Test-Path $fidcJsonPath)
+    {
+        Write-Host "[*] Parsing GitHub OIDC Subjects from Federated Identity Credentials"
+        $fidcData = Get-Content $fidcJsonPath -Raw | ConvertFrom-Json
+        $fidcNodes = @($fidcData.graph.nodes | Where-Object { $_.kind -contains 'AZFederatedIdentityCredential' })
+        if($fidcNodes.Count -gt 0)
+        {
+            $oidc = Parse-GitHoundOIDCSubject -FederatedIdentityCredentials $fidcNodes
+            if($oidc.edges.Count -gt 0)
+            {
+                $payload = [PSCustomObject]@{
+                    graph = [PSCustomObject]@{
+                        nodes = @()
+                        edges = @($oidc.Edges | Where-Object { $_ -ne $null })
+                    }
+                } | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_oidc_$orgId.json")
+            }
         }
-        graph = [PSCustomObject]@{
-            nodes = $org.Nodes.ToArray()
-            edges = $org.Edges.ToArray()
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Organization_$($org.nodes[0].id).json"
+    }
+    else
+    {
+        Write-Host "[*] Skipping OIDC Subject Parsing (no federated identity credential data found at $fidcJsonPath)"
+        Write-Host "    To enable, provide AZFederatedIdentityCredential data in: $fidcJsonPath"
+    }
 
-    Write-Host "[*] Enumerating Organization Users"
-    $users = $org.nodes[0] | Git-HoundUser -Session $Session
-    if($users) { $nodes.AddRange(@($users)) }
-
-    $payload = [PSCustomObject]@{
-        metadata = [PSCustomObject]@{
-            source_kind = "GitHub"
-        }
-        graph = [PSCustomObject]@{
-            nodes = $users
-            edges = @()
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_User_$($org.nodes[0].id).json"
-
-    Write-Host "[*] Enumerating Organization Teams"
-    $teams = $org.nodes[0] | Git-HoundTeam -Session $Session
-    if($teams.nodes) { $nodes.AddRange(@($teams.nodes)) }
-    if($teams.edges) { $edges.AddRange(@($teams.edges)) }
-
-    $payload = [PSCustomObject]@{
-        metadata = [PSCustomObject]@{
-            source_kind = "GitHub"
-        }
-        graph = [PSCustomObject]@{
-            nodes = $teams.Nodes.ToArray()
-            edges = $teams.Edges.ToArray()
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Team_$($org.nodes[0].id).json"
-
-    Write-Host "[*] Enumerating Organization Repositories"
-    $repos = $org.nodes[0] | Git-HoundRepository -Session $Session
-    if($repos.nodes) { $nodes.AddRange(@($repos.nodes)) }
-    if($repos.edges) { $edges.AddRange(@($repos.edges)) }
-
-    $payload = [PSCustomObject]@{
-        metadata = [PSCustomObject]@{
-            source_kind = "GitHub"
-        }
-        graph = [PSCustomObject]@{
-            nodes = $repos.Nodes.ToArray()
-            edges = $repos.Edges.ToArray()
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Repository_$($org.nodes[0].id).json"
-
-    Write-Host "[*] Enumerating Organization Roles"
-    $orgroles = $org.nodes[0] | Git-HoundOrganizationRole -Session $Session
-    if($orgroles.nodes) { $nodes.AddRange(@($orgroles.nodes)) }
-    if($orgroles.edges) { $edges.AddRange(@($orgroles.edges)) }
-
-    $payload = [PSCustomObject]@{
-        metadata = [PSCustomObject]@{
-            source_kind = "GitHub"
-        }
-        graph = [PSCustomObject]@{
-            nodes = $orgroles.Nodes.ToArray()
-            edges = $orgroles.Edges.ToArray()
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_OrgRole_$($org.nodes[0].id).json"
-
-    Write-Host "[*] Enumerating Team Roles"
-    $teamroles = $teams | Git-HoundTeamRole -Session $Session
-    if($teamroles.nodes) { $nodes.AddRange(@($teamroles.nodes)) }
-    if($teamroles.edges) { $edges.AddRange(@($teamroles.edges)) }
-
-    $payload = [PSCustomObject]@{
-        metadata = [PSCustomObject]@{
-            source_kind = "GitHub"
-        }
-        graph = [PSCustomObject]@{
-            nodes = $branches.Nodes.ToArray()
-            edges = $branches.Edges.ToArray()
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_TeamRoles_$($org.nodes[0].id).json"
-
-    Write-Host "[*] Enumerating Repository Roles"
-    $reporoles = $org.nodes[0] | Git-HoundRepositoryRole -Session $Session
-    if($reporoles.nodes) { $nodes.AddRange(@($reporoles.nodes)) }
-    if($reporoles.edges) { $edges.AddRange(@($reporoles.edges)) }
-
-    $payload = [PSCustomObject]@{
-        metadata = [PSCustomObject]@{
-            source_kind = "GitHub"
-        }
-        graph = [PSCustomObject]@{
-            nodes = $reporoles.Nodes.ToArray()
-            edges = $reporoles.Edges.ToArray()
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_RepoRole_$($org.nodes[0].id).json"
-
-    Write-Host "[*] Enumerating Organization Branches"
-    $branches = $repos | Git-HoundBranch -Session $Session
-    if($branches.nodes) { $nodes.AddRange(@($branches.nodes)) }
-    if($branches.edges) { $edges.AddRange(@($branches.edges)) }
-
-    $payload = [PSCustomObject]@{
-        metadata = [PSCustomObject]@{
-            source_kind = "GitHub"
-        }
-        graph = [PSCustomObject]@{
-            nodes = $branches.Nodes.ToArray()
-            edges = $branches.Edges.ToArray()
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Branch_$($org.nodes[0].id).json"
-
-    Write-Host "[*] Enumerating Organization Workflows"
-    $workflows = $repos | Git-HoundWorkflow -Session $Session
-    if($workflows.nodes) { $nodes.AddRange(@($workflows.nodes)) }
-    if($workflows.edges) { $edges.AddRange(@($workflows.edges)) }
-
-    $payload = [PSCustomObject]@{
-        metadata = [PSCustomObject]@{
-            source_kind = "GitHub"
-        }
-        graph = [PSCustomObject]@{
-            nodes = $workflows.Nodes.ToArray()
-            edges = $workflows.Edges.ToArray()
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Workflow_$($org.nodes[0].id).json"
-
-    Write-Host "[*] Enumerating Organization Environments"
-    $environments = $repos | Git-HoundEnvironment -Session $Session
-    if($environments.nodes) { $nodes.AddRange(@($environments.nodes)) }
-    if($environments.edges) { $edges.AddRange(@($environments.edges)) }
-
-    $payload = [PSCustomObject]@{
-        metadata = [PSCustomObject]@{
-            source_kind = "GitHub"
-        }
-        graph = [PSCustomObject]@{
-            nodes = $environments.Nodes.ToArray()
-            edges = $environments.Edges.ToArray()
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Environment_$($org.nodes[0].id).json"
-
-    Write-Host "[*] Enumerating Organization Secrets"
-    $secrets = $repos | Git-HoundSecret -Session $Session
-    if($secrets.nodes) { $nodes.AddRange(@($secrets.nodes)) }
-    if($secrets.edges) { $edges.AddRange(@($secrets.edges)) }
-
-    $payload = [PSCustomObject]@{
-        metadata = [PSCustomObject]@{
-            source_kind = "GitHub"
-        }
-        graph = [PSCustomObject]@{
-            nodes = $secrets.Nodes.ToArray()
-            edges = $secrets.Edges.ToArray()
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Secret_$($org.nodes[0].id).json"
-    
-    Write-Host "[*] Enumerating Secret Scanning Alerts"
-    $secretalerts = $org.nodes[0] | Git-HoundSecretScanningAlert -Session $Session
-    if($secretalerts.nodes) { $nodes.AddRange(@($secretalerts.nodes)) }
-    if($secretalerts.edges) { $edges.AddRange(@($secretalerts.edges)) }
-
-    $payload = [PSCustomObject]@{
-        metadata = [PSCustomObject]@{
-            source_kind = "GitHub"
-        }
-        graph = [PSCustomObject]@{
-            nodes = $secretalerts.Nodes.ToArray()
-            edges = $secretalerts.Edges.ToArray()
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_SecretAlerts_$($org.nodes[0].id).json"
-
-    #Write-Host "[*] Enumerating App Installations"
-    #$appInstallations = $org.nodes[0] | Git-HoundAppInstallation -Session $Session
-    #if($appInstallations.nodes) { $nodes.AddRange(@($appInstallations.nodes)) }
-    #if($appInstallations.edges) { $edges.AddRange(@($appInstallations.edges)) }
-
-    Write-Host "[*] Converting to OpenGraph JSON Payload"
-    $payload = [PSCustomObject]@{
-        metadata = [PSCustomObject]@{
-            source_kind = "GitHub"
-        }
-        graph = [PSCustomObject]@{
-            nodes = $nodes.ToArray()
-            edges = $edges.ToArray()
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_$($org.nodes[0].id).json"
-
-
-    Write-Host "[*] Enumerating SAML Identity Provider"
-    $samlNodes = New-Object System.Collections.ArrayList
-    $samlEdges = New-Object System.Collections.ArrayList
-    $saml = Git-HoundGraphQlSamlProvider -Session $Session
-    if($saml.nodes) { $samlNodes.AddRange(@($saml.nodes)) }
-    if($saml.edges) { $samlEdges.AddRange(@($saml.edges)) }
-
-    $payload = [PSCustomObject]@{
-        graph = [PSCustomObject]@{
-            nodes = $samlNodes.ToArray()
-            edges = $samlEdges.ToArray()
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_saml_$($org.nodes[0].id).json"
+    Write-Host "[+] GitHound collection complete for $($Session.OrganizationName)."
 }

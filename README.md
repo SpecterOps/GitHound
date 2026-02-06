@@ -33,7 +33,13 @@ $session = New-GitHubSession -OrganizationName "YourOrgName" -Token (Get-Clipboa
 # 3. Run the collection
 Invoke-GitHound -Session $session
 
-# 4. Upload the resulting githound_*.json file to BloodHound
+# 4. Upload the resulting githound_<orgId>.json file to BloodHound
+```
+
+If collection is interrupted, resume from where you left off:
+
+```powershell
+Invoke-GitHound -Session $session -Resume
 ```
 
 For detailed setup instructions, see:
