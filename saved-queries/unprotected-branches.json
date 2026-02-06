@@ -1,5 +1,5 @@
 {
   "name": "Unprotected Branches",
-  "query": "MATCH p=(repo:GHRepository)-[:GHHasBranch]-(:GHBranch {protected: false}) RETURN p",
+  "query": "MATCH p=(repo:GH_Repository)-[:GH_HasBranch]-(:GH_Branch {protected: false}) RETURN p",
   "description": "Returns all unprotected branches in repositories."
 }

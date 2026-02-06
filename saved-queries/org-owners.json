@@ -1,5 +1,5 @@
 {
   "name": "Organization Owners",
-  "query": "MATCH p=(:GHUser)-[:GHHasRole]->(:GHOrgRole {short_name:'owners'}) RETURN p",
+  "query": "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_OrgRole {short_name:'owners'}) RETURN p",
   "description": "Returns all users hold the organization owners role."
 }

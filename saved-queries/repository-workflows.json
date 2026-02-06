@@ -1,5 +1,5 @@
 {
   "name": "Repository Workflows",
-  "query": "MATCH p=(:GHRepository)-[:GHHasWorkflow]->(:GHWorkflow) RETURN p",
+  "query": "MATCH p=(:GH_Repository)-[:GH_HasWorkflow]->(:GH_Workflow) RETURN p",
   "description": "Returns all repository workflows"
 }

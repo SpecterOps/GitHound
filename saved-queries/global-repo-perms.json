@@ -1,5 +1,5 @@
 {
   "name": "Global Repo Permissions",
-  "query": "MATCH p=(:GHUser)-[:GHHasBaseRole|GHHasRole|GHMemberOf*1..3]->(role:GHOrgRole) WHERE role.short_name CONTAINS 'all_repo_' RETURN p",
+  "query": "MATCH p=(:GH_User)-[:GH_HasBaseRole|GH_HasRole|GH_MemberOf*1..3]->(role:GH_OrgRole) WHERE role.short_name CONTAINS 'all_repo_' RETURN p",
   "description": "Returns all users who hold a global repository permission role (i.e., roles that are not default)."
 }
