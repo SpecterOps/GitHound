@@ -112,9 +112,9 @@ These edges connect repositories to their resources.
 
 | Edge Type                  | Source          | Target                   | Traversable | Description                                    |
 |----------------------------|-----------------|--------------------------|-------------|------------------------------------------------|
-| `GH_HasBranch`             | `GH_Repository` | `GH_Branch`              | No          | Repository has this branch.                    |
+| `GH_HasBranch`             | `GH_Repository` | `GH_Branch`              | Yes         | Repository has this branch.                    |
 | `GH_HasWorkflow`           | `GH_Repository` | `GH_Workflow`            | No          | Repository has this workflow.                  |
-| `GH_HasEnvironment`        | `GH_Repository` | `GH_Environment`         | No          | Repository has this environment.               |
+| `GH_HasEnvironment`        | `GH_Repository` | `GH_Environment`         | Yes         | Repository has this environment.               |
 | `GH_HasEnvironment`        | `GH_Branch`     | `GH_Environment`         | No          | Branch can deploy to this environment.         |
 | `GH_HasSecret`             | `GH_Repository` | `GH_OrgSecret`           | No          | Repository has access to this org secret.      |
 | `GH_HasSecret`             | `GH_Repository` | `GH_RepoSecret`          | No          | Repository has this repo secret.               |

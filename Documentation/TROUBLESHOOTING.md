@@ -210,8 +210,8 @@ For organizations with thousands of repositories, a full collection can take sev
 
 **Symptoms:**
 
-- No GHWorkflow nodes in output
-- No GHEnvironment nodes
+- No GH_Workflow nodes in output
+- No GH_Environment nodes
 
 **Causes:**
 
@@ -226,7 +226,7 @@ For organizations with thousands of repositories, a full collection can take sev
 
 ## SAML/SSO Identity Collection Issues
 
-### No GHExternalIdentity Nodes
+### No GH_ExternalIdentity Nodes
 
 **Causes:**
 

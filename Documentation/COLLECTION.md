@@ -100,16 +100,17 @@ The `-Resume` flag tells GitHound to check for existing per-step output files in
 
 #### Available parameters
 
-| Parameter               | Type             | Default    | Description                                             |
-|-------------------------|------------------|------------|---------------------------------------------------------|
-| `-Session`              | GitHound.Session | (required) | Authentication session                                  |
-| `-CheckpointPath`       | String           | `"."`      | Directory for output files and intermediate checkpoints |
-| `-Resume`               | Switch           | `$false`   | Load completed steps from disk instead of re-collecting |
-| `-CleanupIntermediates` | Switch           | `$false`   | Delete per-step files after final consolidation         |
+| Parameter               | Type             | Default    | Description                                                                  |
+|-------------------------|------------------|------------|------------------------------------------------------------------------------|
+| `-Session`              | GitHound.Session | (required) | Authentication session                                                       |
+| `-CheckpointPath`       | String           | `"."`      | Directory for output files and intermediate checkpoints                      |
+| `-Resume`               | Switch           | `$false`   | Load completed steps from disk instead of re-collecting                      |
+| `-CleanupIntermediates` | Switch           | `$false`   | Delete per-step files after final consolidation                              |
+| `-CollectAll`           | Switch           | `$false`   | Include optional steps (Workflows, Environments, Repo Secrets, App Installs) |
 
 #### How it works
 
-1. Each of the 12 collection steps writes its output to a file immediately after completing (e.g. `githound_Repository_<orgId>.json`)
+1. Each collection step writes its output to a file immediately after completing (e.g. `githound_Repository_<orgId>.json`). By default 8 steps run; with `-CollectAll`, all 12 steps run
 2. On `-Resume`, if a step's file exists, it's loaded from disk. If not, the step is collected fresh
 3. Functions with internal checkpointing (RepositoryRole, Branch, Workflow, Secret) can also auto-resume from their intermediate chunk files if the function itself was interrupted mid-execution
 4. After all steps complete, everything is consolidated into a single `githound_<orgId>.json`
@@ -486,7 +487,7 @@ Alternatively, you can upload each file individually to BloodHound—the graph d
 
 ### Sample
 
-If you do not have a GitHub Enterprise environment or if you want to test out GitHound before collecting from your own production environment, we've included a sample data set at `./samples/example.json`.
+If you do not have a GitHub Enterprise environment or if you want to test out GitHound before collecting from your own production environment, we've included sample data sets in the `./samples/` directory.
 
 ### Troubleshooting
 
