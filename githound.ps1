@@ -206,17 +206,6 @@ function Invoke-GithubRestMethod {
     }
 } 
 
-function Get-Headers
-{
-    param(
-        [Parameter (Mandatory = $TRUE)]
-        $GitHubPat
-    )
-
-    $headers = @{'Authorization' = "Bearer $($GitHubPat)" }
-    return $headers
-}
-
 function Invoke-GitHubGraphQL
 {
     param(
@@ -770,28 +759,66 @@ function Git-HoundOrganization
 
     $properties = [pscustomobject]@{
         # Common Properties
-        id                                             = Normalize-Null $org.id
-        node_id                                        = Normalize-Null $org.node_id
-        name                                           = Normalize-Null $org.name
+        id                                                           = Normalize-Null $org.id
+        node_id                                                      = Normalize-Null $org.node_id
+        name                                                         = Normalize-Null $org.login
         # Relational Properties
         # Node Specific Properties
-        login                                          = Normalize-Null $org.login
-        blog                                           = Normalize-Null $org.blog
-        is_verified                                    = Normalize-Null $org.is_verified
-        public_repos                                   = Normalize-Null $org.public_repos
-        followers                                      = Normalize-Null $org.followers
-        html_url                                       = Normalize-Null $org.html_url
-        created_at                                     = Normalize-Null $org.created_at
-        updated_at                                     = Normalize-Null $org.updated_at
-        total_private_repos                            = Normalize-Null $org.total_private_repos
-        owned_private_repos                            = Normalize-Null $org.owned_private_repos
-        collaborators                                  = Normalize-Null $org.collaborators
-        default_repository_permission                  = Normalize-Null $org.default_repository_permission
-        two_factor_requirement_enabled                 = Normalize-Null $org.two_factor_requirement_enabled
-        advanced_security_enabled_for_new_repositories = Normalize-Null $org.advanced_security_enabled_for_new_repositories
-        actions_enabled_repositories                   = Normalize-Null $actions.enabled_repositories
-        actions_allowed_actions                        = Normalize-Null $actions.allowed_actions
-        actions_sha_pinning_required                   = Normalize-Null $actions.sha_pinning_required
+        login                                                        = Normalize-Null $org.login
+        description                                                  = Normalize-Null $org.description
+        org_name                                                     = Normalize-Null $org.name
+        company                                                      = Normalize-Null $org.company
+        blog                                                         = Normalize-Null $org.blog
+        location                                                     = Normalize-Null $org.location
+        email                                                        = Normalize-Null $org.email
+        is_verified                                                  = Normalize-Null $org.is_verified
+        has_organization_projects                                    = Normalize-Null $org.has_organization_projects
+        has_repository_projects                                      = Normalize-Null $org.has_repository_projects
+        public_repos                                                 = Normalize-Null $org.public_repos
+        public_gists                                                 = Normalize-Null $org.public_gists
+        followers                                                    = Normalize-Null $org.followers
+        following                                                    = Normalize-Null $org.following
+        html_url                                                     = Normalize-Null $org.html_url
+        created_at                                                   = Normalize-Null $org.created_at
+        updated_at                                                   = Normalize-Null $org.updated_at
+        type                                                         = Normalize-Null $org.type
+        total_private_repos                                          = Normalize-Null $org.total_private_repos
+        owned_private_repos                                          = Normalize-Null $org.owned_private_repos
+        private_gists                                                = Normalize-Null $org.private_gists
+        collaborators                                                = Normalize-Null $org.collaborators
+        default_repository_permission                                = Normalize-Null $org.default_repository_permission
+        members_can_create_repositories                              = Normalize-Null $org.members_can_create_repositories
+        two_factor_requirement_enabled                               = Normalize-Null $org.two_factor_requirement_enabled
+        members_can_create_public_repositories                       = Normalize-Null $org.members_can_create_public_repositories
+        members_can_create_private_repositories                      = Normalize-Null $org.members_can_create_private_repositories
+        members_can_create_internal_repositories                     = Normalize-Null $org.members_can_create_internal_repositories
+        members_can_create_pages                                     = Normalize-Null $org.members_can_create_pages
+        members_can_fork_private_repositories                        = Normalize-Null $org.members_can_fork_private_repositories
+        web_commit_signoff_required                                  = Normalize-Null $org.web_commit_signoff_required
+        deploy_keys_enabled_for_repositories                         = Normalize-Null $org.deploy_keys_enabled_for_repositories
+        members_can_delete_repositories                              = Normalize-Null $org.members_can_delete_repositories
+        members_can_change_repo_visibility                           = Normalize-Null $org.members_can_change_repo_visibility
+        members_can_invite_outside_collaborators                     = Normalize-Null $org.members_can_invite_outside_collaborators
+        members_can_delete_issues                                    = Normalize-Null $org.members_can_delete_issues
+        display_commenter_full_name_setting_enabled                  = Normalize-Null $org.display_commenter_full_name_setting_enabled
+        readers_can_create_discussions                               = Normalize-Null $org.readers_can_create_discussions
+        members_can_create_teams                                     = Normalize-Null $org.members_can_create_teams
+        members_can_view_dependency_insights                         = Normalize-Null $org.members_can_view_dependency_insights
+        default_repository_branch                                    = Normalize-Null $org.default_repository_branch
+        members_can_create_public_pages                              = Normalize-Null $org.members_can_create_public_pages
+        members_can_create_private_pages                             = Normalize-Null $org.members_can_create_private_pages
+        advanced_security_enabled_for_new_repositories               = Normalize-Null $org.advanced_security_enabled_for_new_repositories
+        dependabot_alerts_enabled_for_new_repositories               = Normalize-Null $org.dependabot_alerts_enabled_for_new_repositories
+        dependabot_security_updates_enabled_for_new_repositories     = Normalize-Null $org.dependabot_security_updates_enabled_for_new_repositories
+        dependency_graph_enabled_for_new_repositories                = Normalize-Null $org.dependency_graph_enabled_for_new_repositories
+        secret_scanning_enabled_for_new_repositories                 = Normalize-Null $org.secret_scanning_enabled_for_new_repositories
+        secret_scanning_push_protection_enabled_for_new_repositories = Normalize-Null $org.secret_scanning_push_protection_enabled_for_new_repositories
+        secret_scanning_push_protection_custom_link_enabled          = Normalize-Null $org.secret_scanning_push_protection_custom_link_enabled
+        secret_scanning_push_protection_custom_link                  = Normalize-Null $org.secret_scanning_push_protection_custom_link_enabled
+        secret_scanning_validity_checks_enabled                      = Normalize-Null $org.secret_scanning_validity_checks_enabled
+        actions_enabled_repositories                                 = Normalize-Null $actions.enabled_repositories
+        actions_allowed_actions                                      = Normalize-Null $actions.allowed_actions
+        actions_sha_pinning_required                                 = Normalize-Null $actions.sha_pinning_required
         # Accordion Panel Queries
         query_users                                    = "MATCH (n:GH_User {environment_id:'$($org.node_id)}) RETURN n"
         query_teams                                    = "MATCH (n:GH_Team {environment_id:'$($org.node_id)}) RETURN n"
