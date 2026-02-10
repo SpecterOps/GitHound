@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHRepoSecret.png" width="50"/> GH_RepoSecret
+# <img src="../images/GH_RepoSecret.png" width="50"/> GH_RepoSecret
 
 Represents a repository-level GitHub Actions secret. These are secrets defined directly on a specific repository and are only accessible to workflows running in that repository.
 

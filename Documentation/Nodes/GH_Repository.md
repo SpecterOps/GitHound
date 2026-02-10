@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHRepository.png" width="50"/> GH_Repository
+# <img src="../images/GH_Repository.png" width="50"/> GH_Repository
 
 Represents a GitHub repository within the organization. Repository nodes capture metadata about the repo including visibility, Actions enablement status, and security configuration. Repository role nodes (GH_RepoRole) are created alongside each repository to represent the permission levels available.
 
@@ -54,9 +54,10 @@ Created by: `Git-HoundRepository`
 
 ### Inbound Edges
 
-| Edge Kind | Source Node    | Traversable | Description                        |
-| --------- | -------------- | ----------- | ---------------------------------- |
-| GH_Owns    | GH_Organization | Yes         | Organization owns this repository. |
+| Edge Kind     | Source Node              | Traversable | Description                                              |
+| ------------- | ------------------------ | ----------- | -------------------------------------------------------- |
+| GH_Owns       | GH_Organization          | Yes         | Organization owns this repository.                       |
+| GH_CanAccess  | GH_PersonalAccessToken   | No          | A fine-grained PAT can access this repository.           |
 
 ## Diagram
 
@@ -86,7 +87,12 @@ flowchart TD
     style AWSRole fill:#FF8E40
     style AZFederatedIdentityCredential fill:#FF80D2
 
+    GH_PersonalAccessToken[fa:fa-key GH_PersonalAccessToken]
+
+    style GH_PersonalAccessToken fill:#F5A623
+
     GH_Organization -.->|GH_Owns| GH_Repository
+    GH_PersonalAccessToken -.->|GH_CanAccess| GH_Repository
     GH_Repository -.->|GH_HasBranch| GH_Branch
     GH_Repository -.->|GH_HasWorkflow| GH_Workflow
     GH_Repository -.->|GH_HasEnvironment| GH_Environment

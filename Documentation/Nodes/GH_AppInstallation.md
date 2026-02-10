@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHAppInstallation.png" width="50"/> GH_AppInstallation
+# <img src="../images/GH_AppInstallation.png" width="50"/> GH_AppInstallation
 
 Represents a GitHub App installed on the organization. App installations have specific permissions and can be scoped to all repositories or a selection of repositories. The permissions granted to the app are captured as a JSON string in the properties.
 
