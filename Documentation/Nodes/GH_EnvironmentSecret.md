@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHEnvironmentSecret.png" width="50"/> GH_EnvironmentSecret
+# <img src="../images/GH_EnvironmentSecret.png" width="50"/> GH_EnvironmentSecret
 
 Represents an environment-level GitHub Actions secret. These secrets are scoped to a specific deployment environment and are only available to workflow jobs that reference that environment.
 

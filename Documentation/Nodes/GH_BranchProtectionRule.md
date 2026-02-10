@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHBranchProtectionRule.png" width="50"/> GH_BranchProtectionRule
+# <img src="../images/GH_BranchProtectionRule.png" width="50"/> GH_BranchProtectionRule
 
 Represents a branch protection rule configured on a GitHub repository. Protection rules define requirements that must be met before changes can be merged to matching branches, such as required reviews, status checks, and restrictions on who can push.
 

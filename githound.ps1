@@ -3438,6 +3438,244 @@ function Git-HoundAppInstallation
     })
 }
 
+function Git-HoundPersonalAccessToken
+{
+    <#
+    .SYNOPSIS
+        Retrieves fine-grained personal access tokens granted access to organization resources.
+
+    .DESCRIPTION
+        This function fetches fine-grained personal access tokens (PATs) that have been granted access
+        to the specified organization. For each PAT, it creates a node and edges linking the PAT to its
+        owner (GH_User), the organization (GH_Contains), and accessible repositories (GH_CanAccess).
+
+        For PATs with repository_selection "subset", it makes an additional API call per PAT to enumerate
+        the specific repositories. For PATs with repository_selection "all", it uses the pre-collected
+        repository nodes to create edges.
+
+        API Reference:
+        - List fine-grained PATs with access to org resources: https://docs.github.com/en/rest/orgs/personal-access-tokens#list-fine-grained-personal-access-tokens-with-access-to-organization-resources
+        - List repositories a fine-grained PAT has access to: https://docs.github.com/en/rest/orgs/personal-access-tokens#list-repositories-a-fine-grained-personal-access-token-has-access-to
+
+        Fine Grained Permissions Reference:
+        - "Personal access tokens" organization permissions (read)
+
+    .PARAMETER Session
+        A GitHound session object used to authenticate and interact with the GitHub API.
+
+    .PARAMETER Organization
+        A PSObject representing the GitHub organization node.
+
+    .PARAMETER Repository
+        Repository output from Git-HoundRepository. Used to resolve repo access edges for PATs
+        with repository_selection "all".
+
+    .OUTPUTS
+        A PSObject containing two properties: Nodes and Edges.
+
+    .EXAMPLE
+        $pats = $repos | Git-HoundPersonalAccessToken -Session $session -Organization $org.nodes[0]
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session,
+
+        [Parameter(Position = 1, Mandatory = $true)]
+        [PSObject]
+        $Organization,
+
+        [Parameter(Position = 2, Mandatory = $true, ValueFromPipeline = $true)]
+        [PSObject[]]
+        $Repository
+    )
+
+    begin
+    {
+        $nodes = New-Object System.Collections.ArrayList
+        $edges = New-Object System.Collections.ArrayList
+        $repoNodes = New-Object System.Collections.ArrayList
+    }
+
+    process
+    {
+        $Repository.nodes | Where-Object { $_.kinds -eq 'GH_Repository' } | ForEach-Object {
+            $null = $repoNodes.Add($_)
+        }
+    }
+
+    end
+    {
+        $orgLogin = $Organization.properties.login
+        $orgNodeId = $Organization.properties.node_id
+
+        # Pre-compute all repo node IDs for "all" repository_selection
+        $allRepoNodeIds = @($repoNodes | ForEach-Object { $_.properties.node_id })
+
+        $pats = @(Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/personal-access-tokens")
+
+        Write-Host "[*] Git-HoundPersonalAccessToken: Found $($pats.Count) fine-grained PATs"
+
+        $subsetCount = 0
+        $allCount = 0
+
+        foreach ($pat in $pats) {
+            $patId = "GH_PAT_$($orgNodeId)_$($pat.id)"
+
+            $properties = @{
+                # Common Properties
+                id                   = Normalize-Null $patId
+                name                 = Normalize-Null $pat.token_name
+                # Relational Properties
+                environment_name     = Normalize-Null $orgLogin
+                environment_id       = Normalize-Null $orgNodeId
+                owner_login          = Normalize-Null $pat.owner.login
+                owner_id             = Normalize-Null $pat.owner.id
+                owner_node_id        = Normalize-Null $pat.owner.node_id
+                # Node Specific Properties
+                token_id             = Normalize-Null $pat.token_id
+                token_name           = Normalize-Null $pat.token_name
+                token_expired        = Normalize-Null $pat.token_expired
+                token_expires_at     = Normalize-Null $pat.token_expires_at
+                token_last_used_at   = Normalize-Null $pat.token_last_used_at
+                repository_selection = Normalize-Null $pat.repository_selection
+                access_granted_at    = Normalize-Null $pat.access_granted_at
+                permissions          = Normalize-Null ($pat.permissions | ConvertTo-Json -Depth 10)
+            }
+
+            $null = $nodes.Add((New-GitHoundNode -Id $patId -Kind 'GH_PersonalAccessToken' -Properties $properties))
+
+            # Edge: User owns the PAT
+            if ($pat.owner.node_id) {
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasPersonalAccessToken' -StartId $pat.owner.node_id -EndId $patId -Properties @{ traversable = $false }))
+            }
+
+            # Edge: Org contains the PAT
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $orgNodeId -EndId $patId -Properties @{ traversable = $false }))
+
+            # Repository access edges
+            switch ($pat.repository_selection) {
+                'all' {
+                    $allCount++
+                    foreach ($repoNodeId in $allRepoNodeIds) {
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanAccess' -StartId $patId -EndId $repoNodeId -Properties @{ traversable = $false }))
+                    }
+                }
+                'subset' {
+                    $subsetCount++
+                    Write-Host "[*]   Fetching repositories for PAT '$($pat.token_name)' ($subsetCount subset PATs)"
+                    $patRepos = @(Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/personal-access-tokens/$($pat.id)/repositories")
+                    foreach ($repo in $patRepos) {
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanAccess' -StartId $patId -EndId $repo.node_id -Properties @{ traversable = $false }))
+                    }
+                }
+            }
+        }
+
+        Write-Host "[+] Git-HoundPersonalAccessToken complete. $($nodes.Count) nodes, $($edges.Count) edges (all: $allCount, subset: $subsetCount)."
+
+        Write-Output ([PSCustomObject]@{
+            Nodes = $nodes
+            Edges = $edges
+        })
+    }
+}
+
+function Git-HoundPersonalAccessTokenRequest
+{
+    <#
+    .SYNOPSIS
+        Retrieves pending fine-grained personal access token requests for organization resources.
+
+    .DESCRIPTION
+        This function fetches pending requests from organization members to access organization resources
+        with fine-grained personal access tokens. For each request, it creates a node and edges linking
+        the request to its owner (GH_User) and the organization (GH_Contains).
+
+        API Reference:
+        - List requests to access organization resources with fine-grained PATs: https://docs.github.com/en/rest/orgs/personal-access-token-requests#list-requests-to-access-organization-resources-with-fine-grained-personal-access-tokens
+
+        Fine Grained Permissions Reference:
+        - "Personal access token requests" organization permissions (read)
+
+    .PARAMETER Session
+        A GitHound session object used to authenticate and interact with the GitHub API.
+
+    .PARAMETER Organization
+        A PSObject representing the GitHub organization node.
+
+    .OUTPUTS
+        A PSObject containing two properties: Nodes and Edges.
+
+    .EXAMPLE
+        $patRequests = $org.nodes[0] | Git-HoundPersonalAccessTokenRequest -Session $session
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session,
+
+        [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
+        [PSObject]
+        $Organization
+    )
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+
+    $orgLogin = $Organization.properties.login
+    $orgNodeId = $Organization.properties.node_id
+
+    $patRequests = @(Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/personal-access-token-requests")
+
+    Write-Host "[*] Git-HoundPersonalAccessTokenRequest: Found $($patRequests.Count) pending PAT requests"
+
+    foreach ($request in $patRequests) {
+        $requestId = "GH_PATRequest_$($orgNodeId)_$($request.id)"
+
+        $properties = @{
+            # Common Properties
+            id                   = Normalize-Null $requestId
+            name                 = Normalize-Null $request.token_name
+            # Relational Properties
+            environment_name     = Normalize-Null $orgLogin
+            environment_id       = Normalize-Null $orgNodeId
+            owner_login          = Normalize-Null $request.owner.login
+            owner_id             = Normalize-Null $request.owner.id
+            owner_node_id        = Normalize-Null $request.owner.node_id
+            # Node Specific Properties
+            token_id             = Normalize-Null $request.token_id
+            token_name           = Normalize-Null $request.token_name
+            token_expired        = Normalize-Null $request.token_expired
+            token_expires_at     = Normalize-Null $request.token_expires_at
+            token_last_used_at   = Normalize-Null $request.token_last_used_at
+            repository_selection = Normalize-Null $request.repository_selection
+            reason               = Normalize-Null $request.reason
+            created_at           = Normalize-Null $request.created_at
+            permissions          = Normalize-Null ($request.permissions | ConvertTo-Json -Depth 10)
+        }
+
+        $null = $nodes.Add((New-GitHoundNode -Id $requestId -Kind 'GH_PersonalAccessTokenRequest' -Properties $properties))
+
+        # Edge: User owns the PAT request
+        if ($request.owner.node_id) {
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasPersonalAccessTokenRequest' -StartId $request.owner.node_id -EndId $requestId -Properties @{ traversable = $false }))
+        }
+
+        # Edge: Org contains the PAT request
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $orgNodeId -EndId $requestId -Properties @{ traversable = $false }))
+    }
+
+    Write-Host "[+] Git-HoundPersonalAccessTokenRequest complete. $($nodes.Count) nodes, $($edges.Count) edges."
+
+    Write-Output ([PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    })
+}
+
 function Git-HoundScimUser
 {
     <#
@@ -4139,6 +4377,42 @@ function Invoke-GitHound
         Write-Host "[*] Skipping App Installations (use -CollectAll to include)"
     }
 
+    # ── Step 13: Personal Access Tokens (requires -CollectAll) ──────────
+    if ($CollectAll) {
+        $stepFile = Join-Path $CheckpointPath "githound_PersonalAccessToken_$orgId.json"
+        if ($Resume -and (Test-Path $stepFile)) {
+            Write-Host "[*] Resuming: Loaded Personal Access Tokens from githound_PersonalAccessToken_$orgId.json"
+            $personalAccessTokens = Import-GitHoundStepOutput -FilePath $stepFile
+        } else {
+            Write-Host "[*] Enumerating Personal Access Tokens"
+            $personalAccessTokens = $repos | Git-HoundPersonalAccessToken -Session $Session -Organization $org.nodes[0]
+            Export-GitHoundStepOutput -StepResult $personalAccessTokens -FilePath $stepFile
+            Write-Host "[+] Saved: githound_PersonalAccessToken_$orgId.json"
+        }
+        if($personalAccessTokens.nodes) { $nodes.AddRange(@($personalAccessTokens.nodes)) }
+        if($personalAccessTokens.edges) { $edges.AddRange(@($personalAccessTokens.edges)) }
+    } else {
+        Write-Host "[*] Skipping Personal Access Tokens (use -CollectAll to include)"
+    }
+
+    # ── Step 14: Personal Access Token Requests (requires -CollectAll) ──
+    if ($CollectAll) {
+        $stepFile = Join-Path $CheckpointPath "githound_PersonalAccessTokenRequest_$orgId.json"
+        if ($Resume -and (Test-Path $stepFile)) {
+            Write-Host "[*] Resuming: Loaded Personal Access Token Requests from githound_PersonalAccessTokenRequest_$orgId.json"
+            $personalAccessTokenRequests = Import-GitHoundStepOutput -FilePath $stepFile
+        } else {
+            Write-Host "[*] Enumerating Personal Access Token Requests"
+            $personalAccessTokenRequests = $org.nodes[0] | Git-HoundPersonalAccessTokenRequest -Session $Session
+            Export-GitHoundStepOutput -StepResult $personalAccessTokenRequests -FilePath $stepFile
+            Write-Host "[+] Saved: githound_PersonalAccessTokenRequest_$orgId.json"
+        }
+        if($personalAccessTokenRequests.nodes) { $nodes.AddRange(@($personalAccessTokenRequests.nodes)) }
+        if($personalAccessTokenRequests.edges) { $edges.AddRange(@($personalAccessTokenRequests.edges)) }
+    } else {
+        Write-Host "[*] Skipping Personal Access Token Requests (use -CollectAll to include)"
+    }
+
     # ── Final Consolidation ───────────────────────────────────────────────
     Write-Host "[*] Consolidating to OpenGraph JSON Payload"
     # Filter out any null entries that may have been introduced by thread-safety issues or API errors
@@ -4176,7 +4450,9 @@ function Invoke-GitHound
             "githound_OrgSecret_$orgId.json",
             "githound_Secret_$orgId.json",
             "githound_SecretAlerts_$orgId.json",
-            "githound_AppInstallation_$orgId.json"
+            "githound_AppInstallation_$orgId.json",
+            "githound_PersonalAccessToken_$orgId.json",
+            "githound_PersonalAccessTokenRequest_$orgId.json"
         )
         $completeFilePatterns = @(
             "githound_RepoRole_complete.json",

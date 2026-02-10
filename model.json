@@ -125,6 +125,20 @@
         "name": "cogs",
         "color": "#FFE4A1"
       }
+    },
+    "GH_PersonalAccessToken": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "key",
+        "color": "#F5A623"
+      }
+    },
+    "GH_PersonalAccessTokenRequest": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "key",
+        "color": "#D4A017"
+      }
     }
   }
 }

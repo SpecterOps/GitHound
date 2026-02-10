@@ -148,6 +148,22 @@
       "is_display_kind": true,
       "icon": "plug",
       "color": "0xA8D8EA"
+    },
+    {
+      "name": "GH_PersonalAccessToken",
+      "display_name": "GitHub Personal Access Token",
+      "description": "A fine-grained personal access token granted access to organization resources",
+      "is_display_kind": true,
+      "icon": "key",
+      "color": "0xF5A623"
+    },
+    {
+      "name": "GH_PersonalAccessTokenRequest",
+      "display_name": "GitHub Personal Access Token Request",
+      "description": "A pending request from an organization member to access organization resources with a fine-grained personal access token",
+      "is_display_kind": true,
+      "icon": "key",
+      "color": "0xD4A017"
     }
   ],
   "relationship_kinds": [
@@ -330,6 +346,21 @@
       "name": "CanAssumeIdentity",
       "description": "GitHub repository, branch, or environment can assume an Azure federated identity via OIDC",
       "is_traversable": true
+    },
+    {
+      "name": "GH_HasPersonalAccessToken",
+      "description": "User owns this personal access token that has been granted access to the organization",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_HasPersonalAccessTokenRequest",
+      "description": "User has a pending personal access token request for the organization",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_CanAccess",
+      "description": "Personal access token can access this repository",
+      "is_traversable": false
     }
   ],
   "environments": [

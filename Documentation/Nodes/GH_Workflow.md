@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHWorkflow.png" width="50"/> GH_Workflow
+# <img src="../images/GH_Workflow.png" width="50"/> GH_Workflow
 
 Represents a GitHub Actions workflow defined in a repository. Workflow nodes capture the workflow definition metadata including its file path, state, and containing repository. Only repositories with GitHub Actions enabled are queried for workflows.
 

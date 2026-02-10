@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHTeamRole.png" width="50"/> GH_TeamRole
+# <img src="../images/GH_TeamRole.png" width="50"/> GH_TeamRole
 
 Represents a role within a GitHub team. Each team has two built-in roles: Member and Maintainer. Maintainers can add and remove team members. Team roles connect users to teams and transitively to any repository roles assigned to the team.
 

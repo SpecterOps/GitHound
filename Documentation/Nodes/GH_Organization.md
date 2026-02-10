@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHOrganization.png" width="50"/> GH_Organization
+# <img src="../images/GH_Organization.png" width="50"/> GH_Organization
 
 Represents a GitHub organization. This is the root node of the graph and serves as the primary container for all other nodes. Organization-level settings such as default repository permissions, Actions configuration, and security features are captured as properties on this node.
 
@@ -34,10 +34,12 @@ Created by: `Git-HoundOrganization`
 
 ### Outbound Edges
 
-| Edge Kind                 | Target Node            | Traversable | Description                                                 |
-| ------------------------- | ---------------------- | ----------- | ----------------------------------------------------------- |
-| GH_Contains                | GH_OrgSecret            | No          | Organization contains an organization-level Actions secret. |
-| GH_HasSamlIdentityProvider | GH_SamlIdentityProvider | No          | Organization has a configured SAML identity provider.       |
+| Edge Kind                 | Target Node                      | Traversable | Description                                                      |
+| ------------------------- | -------------------------------- | ----------- | ---------------------------------------------------------------- |
+| GH_Contains                | GH_OrgSecret                     | No          | Organization contains an organization-level Actions secret.      |
+| GH_HasSamlIdentityProvider | GH_SamlIdentityProvider          | No          | Organization has a configured SAML identity provider.            |
+| GH_Contains                | GH_PersonalAccessToken           | No          | Organization contains a granted fine-grained personal access token. |
+| GH_Contains                | GH_PersonalAccessTokenRequest    | No          | Organization contains a pending personal access token request.   |
 
 ### Inbound Edges
 
@@ -81,8 +83,16 @@ flowchart TD
     style GH_OrgRole fill:#BFFFD1
 
     GH_Organization -.->|GH_Owns| GH_Repository
+    GH_PersonalAccessToken[fa:fa-key GH_PersonalAccessToken]
+    GH_PersonalAccessTokenRequest[fa:fa-key GH_PersonalAccessTokenRequest]
+
+    style GH_PersonalAccessToken fill:#F5A623
+    style GH_PersonalAccessTokenRequest fill:#D4A017
+
     GH_Organization -.->|GH_Contains| GH_OrgSecret
     GH_Organization -.->|GH_HasSamlIdentityProvider| GH_SamlIdentityProvider
+    GH_Organization -.->|GH_Contains| GH_PersonalAccessToken
+    GH_Organization -.->|GH_Contains| GH_PersonalAccessTokenRequest
     GH_OrgRole -.->|GH_ManageOrganizationWebhooks| GH_Organization
     GH_OrgRole -.->|GH_OrgBypassCodeScanningDismissalRequests| GH_Organization
     GH_OrgRole -.->|GH_OrgBypassSecretScanningClosureRequests| GH_Organization
