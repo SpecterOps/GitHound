@@ -1893,7 +1893,7 @@ function Git-HoundRepositoryRole
 
         # Auto-detect resume from existing chunk files
         if ($currentIndex -eq 0) {
-            $existingChunks = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_RepoRole_chunk_*.json" -ErrorAction SilentlyContinue | Sort-Object Name)
+            $existingChunks = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_RepoRole_chunk_*.json" -ErrorAction SilentlyContinue | Sort-Object { [int]($_.Name -replace '.*chunk_(\d+)\.json','$1') })
             if ($existingChunks.Count -gt 0) {
                 foreach ($chunk in $existingChunks) {
                     try {
@@ -2189,6 +2189,8 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
 
     # ── Phase 1: Paginate repos with nested refs ───────────────────────────
     $overflowRepos = New-Object System.Collections.ArrayList
+    $skipPhase1 = $false
+    $skipPhase2 = $false
 
     $variables = @{
         login = $orgLogin
@@ -2196,6 +2198,83 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
         after = $null
     }
 
+    # ── Auto-resume: Check for existing checkpoints (highest precedence first) ──
+
+    # Priority 1: Phase 2 complete → skip to Phase 3
+    $phase2File = Join-Path $CheckpointPath "githound_Branch_phase2.json"
+    if (Test-Path $phase2File) {
+        try {
+            $p2Data = Get-Content $phase2File -Raw | ConvertFrom-Json
+            if ($p2Data.graph.nodes) { $null = $nodes.AddRange(@($p2Data.graph.nodes)) }
+            if ($p2Data.graph.edges) { $null = $edges.AddRange(@($p2Data.graph.edges)) }
+            if ($p2Data.metadata.rule_to_branches) {
+                foreach ($prop in $p2Data.metadata.rule_to_branches.PSObject.Properties) {
+                    $ruleToBranches[$prop.Name] = [System.Collections.ArrayList]@($prop.Value)
+                }
+            }
+            Write-Host "[*] Auto-resume: Phase 2 checkpoint found ($($nodes.Count) branches). Skipping to Phase 3."
+            $skipPhase1 = $true
+            $skipPhase2 = $true
+        }
+        catch {
+            Write-Warning "Failed to load Phase 2 checkpoint, will check Phase 1 checkpoints: $_"
+        }
+    }
+
+    # Priority 2: Phase 1 page checkpoints → resume or skip Phase 1
+    if (-not $skipPhase1) {
+        $existingPages = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Branch_page_*.json" -ErrorAction SilentlyContinue |
+            Sort-Object { [int]($_.Name -replace '.*page_(\d+)\.json','$1') })
+
+        if ($existingPages.Count -gt 0) {
+            $lastPage = $existingPages[-1]
+            try {
+                $resumeData = Get-Content $lastPage.FullName -Raw | ConvertFrom-Json
+
+                # Restore cumulative nodes and edges
+                if ($resumeData.graph.nodes) { $null = $nodes.AddRange(@($resumeData.graph.nodes)) }
+                if ($resumeData.graph.edges) { $null = $edges.AddRange(@($resumeData.graph.edges)) }
+
+                # Restore Phase 2/3 tracking structures
+                if ($resumeData.metadata.overflow_repos) {
+                    foreach ($r in $resumeData.metadata.overflow_repos) {
+                        $null = $overflowRepos.Add(@{
+                            owner    = $r.owner
+                            name     = $r.name
+                            nodeId   = $r.nodeId
+                            fullName = $r.fullName
+                            cursor   = $r.cursor
+                        })
+                    }
+                }
+                if ($resumeData.metadata.rule_to_branches) {
+                    foreach ($prop in $resumeData.metadata.rule_to_branches.PSObject.Properties) {
+                        $ruleToBranches[$prop.Name] = [System.Collections.ArrayList]@($prop.Value)
+                    }
+                }
+
+                # Restore pagination state
+                $pageCount = $resumeData.metadata.page
+                $totalRepos = $resumeData.metadata.total_repos
+                $totalPages = [Math]::Ceiling($totalRepos / 25)
+                $reposProcessed = $resumeData.metadata.repos_processed
+                $variables.after = $resumeData.metadata.cursor
+
+                # If Phase 1 was complete (cursor is null / no more pages), skip to Phase 2
+                if (-not $resumeData.metadata.cursor) {
+                    Write-Host "[*] Auto-resume: Phase 1 was complete ($pageCount pages, $($nodes.Count) branches). Skipping to Phase 2."
+                    $skipPhase1 = $true
+                } else {
+                    Write-Host "[*] Auto-resuming Phase 1 from page $($pageCount + 1)/$totalPages ($($nodes.Count) branches recovered from $($existingPages.Count) checkpoint files)"
+                }
+            }
+            catch {
+                Write-Warning "Failed to load checkpoint $($lastPage.Name), starting fresh: $_"
+            }
+        }
+    }
+
+    if (-not $skipPhase1) {
     do {
         $result = Invoke-GitHubGraphQL -Session $Session -Headers $Session.Headers -Query $RepoRefsQuery -Variables $variables
 
@@ -2251,12 +2330,18 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
 
         # Checkpoint after each page
         $pageCount++
+        $nextCursor = $result.data.organization.repositories.pageInfo.endCursor
         $chunkPayload = [PSCustomObject]@{
             metadata = [PSCustomObject]@{
-                source_kind = "GitHub"
-                phase       = "branches_phase1"
-                page        = $pageCount
-                timestamp   = (Get-Date -Format "o")
+                source_kind      = "GitHub"
+                phase            = "branches_phase1"
+                page             = $pageCount
+                total_repos      = $totalRepos
+                repos_processed  = $reposProcessed
+                cursor           = if ($result.data.organization.repositories.pageInfo.hasNextPage) { $nextCursor } else { $null }
+                timestamp        = (Get-Date -Format "o")
+                overflow_repos   = @($overflowRepos)
+                rule_to_branches = $ruleToBranches
             }
             graph = [PSCustomObject]@{
                 nodes = @($nodes)
@@ -2281,8 +2366,10 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
     } while ($result.data.organization.repositories.pageInfo.hasNextPage)
 
     Write-Host "[*] Phase 1 complete. $reposProcessed/$totalRepos repos processed, $($nodes.Count) branches found. $($overflowRepos.Count) repos need overflow pagination (>100 branches)."
+    } # end if (-not $skipPhase1)
 
     # ── Phase 2: Paginate remaining refs for overflow repos ────────────────
+    if (-not $skipPhase2) {
     $overflowCount = 0
     foreach ($overflowRepo in $overflowRepos) {
         $overflowCount++
@@ -2342,9 +2429,10 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
     if ($overflowRepos.Count -gt 0) {
         $chunkPayload = [PSCustomObject]@{
             metadata = [PSCustomObject]@{
-                source_kind = "GitHub"
-                phase       = "branches_phase2"
-                timestamp   = (Get-Date -Format "o")
+                source_kind      = "GitHub"
+                phase            = "branches_phase2"
+                timestamp        = (Get-Date -Format "o")
+                rule_to_branches = $ruleToBranches
             }
             graph = [PSCustomObject]@{
                 nodes = @($nodes)
@@ -2357,6 +2445,7 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
     }
 
     Write-Host "[*] Phase 2 complete. $($nodes.Count) total branch nodes. $($ruleToBranches.Count) protection rules found."
+    } # end if (-not $skipPhase2)
 
     # ── Phase 3: Fetch protection rules by node ID ─────────────────────────
     # Query protection rule details in batches using GraphQL nodes() query.
@@ -2599,7 +2688,7 @@ function Git-HoundWorkflow
 
         # Auto-detect resume from existing chunk files
         if ($currentIndex -eq 0) {
-            $existingChunks = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Workflow_chunk_*.json" -ErrorAction SilentlyContinue | Sort-Object Name)
+            $existingChunks = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Workflow_chunk_*.json" -ErrorAction SilentlyContinue | Sort-Object { [int]($_.Name -replace '.*chunk_(\d+)\.json','$1') })
             if ($existingChunks.Count -gt 0) {
                 foreach ($chunk in $existingChunks) {
                     try {
@@ -3118,7 +3207,7 @@ function Git-HoundSecret
 
         # Auto-detect resume from existing chunk files
         if ($currentIndex -eq 0) {
-            $existingChunks = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Secret_chunk_*.json" -ErrorAction SilentlyContinue | Sort-Object Name)
+            $existingChunks = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Secret_chunk_*.json" -ErrorAction SilentlyContinue | Sort-Object { [int]($_.Name -replace '.*chunk_(\d+)\.json','$1') })
             if ($existingChunks.Count -gt 0) {
                 foreach ($chunk in $existingChunks) {
                     try {
@@ -4049,8 +4138,8 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                     scim_identity_family_name = Normalize-Null $identity.scimIdentity.familyName
                     scim_identity_given_name  = Normalize-Null $identity.scimIdentity.givenName
                     scim_identity_username    = Normalize-Null $identity.scimIdentity.username
-                    github_username           = Normalize-Null $identity.user.login
-                    github_user_id            = Normalize-Null $identity.user.id
+                    github_username           = Normalize-Null $(if ($identity.user) { $identity.user.login } else { $null })
+                    github_user_id            = Normalize-Null $(if ($identity.user) { $identity.user.id } else { $null })
                     # Accordion Panel Queries
                     query_mapped_users = "MATCH p=(:GH_ExternalIdentity {objectid: '$($identity.id.ToUpper())'})-[:GH_MapsToUser]->() RETURN p"
                 }
@@ -4067,7 +4156,7 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                     $null = $edges.Add((New-GitHoundEdge -Kind GH_MapsToUser -StartId $identity.id -EndId $identity.scimIdentity.username -EndKind $ForeignUserNodeKind -EndMatchBy name -Properties @{traversable=$false}))
                 }
 
-                if($identity.user.id -ne $null)
+                if($identity.user -ne $null -and $identity.user.id -ne $null)
                 {
                     $null = $edges.Add((New-GitHoundEdge -Kind GH_MapsToUser -StartId $identity.id -EndId $identity.user.id -Properties @{traversable=$false}))
                     
