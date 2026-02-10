@@ -1893,7 +1893,7 @@ function Git-HoundRepositoryRole
 
         # Auto-detect resume from existing chunk files
         if ($currentIndex -eq 0) {
-            $existingChunks = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_RepoRole_chunk_*.json" -ErrorAction SilentlyContinue | Sort-Object Name)
+            $existingChunks = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_RepoRole_chunk_*.json" -ErrorAction SilentlyContinue | Sort-Object { [int]($_.BaseName -replace 'githound_RepoRole_chunk_', '') })
             if ($existingChunks.Count -gt 0) {
                 foreach ($chunk in $existingChunks) {
                     try {
@@ -2599,7 +2599,7 @@ function Git-HoundWorkflow
 
         # Auto-detect resume from existing chunk files
         if ($currentIndex -eq 0) {
-            $existingChunks = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Workflow_chunk_*.json" -ErrorAction SilentlyContinue | Sort-Object Name)
+            $existingChunks = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Workflow_chunk_*.json" -ErrorAction SilentlyContinue | Sort-Object { [int]($_.BaseName -replace 'githound_Workflow_chunk_', '') })
             if ($existingChunks.Count -gt 0) {
                 foreach ($chunk in $existingChunks) {
                     try {
@@ -3118,7 +3118,7 @@ function Git-HoundSecret
 
         # Auto-detect resume from existing chunk files
         if ($currentIndex -eq 0) {
-            $existingChunks = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Secret_chunk_*.json" -ErrorAction SilentlyContinue | Sort-Object Name)
+            $existingChunks = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Secret_chunk_*.json" -ErrorAction SilentlyContinue | Sort-Object { [int]($_.BaseName -replace 'githound_Secret_chunk_', '') })
             if ($existingChunks.Count -gt 0) {
                 foreach ($chunk in $existingChunks) {
                     try {
