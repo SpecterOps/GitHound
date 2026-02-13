@@ -13,6 +13,8 @@ Created by: `Git-HoundBranch`
 | objectid                        | string    | The GitHub node ID of the branch protection rule.                        |
 | name                            | string    | Display name (e.g., `repo\main`).                                        |
 | id                              | string    | Same as objectid.                                                        |
+| environment_name                | string    | The GitHub organization login name.                                      |
+| environment_id                  | string    | The GitHub organization node ID.                                         |
 | pattern                         | string    | The branch name pattern this rule applies to (e.g., `main`, `release/*`).|
 | enforce_admins                  | boolean   | Whether branch protection rules are enforced for administrators.         |
 | lock_branch                     | boolean   | Whether the branch is locked (read-only).                                |
