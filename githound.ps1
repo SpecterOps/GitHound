@@ -2524,6 +2524,8 @@ query ProtectionRulesByIds($ids: [ID!]!) {
                 $props = [pscustomobject]@{
                     name                            = Normalize-Null $rule.pattern
                     id                              = Normalize-Null $ruleId
+                    environment_name                = Normalize-Null $orgLogin
+                    environment_id                  = Normalize-Null $orgNodeId
                     pattern                         = Normalize-Null $rule.pattern
                     enforce_admins                  = Normalize-Null $rule.isAdminEnforced
                     lock_branch                     = Normalize-Null $rule.lockBranch
@@ -3792,21 +3794,34 @@ function Git-HoundScimUser
         foreach($scimIdentity in $result.Resources)
         {
             $props = [pscustomobject]@{
-                active = Normalize-Null $scimIdentity.active
-                external_id = Normalize-Null $scimIdentity.externalId
-                family_name = Normalize-Null $scimIdentity.name.familyName
-                given_name = Normalize-Null $scimIdentity.name.givenName
-                username = Normalize-Null $scimIdentity.username
-                schemas = Normalize-Null $scimIdentity.schemas
                 id = Normalize-Null $scimIdentity.id
-                resource_type = Normalize-Null $scimIdentity.meta.resourceType
-                #created_date = Normalize-Null $scimIdentity.meta.created
-                #last_modified_date = Normalize-Null $scimIdentity.meta.lastModified
-                scim_location = Normalize-Null $scimIdentity.meta.location
+                name = Normalize-Null $scimIdentity.externalId
+                externalId = Normalize-Null $scimIdentity.externalId
+                userName = Normalize-Null $scimIdentity.userName
+                enabled = Normalize-Null $scimIdentity.active
+                # displayName is not provided
+                givenName = Normalize-Null $scimIdentity.name.givenName
+                familyName = Normalize-Null $scimIdentity.name.familyName
+                # middleName is not provided
+                # honorificPrefix is not provided
+                # honorificSuffix is not provided
+                # title is not provided
+                # userType is not provided
+                profileUrl = Normalize-Null $scimIdentity.meta.location
+                mail = Normalize-Null ($scimIdentity.emails | Where-Object { $_.primary -eq $true }).value
+                # otherMails is not implemented
+                # roles are provided but not implemented in GitHound graph yet
+                # employeeNumber is not provided
+                organization = $session.OrganizationName
+                # department is not provided
+                # managerId is not provided
+                #created = Normalize-Null $scimIdentity.meta.created
+                #lastModified = Normalize-Null $scimIdentity.meta.lastModified
+                #schemas = Normalize-Null $scimIdentity.schemas
             }
             
-            $null = $nodes.Add((New-GitHoundNode -Kind SCIMUser -Id $scimIdentity.externalId -Properties $props))
-            $null = $edges.Add((New-GitHoundEdge -Kind SCIMProvisioned -StartId $scimIdentity.externalId -EndId $scimIdentity.id -Properties @{ traversable = $true }))
+            $null = $nodes.Add((New-GitHoundNode -Kind SCIM_User -Id $scimIdentity.id -Properties $props))
+            $null = $edges.Add((New-GitHoundEdge -Kind SCIM_Provisioned -StartId $scimIdentity.id -EndId $scimIdentity.id -EndKind GH_ExternalIdentity -EndMatchBy name -Properties @{ traversable = $true }))
         }
 
         $startIndex = $result.startIndex + $result.itemsPerPage
@@ -4125,7 +4140,7 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
 
                 $EIprops = [pscustomobject]@{
                     # Common Properties
-                    name                      = Normalize-Null $identity.id
+                    name                      = Normalize-Null $identity.guid
                     guid                      = Normalize-Null $identity.guid
                     # Relational Properties
                     environment_id           = Normalize-Null $result.data.organization.id
@@ -4576,6 +4591,26 @@ function Invoke-GitHound
             edges = @($samlEdges | Where-Object { $_ -ne $null })
         }
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_saml_$orgId.json")
+
+    # ── SCIM (separate output, not included in consolidated payload) ──────
+    if ($CollectAll) {
+        Write-Host "[*] Enumerating SCIM Users"
+        $scimNodes = New-Object System.Collections.ArrayList
+        $scimEdges = New-Object System.Collections.ArrayList
+        $scim = Git-HoundScimUser -Session $Session
+        if($scim.nodes) { $scimNodes.AddRange(@($scim.nodes)) }
+        if($scim.edges) { $scimEdges.AddRange(@($scim.edges)) }
+
+        $payload = [PSCustomObject]@{
+            graph = [PSCustomObject]@{
+                nodes = @($scimNodes | Where-Object { $_ -ne $null })
+                edges = @($scimEdges | Where-Object { $_ -ne $null })
+            }
+        } | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_scim_$orgId.json")
+        Write-Host "[+] SCIM payload: githound_scim_$orgId.json ($($scimNodes.Count) nodes, $($scimEdges.Count) edges)"
+    } else {
+        Write-Host "[*] Skipping SCIM Users (use -CollectAll to include)"
+    }
 
     # ── OIDC (separate output, not included in consolidated payload) ──────
     $fidcJsonPath = Join-Path $CheckpointPath "azurehound_federatedidentitycredentials.json"
