@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHUser.png" width="50"/> GH_User
+# <img src="../images/GH_User.png" width="50"/> GH_User
 
 Represents a GitHub user who is a member of the organization. Users are associated with organization roles (Owner or Member) and can be assigned to repository roles and team roles.
 
@@ -33,10 +33,16 @@ Created by: `Git-HoundUser`
 
 ### Inbound Edges
 
-| Edge Kind      | Source Node        | Traversable | Description                                              |
-| -------------- | ------------------ | ----------- | -------------------------------------------------------- |
-| GH_MapsToUser   | GH_ExternalIdentity | No          | An external SAML/SCIM identity maps to this GitHub user. |
-| SyncedToGHUser | AZUser / OktaUser / PingOneUser | Yes | Identity provider user synced to this GitHub user via SAML/SCIM. |
+| Edge Kind    | Source Node        | Traversable | Description                                              |
+| ------------ | ------------------ | ----------- | -------------------------------------------------------- |
+| GH_MapsToUser | GH_ExternalIdentity | No          | An external SAML/SCIM identity maps to this GitHub user. |
+
+> **Note:** The following outbound edges are also created from GH_User when PAT/PAT Request collection is enabled (`-CollectAll`):
+
+| Edge Kind                         | Target Node                      | Traversable | Description                                              |
+| --------------------------------- | -------------------------------- | ----------- | -------------------------------------------------------- |
+| GH_HasPersonalAccessToken         | GH_PersonalAccessToken           | No          | User owns a fine-grained PAT granted to the organization.|
+| GH_HasPersonalAccessTokenRequest  | GH_PersonalAccessTokenRequest    | No          | User has a pending PAT request for the organization.     |
 
 ## Diagram
 
@@ -62,11 +68,19 @@ flowchart TD
     style OktaUser fill:#FFE4A1
     style PingOneUser fill:#FFE4A1
 
+    GH_PersonalAccessToken[fa:fa-key GH_PersonalAccessToken]
+    GH_PersonalAccessTokenRequest[fa:fa-key GH_PersonalAccessTokenRequest]
+
+    style GH_PersonalAccessToken fill:#F5A623
+    style GH_PersonalAccessTokenRequest fill:#D4A017
+
     GH_User -->|GH_HasRole| GH_OrgRole
     GH_User -->|GH_HasRole| GH_TeamRole
     GH_User -->|GH_HasRole| GH_RepoRole
-    GH_User -.->|GH_BypassPullRequestAllowances| GH_BranchProtectionRule
-    GH_User -.->|GH_RestrictionsCanPush| GH_BranchProtectionRule
+    GH_User -.->|GH_BypassPullRequestAllowances| GH_Branch
+    GH_User -.->|GH_RestrictionsCanPush| GH_Branch
+    GH_User -.->|GH_HasPersonalAccessToken| GH_PersonalAccessToken
+    GH_User -.->|GH_HasPersonalAccessTokenRequest| GH_PersonalAccessTokenRequest
     GH_ExternalIdentity -.->|GH_MapsToUser| GH_User
     AZUser -->|SyncedToGHUser| GH_User
     OktaUser -->|SyncedToGHUser| GH_User

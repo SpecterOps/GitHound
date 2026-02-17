@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHRepository.png" width="50"/> GH_Repository
+# <img src="../images/GH_Repository.png" width="50"/> GH_Repository
 
 Represents a GitHub repository within the organization. Repository nodes capture metadata about the repo including visibility, Actions enablement status, and security configuration. Repository role nodes (GH_RepoRole) are created alongside each repository to represent the permission levels available.
 
@@ -54,26 +54,9 @@ Created by: `Git-HoundRepository`
 
 ### Inbound Edges
 
-| Edge Kind                        | Source Node     | Traversable | Description                                           |
-| -------------------------------- | --------------- | ----------- | ----------------------------------------------------- |
-| GH_Owns                          | GH_Organization | Yes         | Organization owns this repository.                    |
-| GH_ReadRepoContents              | GH_RepoRole     | No          | Repo role can read repository contents.               |
-| GH_WriteRepoContents             | GH_RepoRole     | No          | Repo role can push to the repository.                 |
-| GH_WriteRepoPullRequests         | GH_RepoRole     | No          | Repo role can create and merge pull requests.         |
-| GH_AdminTo                       | GH_RepoRole     | No          | Repo role has full administrative access.             |
-| GH_ManageWebhooks                | GH_RepoRole     | No          | Repo role can manage webhooks.                        |
-| GH_ManageDeployKeys              | GH_RepoRole     | No          | Repo role can manage deploy keys.                     |
-| GH_PushProtectedBranch           | GH_RepoRole     | No          | Repo role can push to protected branches.             |
-| GH_DeleteAlertsCodeScanning      | GH_RepoRole     | No          | Repo role can delete code scanning alerts.            |
-| GH_ViewSecretScanningAlerts      | GH_RepoRole     | No          | Repo role can view secret scanning alerts.            |
-| GH_RunOrgMigration               | GH_RepoRole     | No          | Repo role can run organization migrations.            |
-| GH_BypassBranchProtection        | GH_RepoRole     | No          | Repo role can bypass branch protection rules.         |
-| GH_ManageSecurityProducts        | GH_RepoRole     | No          | Repo role can manage security products.               |
-| GH_ManageRepoSecurityProducts    | GH_RepoRole     | No          | Repo role can manage repo security products.          |
-| GH_EditRepoProtections           | GH_RepoRole     | No          | Repo role can edit branch protection rules.           |
-| GH_JumpMergeQueue                | GH_RepoRole     | No          | Repo role can jump the merge queue.                   |
-| GH_CreateSoloMergeQueueEntry     | GH_RepoRole     | No          | Repo role can create solo merge queue entries.        |
-| GH_EditRepoCustomPropertiesValue | GH_RepoRole     | No          | Repo role can edit custom property values.            |
+| Edge Kind | Source Node    | Traversable | Description                        |
+| --------- | -------------- | ----------- | ---------------------------------- |
+| GH_Owns    | GH_Organization | Yes         | Organization owns this repository. |
 
 ## Diagram
 
@@ -101,8 +84,12 @@ flowchart TD
     style GH_RepoRole fill:#DEFEFA
     style AZFederatedIdentityCredential fill:#FF80D2
 
-    GH_Organization -->|GH_Owns| GH_Repository
-    GH_Repository -->|GH_HasBranch| GH_Branch
+    GH_PersonalAccessToken[fa:fa-key GH_PersonalAccessToken]
+
+    style GH_PersonalAccessToken fill:#F5A623
+
+    GH_Organization -.->|GH_Owns| GH_Repository
+    GH_Repository -.->|GH_HasBranch| GH_Branch
     GH_Repository -.->|GH_HasWorkflow| GH_Workflow
     GH_Repository -->|GH_HasEnvironment| GH_Environment
     GH_Repository -.->|GH_HasSecret| GH_OrgSecret

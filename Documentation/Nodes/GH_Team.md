@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHTeam.png" width="50"/> GH_Team
+# <img src="../images/GH_Team.png" width="50"/> GH_Team
 
 Represents a GitHub team within the organization. Teams can have parent-child relationships, contain members with different roles (Member, Maintainer), and be assigned to repository roles.
 

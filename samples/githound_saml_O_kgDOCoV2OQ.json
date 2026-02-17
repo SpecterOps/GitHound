@@ -1,4 +1,5 @@
 {
+  "$schema": "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json",
   "graph": {
     "nodes": [
       {
@@ -27,7 +28,7 @@
           "GH_ExternalIdentity"
         ],
         "properties": {
-          "name": "EI_lAHOCoV2Oc2WFs4CbGNd",
+          "name": "d9219f20-d6d6-11f0-8f93-069c0d01bdfa",
           "guid": "d9219f20-d6d6-11f0-8f93-069c0d01bdfa",
           "environment_id": "O_kgDOCoV2OQ",
           "environment_name": "SpecterOps Testing",
@@ -75,9 +76,9 @@
           "value": "EI_lAHOCoV2Oc2WFs4CbGNd"
         },
         "end": {
-          "value": "jatkinson@specterops.io",
+          "kind": "OktaUser",
           "match_by": "name",
-          "kind": "OktaUser"
+          "value": "jatkinson@specterops.io"
         },
         "properties": {
           "traversable": false
@@ -98,9 +99,9 @@
       {
         "kind": "SyncedToGHUser",
         "start": {
-          "value": "jatkinson@specterops.io",
+          "kind": "OktaUser",
           "match_by": "name",
-          "kind": "OktaUser"
+          "value": "jatkinson@specterops.io"
         },
         "end": {
           "value": "MDQ6VXNlcjEzMjc4MjEw"

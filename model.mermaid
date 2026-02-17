@@ -23,6 +23,8 @@ flowchart TD
     GH_TeamRole[fa:fa-user-tie GH_TeamRole]
     GH_User[fa:fa-user GH_User]
     GH_Workflow[fa:fa-cogs GH_Workflow]
+    GH_PersonalAccessToken[fa:fa-key GH_PersonalAccessToken]
+    GH_PersonalAccessTokenRequest[fa:fa-key GH_PersonalAccessTokenRequest]
     OktaUser[fa:fa-user OktaUser]
     PingOneUser[fa:fa-user PingOneUser]
     SCIMUser[fa:fa-user SCIMUser]
@@ -47,6 +49,8 @@ flowchart TD
     style GH_TeamRole fill:#D0B0FF
     style GH_User fill:#FF8E40
     style GH_Workflow fill:#FFE4A1
+    style GH_PersonalAccessToken fill:#F5A623
+    style GH_PersonalAccessTokenRequest fill:#D4A017
     style OktaUser fill:#FFE4A1
     style PingOneUser fill:#FFE4A1
     style SCIMUser fill:#FFE4A1
@@ -116,6 +120,12 @@ flowchart TD
     GH_Repository -.->|GH_HasSecretScanningAlert| GH_SecretScanningAlert
     GH_Environment -.->|GH_Contains| GH_EnvironmentSecret
     GH_Environment -.->|GH_HasSecret| GH_EnvironmentSecret
+
+    GH_User -.->|GH_HasPersonalAccessToken| GH_PersonalAccessToken
+    GH_User -.->|GH_HasPersonalAccessTokenRequest| GH_PersonalAccessTokenRequest
+    GH_Organization -.->|GH_Contains| GH_PersonalAccessToken
+    GH_Organization -.->|GH_Contains| GH_PersonalAccessTokenRequest
+    GH_PersonalAccessToken -.->|GH_CanAccess| GH_Repository
 
     GH_Organization -.->|GH_HasSamlIdentityProvider| GH_SamlIdentityProvider
     GH_SamlIdentityProvider -.->|GH_HasExternalIdentity| GH_ExternalIdentity
