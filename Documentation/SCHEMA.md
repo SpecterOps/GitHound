@@ -35,12 +35,6 @@ These edges represent organizational hierarchy and ownership.
 
 | Edge Type     | Source            | Target                 | Traversable | Description                              |
 |---------------|-------------------|------------------------|-------------|------------------------------------------|
-| `GH_Contains` | `GH_Organization` | `GH_OrgRole`           | No          | Organization contains this org role.     |
-| `GH_Contains` | `GH_Organization` | `GH_RepoRole`          | No          | Organization contains this repo role.    |
-| `GH_Contains` | `GH_Organization` | `GH_Repository`        | No          | Organization contains this repository.   |
-| `GH_Contains` | `GH_Organization` | `GH_TeamRole`          | No          | Organization contains this team role.    |
-| `GH_Contains` | `GH_Organization` | `GH_Team`              | No          | Organization contains this team.         |
-| `GH_Contains` | `GH_Organization` | `GH_User`              | No          | Organization contains this user.         |
 | `GH_Contains` | `GH_Organization` | `GH_OrgSecret`         | No          | Organization contains this secret.       |
 | `GH_Contains` | `GH_Repository`   | `GH_RepoSecret`        | No          | Repository contains this secret.         |
 | `GH_Contains` | `GH_Environment`  | `GH_EnvironmentSecret` | No          | Environment contains this secret.        |
@@ -76,23 +70,44 @@ These edges represent permissions that org roles grant on the organization.
 | `GH_CreateTeam`                             | `GH_OrgRole`| `GH_Organization` | No          | Can create teams in the org.               |
 | `GH_TransferRepository`                     | `GH_OrgRole`| `GH_Organization` | No          | Can transfer repositories.                 |
 | `GH_ManageOrganizationWebhooks`             | `GH_OrgRole`| `GH_Organization` | No          | Can manage org webhooks.                   |
-| `GH_OrgBypassCodeScanningDismissalRequests` | `GH_OrgRole`| `GH_Organization` | No          | Can bypass code scanning dismissal.        |
-| `GH_OrgBypassSecretScanningClosureRequests` | `GH_OrgRole`| `GH_Organization` | No          | Can bypass secret scanning closure.        |
+| `GH_OrgBypassCodeScanningDismissalRequests`                | `GH_OrgRole`| `GH_Organization` | No          | Can bypass code scanning dismissal.                        |
+| `GH_OrgBypassSecretScanningClosureRequests`                | `GH_OrgRole`| `GH_Organization` | No          | Can bypass secret scanning closure.                        |
+| `GH_OrgReviewAndManageSecretScanningBypassRequests`        | `GH_OrgRole`| `GH_Organization` | No          | Can review/manage secret scanning bypass requests.         |
+| `GH_OrgReviewAndManageSecretScanningClosureRequests`       | `GH_OrgRole`| `GH_Organization` | No          | Can review/manage secret scanning closure requests.        |
+| `GH_ReadOrganizationActionsUsageMetrics`                   | `GH_OrgRole`| `GH_Organization` | No          | Can read Actions usage metrics.                            |
+| `GH_ReadOrganizationCustomOrgRole`                         | `GH_OrgRole`| `GH_Organization` | No          | Can read custom org role definitions.                      |
+| `GH_ReadOrganizationCustomRepoRole`                        | `GH_OrgRole`| `GH_Organization` | No          | Can read custom repo role definitions.                     |
+| `GH_ResolveSecretScanningAlerts`                           | `GH_OrgRole`| `GH_Organization` | No          | Can resolve secret scanning alerts.                        |
+| `GH_ViewSecretScanningAlerts`                              | `GH_OrgRole`| `GH_Organization` | No          | Can view secret scanning alerts.                           |
+| `GH_WriteOrganizationActionsSecrets`                       | `GH_OrgRole`| `GH_Organization` | No          | Can write Actions secrets.                                 |
+| `GH_WriteOrganizationActionsSettings`                      | `GH_OrgRole`| `GH_Organization` | No          | Can write Actions settings.                                |
+| `GH_WriteOrganizationCustomOrgRole`                        | `GH_OrgRole`| `GH_Organization` | No          | Can write custom org role definitions.                     |
+| `GH_WriteOrganizationCustomRepoRole`                       | `GH_OrgRole`| `GH_Organization` | No          | Can write custom repo role definitions.                    |
+| `GH_WriteOrganizationNetworkConfigurations`                | `GH_OrgRole`| `GH_Organization` | No          | Can write network configurations.                          |
 
 ### Repository Permission Edges
 
 These edges represent permissions that repo roles grant on repositories.
 
-| Edge Type                    | Source        | Target          | Traversable | Custom | Description                           |
-|------------------------------|---------------|-----------------|-------------|--------|---------------------------------------|
-| `GH_CanPull`                 | `GH_RepoRole` | `GH_Repository` | Yes         | No     | Can clone/pull the repository.        |
-| `GH_ReadRepoContents`        | `GH_RepoRole` | `GH_Repository` | Yes         | No     | Can read repository contents.         |
-| `GH_CanPush`                 | `GH_RepoRole` | `GH_Repository` | No          | No     | Can push to the repository.           |
-| `GH_WriteRepoContents`       | `GH_RepoRole` | `GH_Repository` | No          | No     | Can write repository contents.        |
-| `GH_AdminTo`                 | `GH_RepoRole` | `GH_Repository` | No          | No     | Has admin access to the repository.   |
-| `GH_BypassProtections`       | `GH_RepoRole` | `GH_Repository` | No          | Yes    | Can bypass branch protections.        |
-| `GH_EditProtections`         | `GH_RepoRole` | `GH_Repository` | No          | Yes    | Can edit branch protection rules.     |
-| `GH_ViewSecretScanningAlerts`| `GH_RepoRole` | `GH_Repository` | No          | Yes    | Can view secret scanning alerts.      |
+| Edge Type                          | Source        | Target          | Traversable | Description                                          |
+|------------------------------------|---------------|-----------------|-------------|------------------------------------------------------|
+| `GH_ReadRepoContents`              | `GH_RepoRole` | `GH_Repository` | No          | Can read repository contents.                        |
+| `GH_WriteRepoContents`             | `GH_RepoRole` | `GH_Repository` | No          | Can write repository contents.                       |
+| `GH_WriteRepoPullRequests`         | `GH_RepoRole` | `GH_Repository` | No          | Can create and merge pull requests.                  |
+| `GH_AdminTo`                       | `GH_RepoRole` | `GH_Repository` | No          | Has admin access to the repository.                  |
+| `GH_ManageWebhooks`               | `GH_RepoRole` | `GH_Repository` | No          | Can manage repository webhooks.                      |
+| `GH_ManageDeployKeys`             | `GH_RepoRole` | `GH_Repository` | No          | Can manage deploy keys.                              |
+| `GH_PushProtectedBranch`          | `GH_RepoRole` | `GH_Repository` | No          | Can push to protected branches.                      |
+| `GH_DeleteAlertsCodeScanning`     | `GH_RepoRole` | `GH_Repository` | No          | Can delete code scanning alerts.                     |
+| `GH_ViewSecretScanningAlerts`      | `GH_RepoRole` | `GH_Repository` | No          | Can view secret scanning alerts.                     |
+| `GH_RunOrgMigration`              | `GH_RepoRole` | `GH_Repository` | No          | Can run organization migrations.                     |
+| `GH_BypassBranchProtection`       | `GH_RepoRole` | `GH_Repository` | No          | Can bypass branch protection rules.                  |
+| `GH_ManageSecurityProducts`       | `GH_RepoRole` | `GH_Repository` | No          | Can manage security products.                        |
+| `GH_ManageRepoSecurityProducts`   | `GH_RepoRole` | `GH_Repository` | No          | Can manage repo-level security products.             |
+| `GH_EditRepoProtections`          | `GH_RepoRole` | `GH_Repository` | No          | Can edit branch protection rules.                    |
+| `GH_JumpMergeQueue`               | `GH_RepoRole` | `GH_Repository` | No          | Can jump the merge queue.                            |
+| `GH_CreateSoloMergeQueueEntry`    | `GH_RepoRole` | `GH_Repository` | No          | Can create solo merge queue entries.                 |
+| `GH_EditRepoCustomPropertiesValue`| `GH_RepoRole` | `GH_Repository` | No          | Can edit custom property values.                     |
 
 ### Branch Protection Edges
 
@@ -141,9 +156,7 @@ These edges connect GitHub nodes to nodes in other platforms (Azure, AWS, Okta, 
 | `SyncedToGHUser`     | `OktaUser`            | `GH_User`                        | Yes         | Okta user is synced to GitHub user via SAML/SCIM.                                |
 | `SyncedToGHUser`     | `PingOneUser`         | `GH_User`                        | Yes         | PingOne user is synced to GitHub user via SAML/SCIM.                             |
 | `GH_MapsToUser`      | `GH_ExternalIdentity` | `AZUser`/`OktaUser`/`PingOneUser`| No          | External identity maps to identity provider user.                                |
-| `GH_CanAssumeAWSRole`| `GH_Repository`       | `AWSRole`                        | Yes         | Repository can assume AWS IAM role via OIDC.                                     |
-| `GH_CanAssumeAWSRole`| `GH_Branch`           | `AWSRole`                        | Yes         | Branch can assume AWS IAM role via OIDC.                                         |
-| `GH_CanAssumeAWSRole`| `GH_Environment`      | `AWSRole`                        | Yes         | Environment can assume AWS IAM role via OIDC.                                    |
+| `SCIMProvisioned`    | `SCIMUser`            | `GH_User`                        | Yes         | SCIM user is provisioned and mapped to a GitHub user.                            |
 | `CanAssumeIdentity`  | `GH_Repository`       | `AZFederatedIdentityCredential`  | Yes         | Repository can assume Azure federated identity (subject: `*`).                   |
 | `CanAssumeIdentity`  | `GH_Branch`           | `AZFederatedIdentityCredential`  | Yes         | Branch can assume Azure federated identity (subject: `ref:refs/heads/{branch}`). |
 | `CanAssumeIdentity`  | `GH_Environment`      | `AZFederatedIdentityCredential`  | Yes         | Environment can assume Azure federated identity (subject: `environment:{name}`). |
@@ -157,7 +170,7 @@ These patterns show how to traverse the graph to answer common security question
 Find all repositories a user can access through any role assignment:
 
 ```cypher
-(:GH_User)-[:GH_HasRole|GH_MemberOf|GH_AddMember*1..]->(:GH_RepoRole)-[:GH_AdminTo|GH_CanPush|GH_CanPull]->(:GH_Repository)
+(:GH_User)-[:GH_HasRole|GH_MemberOf|GH_AddMember*1..]->(:GH_RepoRole)-[:GH_AdminTo|GH_WriteRepoContents|GH_ReadRepoContents]->(:GH_Repository)
 ```
 
 ### Team → Repository Permission Path
@@ -165,7 +178,7 @@ Find all repositories a user can access through any role assignment:
 Find all repositories a team can access:
 
 ```cypher
-(:GH_Team)-[:GH_HasRole]->(:GH_RepoRole)-[:GH_AdminTo|GH_CanPush|GH_CanPull]->(:GH_Repository)
+(:GH_Team)-[:GH_HasRole]->(:GH_RepoRole)-[:GH_AdminTo|GH_WriteRepoContents|GH_ReadRepoContents]->(:GH_Repository)
 ```
 
 ### User → Organization Admin Path
@@ -189,7 +202,7 @@ Trace role inheritance:
 Find GitHub entities that can assume Azure identities:
 
 ```cypher
-(:GH_User)-[:GH_HasRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_CanPush]->(:GH_Repository)-[:CanAssumeIdentity]->(:AZFederatedIdentityCredential)
+(:GH_User)-[:GH_HasRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_WriteRepoContents]->(:GH_Repository)-[:CanAssumeIdentity]->(:AZFederatedIdentityCredential)
 ```
 
 ## Key Traversable Edges
@@ -203,9 +216,8 @@ The following edges are marked as "traversable" and form the primary attack path
 | `GH_AddMember`        | Team role can add members (maintainer privilege)   |
 | `GH_HasBaseRole`      | Role inherits from another role                    |
 | `GH_Owns`             | Organization owns repository                       |
-| `GH_CanPull`          | Role grants read access to repository              |
-| `GH_ReadRepoContents` | Role grants content read access                    |
-| `GH_AdminTo`          | Role grants admin access to repository             |
+| `GH_HasBranch`        | Repository has this branch                         |
+| `GH_ProtectedBy`      | Branch protection rule protects this branch        |
 | `SyncedToGHUser`      | Identity provider user synced to GitHub user       |
-| `GH_CanAssumeAWSRole` | GitHub entity can assume AWS role                  |
+| `SCIMProvisioned`     | SCIM user provisioned and mapped to GitHub user    |
 | `CanAssumeIdentity`   | GitHub entity can assume Azure identity            |
