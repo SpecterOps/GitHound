@@ -759,10 +759,11 @@ function Git-HoundOrganization
 
     $properties = [pscustomobject]@{
         # Common Properties
-        id                                                           = Normalize-Null $org.id
-        node_id                                                      = Normalize-Null $org.node_id
         name                                                         = Normalize-Null $org.login
+        node_id                                                      = Normalize-Null $org.node_id
         # Relational Properties
+        environment_id                                               = Normalize-Null $org.node_id
+        environment_name                                             = Normalize-Null $org.login
         # Node Specific Properties
         login                                                        = Normalize-Null $org.login
         description                                                  = Normalize-Null $org.description
@@ -820,10 +821,15 @@ function Git-HoundOrganization
         actions_allowed_actions                                      = Normalize-Null $actions.allowed_actions
         actions_sha_pinning_required                                 = Normalize-Null $actions.sha_pinning_required
         # Accordion Panel Queries
-        query_users                                    = "MATCH (n:GH_User {environment_id:'$($org.node_id)}) RETURN n"
-        query_teams                                    = "MATCH (n:GH_Team {environment_id:'$($org.node_id)}) RETURN n"
-        query_repositories                             = "MATCH (n:GH_Repository {environment_id:'$($org.node_id)}) RETURN n"
+        query_organization_roles                      = "MATCH (:GH_Organization {node_id:'$($org.node_id)'})-[:GH_Contains]->(n:GH_OrgRole) RETURN n"
+        query_users                                    = "MATCH (n:GH_User {environment_id:'$($org.node_id)'}) RETURN n"
+        query_teams                                    = "MATCH (n:GH_Team {environment_id:'$($org.node_id)'}) RETURN n"
+        query_repositories                             = "MATCH (n:GH_Repository {environment_id:'$($org.node_id)'}) RETURN n"
         query_personal_access_tokens                   = "MATCH p=(:GH_Organization {node_id: '$($org.node_id)'})-[:GH_Contains]->(token) WHERE token:GH_PersonalAccessToken OR token:GH_PersonalAccessTokenRequest RETURN p"
+        query_secret_scanning_alerts                   = "MATCH p=(:GH_Organization {node_id: '$($org.node_id)'})-[:GH_Contains]->(alert:GH_SecretScanningAlert) RETURN p"
+        query_identity_provider                        = "MATCH p=(OIP:GH_SamlIdentityProvider)-[:GH_HasExternalIdentity]->(EI:GH_ExternalIdentity) MATCH p1=(OIP)<-[:GH_HasSamlIdentityProvider]-(:GH_Organization {node_id:'$($org.node_id)'}) MATCH p2=(EI)-[:GH_MapsToUser]->() RETURN p,p1,p2"
+        query_app_installations                        = "MATCH p=(:GH_Organization)-[:GH_Contains]->(:GH_AppInstallation) RETURN p"
+        query_organization_secrets                     = "MATCH p=(:GH_Organization {node_id: '$($org.node_id)'})-[:GH_Contains]->(secret:GH_OrganizationSecret) RETURN p"
     }
 
     $orgNode = New-GitHoundNode -Id $org.node_id -Kind 'GH_Organization' -Properties $properties
@@ -846,20 +852,23 @@ function Git-HoundOrganization
         $customRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_$($customrole.name)"))
         $customRoleProps = [pscustomobject]@{
             # Common Properties
-            id                     = Normalize-Null $customRoleId
             name                   = Normalize-Null "$($org.login)/$($customrole.name)"
+            node_id                = Normalize-Null $customRoleId
             # Relational Properties
-            environment_name      = Normalize-Null $org.login
-            environment_id        = Normalize-Null $org.node_id
+            environment_name       = Normalize-Null $org.login
+            environment_id         = Normalize-Null $org.node_id
             # Node Specific Properties
-            short_name             = Normalize-Null $customrole.name
+            short_name             = Normalize-Null $customrole.namehttps://research.bloodhoundenterprise.io/ui/graphview?environmentId=S-1-5-21-1273778777-4208638582-2921056243
             type                   = Normalize-Null 'custom'
             # Accordion Panel Queries
-            query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_OrgRole {id:'$($customRoleId)'}) RETURN p"
-            query_unrolled_members = "MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_OrgRole {id:'$($customRoleId)'}) RETURN p"
-            query_repositories     = "MATCH p=(:GH_OrgRole {id:'$($customRoleId)'})-[*]->(:GH_Repository) RETURN p"
+            query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_OrgRole {node_id:'$($customRoleId)'}) RETURN p"
+            query_unrolled_members = "MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_OrgRole {node_id:'$($customRoleId)'}) RETURN p"
+            query_org_permissions  = "MATCH p=(:GH_OrgRole {node_id:'$($customRoleId)'})-[]->(:GH_Organization) RETURN p"
+            query_repo_permissions = "MATCH p=(s:GH_OrgRole {node_id:'$($customRoleId)'})-[:GH_HasBaseRole]->(d:GH_OrgRole) WHERE s<>d RETURN p"
+
         }
         $null = $nodes.Add((New-GitHoundNode -Id $customRoleId -Kind 'GH_OrgRole', 'GH_Role' -Properties $customRoleProps))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $orgNode.id -EndId $customRoleId -Properties @{traversable=$false}))
 
         foreach($team in (Invoke-GithubRestMethod -Session $session -Path "orgs/$($org.login)/organization-roles/$($customRole.id)/teams"))
         {
@@ -930,20 +939,22 @@ function Git-HoundOrganization
     $orgOwnersId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_owners"))
     $ownersProps = [pscustomobject]@{
         # Common Properties
-        id                     = Normalize-Null $orgOwnersId
         name                   = Normalize-Null "$($org.login)/owners"
+        node_id                = Normalize-Null $orgOwnersId
         # Relational Properties
-        environment_name      = Normalize-Null $org.login
-        environment_id        = Normalize-Null $org.node_id
+        environment_name       = Normalize-Null $org.login
+        environment_id         = Normalize-Null $org.node_id
         # Node Specific Properties
         short_name             = Normalize-Null 'owners'
         type                   = Normalize-Null 'default'
         # Accordion Panel Queries
-        query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_OrgRole {id:'$($orgOwnersId)'}) RETURN p"
-        query_unrolled_members = "MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_OrgRole {id:'$($orgOwnersId)'}) RETURN p"
-        query_repositories     = "MATCH p=(:GH_OrgRole {id:'$($orgOwnersId)'})-[*]->(:GH_Repository) RETURN p"
+        query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_OrgRole {node_id:'$($orgOwnersId)'}) RETURN p"
+        query_unrolled_members = "MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_OrgRole {node_id:'$($orgOwnersId)'}) RETURN p"
+        query_org_permissions  = "MATCH p=(:GH_OrgRole {node_id:'$($orgOwnersId)'})-[]->(:GH_Organization) RETURN p"
+        query_repo_permissions = "MATCH p=(s:GH_OrgRole {node_id:'$($orgOwnersId)'})-[:GH_HasBaseRole]->(d:GH_OrgRole) WHERE s<>d RETURN p"
     }
     $null = $nodes.Add((New-GitHoundNode -Id $orgOwnersId -Kind 'GH_OrgRole', 'GH_Role' -Properties $ownersProps))
+    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $orgNode.id -EndId $orgOwnersId -Properties @{traversable=$false}))
     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateRepository' -StartId $orgOwnersId -EndId $orgNode.id -Properties @{traversable=$false}))
     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_InviteMember' -StartId $orgOwnersId -EndId $orgNode.id -Properties @{traversable=$false}))
     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddCollaborator' -StartId $orgOwnersId -EndId $orgNode.id -Properties @{traversable=$false}))
@@ -955,20 +966,22 @@ function Git-HoundOrganization
     $orgMembersId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_members"))
     $membersProps = [pscustomobject]@{
         # Common Properties
-        id                = Normalize-Null $orgMembersId
         name              = Normalize-Null "$($org.login)/members"
+        node_id           = Normalize-Null $orgMembersId
         # Relational Properties
-        environment_name = Normalize-Null $org.login
-        environment_id   = Normalize-Null $org.node_id
+        environment_name  = Normalize-Null $org.login
+        environment_id    = Normalize-Null $org.node_id
         # Node Specific Properties
         short_name        = Normalize-Null 'members'
         type              = Normalize-Null 'default'
         # Accordion Panel Queries
-        query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_OrgRole {id:'$($orgMembersId)'}) RETURN p"
-        query_unrolled_members = "MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_OrgRole {id:'$($orgMembersId)'}) RETURN p"
-        query_repositories     = "MATCH p=(:GH_OrgRole {id:'$($orgMembersId)'})-[*]->(:GH_Repository) RETURN p"
+        query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_OrgRole {node_id:'$($orgMembersId)'}) RETURN p"
+        query_unrolled_members = "MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_OrgRole {node_id:'$($orgMembersId)'}) RETURN p"
+        query_org_permissions  = "MATCH p=(:GH_OrgRole {node_id:'$($orgMembersId)'})-[]->(:GH_Organization) RETURN p"
+        query_repo_permissions = "MATCH p=(s:GH_OrgRole {node_id:'$($orgMembersId)'})-[:GH_HasBaseRole]->(d:GH_OrgRole) WHERE s<>d RETURN p"
     }
     $null = $nodes.Add((New-GitHoundNode -Id $orgMembersId -Kind 'GH_OrgRole', 'GH_Role' -Properties $membersProps))
+    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $orgNode.id -EndId $orgMembersId -Properties @{traversable=$false}))
     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateRepository' -StartId $orgMembersId -EndId $orgNode.id -Properties @{traversable=$false}))
     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateTeam' -StartId $orgMembersId -EndId $orgNode.id -Properties @{traversable=$false}))
 
@@ -1107,12 +1120,12 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
             # --- Team Node ---
             $properties = [pscustomobject]@{
                 # Common Properties
-                id                = Normalize-Null $team.databaseId
-                node_id           = Normalize-Null $team.id
+                #id                = Normalize-Null $team.databaseId
                 name              = Normalize-Null $team.name
+                node_id           = Normalize-Null $team.id
                 # Relational Properties
-                environment_name = Normalize-Null $Organization.properties.login
-                environment_id   = Normalize-Null $Organization.properties.node_id
+                environment_name  = Normalize-Null $Organization.properties.login
+                environment_id    = Normalize-Null $Organization.properties.node_id
                 # Node Specific Properties
                 slug              = Normalize-Null $team.slug
                 description       = Normalize-Null $team.description
@@ -1137,20 +1150,20 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
             $memberId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($team.id)_members"))
             $memberProps = [pscustomobject]@{
                 # Common Properties
-                id                 = Normalize-Null $memberId
                 name               = Normalize-Null "$($Organization.properties.login)/$($team.slug)/members"
+                node_id            = Normalize-Null $memberId
                 # Relational Properties
-                environment_name  = Normalize-Null $Organization.properties.login
-                environment_id    = Normalize-Null $Organization.properties.node_id
+                environment_name   = Normalize-Null $Organization.properties.login
+                environment_id     = Normalize-Null $Organization.properties.node_id
                 team_name          = Normalize-Null $team.name
                 team_id            = Normalize-Null $team.id
                 # Node Specific Properties
                 short_name         = Normalize-Null 'members'
                 type               = Normalize-Null 'team'
                 # Accordion Panel Queries
-                query_team         = "MATCH p=(:GH_TeamRole {id:'$($memberId)'})-[:GH_MemberOf]->(:GH_Team) RETURN p "
-                query_members      = "MATCH p=(:GH_User)-[GH_HasRole]->(:GH_TeamRole {id:'$($memberId)'}) RETURN p"
-                query_repositories = "MATCH p=(:GH_TeamRole {id:'$($memberId)'})-[:GH_MemberOf]->(:GH_Team)-[:GH_HasRole|GH_HasBaseRole*1..]->(:GH_RepoRole)-[]->(:GH_Repository) RETURN p"
+                query_team         = "MATCH p=(:GH_TeamRole {node_id:'$($memberId)'})-[:GH_MemberOf]->(:GH_Team) RETURN p "
+                query_members      = "MATCH p=(:GH_User)-[GH_HasRole]->(:GH_TeamRole {node_id:'$($memberId)'}) RETURN p"
+                query_repositories = "MATCH p=(:GH_TeamRole {node_id:'$($memberId)'})-[:GH_MemberOf]->(:GH_Team)-[:GH_HasRole|GH_HasBaseRole*1..]->(:GH_RepoRole)-[]->(:GH_Repository) RETURN p"
             }
             $null = $nodes.Add((New-GitHoundNode -Id $memberId -Kind 'GH_TeamRole','GH_Role' -Properties $memberProps))
             $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MemberOf' -StartId $memberId -EndId $team.id -Properties @{traversable=$true}))
@@ -1158,20 +1171,20 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
             $maintainerId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($team.id)_maintainers"))
             $maintainerProps = [pscustomobject]@{
                 # Common Properties
-                id                 = Normalize-Null $maintainerId
                 name               = Normalize-Null "$($Organization.properties.login)/$($team.slug)/maintainers"
+                node_id            = Normalize-Null $maintainerId
                 # Relational Properties
-                environment_name  = Normalize-Null $Organization.properties.login
-                environment_id    = Normalize-Null $Organization.properties.node_id
+                environment_name   = Normalize-Null $Organization.properties.login
+                environment_id     = Normalize-Null $Organization.properties.node_id
                 team_name          = Normalize-Null $team.name
                 team_id            = Normalize-Null $team.id
                 # Node Specific Properties
                 short_name         = Normalize-Null 'maintainers'
                 type               = Normalize-Null 'team'
                 # Accordion Panel Queries
-                query_team         = "MATCH p=(:GH_TeamRole {id:'$($maintainerId)'})-[:GH_MemberOf]->(:GH_Team) RETURN p "
-                query_members      = "MATCH p=(:GH_User)-[GH_HasRole]->(:GH_TeamRole {id:'$($maintainerId)'}) RETURN p"
-                query_repositories = "MATCH p=(:GH_TeamRole {id:'$($maintainerId)'})-[:GH_MemberOf]->(:GH_Team)-[:GH_HasRole|GH_HasBaseRole*1..]->(:GH_RepoRole)-[]->(:GH_Repository) RETURN p"
+                query_team         = "MATCH p=(:GH_TeamRole {node_id:'$($maintainerId)'})-[:GH_MemberOf]->(:GH_Team) RETURN p "
+                query_members      = "MATCH p=(:GH_User)-[GH_HasRole]->(:GH_TeamRole {node_id:'$($maintainerId)'}) RETURN p"
+                query_repositories = "MATCH p=(:GH_TeamRole {node_id:'$($maintainerId)'})-[:GH_MemberOf]->(:GH_Team)-[:GH_HasRole|GH_HasBaseRole*1..]->(:GH_RepoRole)-[]->(:GH_Repository) RETURN p"
             }
             $null = $nodes.Add((New-GitHoundNode -Id $maintainerId -Kind 'GH_TeamRole','GH_Role' -Properties $maintainerProps))
             $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MemberOf' -StartId $maintainerId -EndId $team.id -Properties @{traversable=$true}))
@@ -1326,12 +1339,12 @@ query MembersWithRole($login: String!, $count: Int = 100, $after: String = null)
 
             $properties = @{
                 # Common Properties
-                id                  = Normalize-Null $user.databaseId
-                node_id             = Normalize-Null $user.id
+                #id                  = Normalize-Null $user.databaseId
                 name                = Normalize-Null $user.login
+                node_id             = Normalize-Null $user.id
                 # Relational Properties
-                environment_name   = Normalize-Null $Organization.properties.login
-                environment_id     = Normalize-Null $Organization.properties.node_id
+                environment_name    = Normalize-Null $Organization.properties.login
+                environment_id      = Normalize-Null $Organization.properties.node_id
                 # Node Specific Properties
                 login               = Normalize-Null $user.login
                 full_name           = Normalize-Null $user.name
@@ -1465,50 +1478,53 @@ function Git-HoundRepository
             $actionsEnabled = $enabledRepos -contains $repo.node_id
         }
 
+        $orgMembersId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_members"))
+
         $properties = @{
             # Common Properties
-            id                           = Normalize-Null $repo.id
-            node_id                      = Normalize-Null $repo.node_id
-            name                         = Normalize-Null $repo.name
+            #id                           = Normalize-Null $repo.id
+            name                          = Normalize-Null $repo.name
+            node_id                       = Normalize-Null $repo.node_id
             # Relational Properties
-            environment_name            = Normalize-Null $Organization.properties.login
-            environment_id              = Normalize-Null $Organization.properties.node_id
-            owner_id                     = Normalize-Null $repo.owner.id
-            owner_node_id                = Normalize-Null $repo.owner.node_id
-            owner_name                   = Normalize-Null $repo.owner.login
+            environment_name              = Normalize-Null $Organization.properties.login
+            environment_id                = Normalize-Null $Organization.properties.node_id
+            owner_name                    = Normalize-Null $repo.owner.login
+            #owner_id                     = Normalize-Null $repo.owner.id
+            owner_id                      = Normalize-Null $repo.owner.node_id
             # Node Specific Properties
-            full_name                    = Normalize-Null $repo.full_name
-            private                      = Normalize-Null $repo.private
-            html_url                     = Normalize-Null $repo.html_url
-            description                  = Normalize-Null $description
-            created_at                   = Normalize-Null $repo.created_at
-            updated_at                   = Normalize-Null $repo.updated_at
-            pushed_at                    = Normalize-Null $repo.pushed_at
-            archived                     = Normalize-Null $repo.archived
-            disabled                     = Normalize-Null $repo.disabled
-            open_issues_count            = Normalize-Null $repo.open_issues_count
-            allow_forking                = Normalize-Null $repo.allow_forking
-            web_commit_signoff_required  = Normalize-Null $repo.web_commit_signoff_required
-            visibility                   = Normalize-Null $repo.visibility
-            forks                        = Normalize-Null $repo.forks
-            open_issues                  = Normalize-Null $repo.open_issues
-            watchers                     = Normalize-Null $repo.watchers
-            default_branch               = Normalize-Null $repo.default_branch
-            actions_enabled              = Normalize-Null $actionsEnabled
-            secret_scanning              = Normalize-Null $repo.security_and_analysis.secret_scanning.status
+            full_name                     = Normalize-Null $repo.full_name
+            private                       = Normalize-Null $repo.private
+            html_url                      = Normalize-Null $repo.html_url
+            description                   = Normalize-Null $description
+            created_at                    = Normalize-Null $repo.created_at
+            updated_at                    = Normalize-Null $repo.updated_at
+            pushed_at                     = Normalize-Null $repo.pushed_at
+            archived                      = Normalize-Null $repo.archived
+            disabled                      = Normalize-Null $repo.disabled
+            open_issues_count             = Normalize-Null $repo.open_issues_count
+            allow_forking                 = Normalize-Null $repo.allow_forking
+            web_commit_signoff_required   = Normalize-Null $repo.web_commit_signoff_required
+            visibility                    = Normalize-Null $repo.visibility
+            forks                         = Normalize-Null $repo.forks
+            open_issues                   = Normalize-Null $repo.open_issues
+            watchers                      = Normalize-Null $repo.watchers
+            default_branch                = Normalize-Null $repo.default_branch
+            actions_enabled               = Normalize-Null $actionsEnabled
+            secret_scanning               = Normalize-Null $repo.security_and_analysis.secret_scanning.status
             # Accordion Panel Queries
-            query_branches               = "MATCH p=(:GH_Repository {node_id: '$($repo.node_id)'})-[:GH_HasBranch]->(:GH_Branch) RETURN p"
-            query_protected_branches     = "MATCH p=(:GH_Repository {node_id: '$($repo.node_id)'})-[:GH_HasBranch]->(:GH_Branch)<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule) RETURN p"
-            query_roles                  = "MATCH p=(:GH_RepoRole)-[*1..]->(:GH_Repository {node_id: '$($repo.node_id)'}) RETURN p"
-            query_teams                  = "MATCH p=(:GH_Team)-[:GH_MemberOf|GH_HasRole*1..]->(:GH_RepoRole)-[]->(:GH_Repository {node_id: '$($repo.node_id)'}) RETURN p"
-            query_workflows              = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_HasWorkflow]->(w:GH_Workflow) RETURN p"
-            query_environments           = "MATCH p=(:GH_Repository {node_id: '$($repo.node_id)'})-[:GH_HasEnvironment]->(:GH_Environment) RETURN p"
-            query_secrets                = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_HasSecret]->(:GH_Secret) RETURN p"
-            query_secret_scanning_alerts = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_HasSecretScanningAlert]->(:GH_SecretScanningAlert) RETURN p"
-            query_explicit_readers       = "MATCH p=(role:GH_Role)-[:GH_HasBaseRole|GH_ReadRepoContents*1..]->(r:GH_Repository {node_id:'$($repo.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
-            query_unrolled_readers       = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ReadRepoContents*1..]->(r:GH_Repository {node_id:'$($repo.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
-            query_explicit_writers       = "MATCH p=(role:GH_Role)-[:GH_HasBaseRole|GH_WriteRepoContents|GH_WriteRepoPullRequests*1..]->(r:GH_Repository {node_id:'$($repo.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
-            query_unrolled_writers       = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_WriteRepoContents|GH_WriteRepoPullRequests*1..]->(r:GH_Repository {node_id:'$($repo.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
+            query_branches                = "MATCH p=(:GH_Repository {node_id: '$($repo.node_id)'})-[:GH_HasBranch]->(:GH_Branch) RETURN p"
+            query_protected_branches      = "MATCH p=(:GH_Repository {node_id: '$($repo.node_id)'})-[:GH_HasBranch]->(:GH_Branch)<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule) RETURN p"
+            query_branch_protection_rules = "MATCH p=(:GH_Repository {node_id: '$($repo.node_id)'})-[:GH_Contains]->(:GH_BranchBranchProtectionRule) RETURN p"
+            query_roles                   = "MATCH p=(:GH_RepoRole)-[*1..]->(:GH_Repository {node_id: '$($repo.node_id)'}) RETURN p"
+            query_teams                   = "MATCH p=(:GH_Team)-[:GH_MemberOf|GH_HasRole*1..]->(:GH_RepoRole)-[]->(:GH_Repository {node_id: '$($repo.node_id)'}) RETURN p"
+            query_workflows               = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_HasWorkflow]->(w:GH_Workflow) RETURN p"
+            query_environments            = "MATCH p=(:GH_Repository {node_id: '$($repo.node_id)'})-[:GH_HasEnvironment]->(:GH_Environment) RETURN p"
+            query_secrets                 = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_HasSecret]->(:GH_Secret) RETURN p"
+            query_secret_scanning_alerts  = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_HasSecretScanningAlert]->(:GH_SecretScanningAlert) RETURN p"
+            query_explicit_readers        = "MATCH p=(role:GH_Role)-[:GH_HasBaseRole|GH_ReadRepoContents*1..]->(r:GH_Repository {node_id:'$($repo.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
+            query_unrolled_readers        = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ReadRepoContents*1..]->(r:GH_Repository {node_id:'$($repo.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
+            query_explicit_writers        = "MATCH p=(role:GH_Role)-[:GH_HasBaseRole|GH_WriteRepoContents|GH_WriteRepoPullRequests*1..]->(r:GH_Repository {node_id:'$($repo.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
+            query_unrolled_writers        = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_WriteRepoContents|GH_WriteRepoPullRequests*1..]->(r:GH_Repository {node_id:'$($repo.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
 
 
             #query_user_permissions       = "MATCH p=(:GH_User)-[:GH_HasRole]->()-[:GH_HasBaseRole|GH_HasRole|GH_Owns|GH_AddMember|GH_MemberOf]->(:GH_RepoRole)-[]->(:GH_Repository {node_id: '$($repo.node_id)'}) RETURN p"
@@ -1523,47 +1539,52 @@ function Git-HoundRepository
         $repoReadId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_read"))
         $repoReadProps = [pscustomobject]@{
             # Common Properties
-            id                     = Normalize-Null $repoReadId
             name                   = Normalize-Null "$($repo.full_name)/read"
+            node_id                = Normalize-Null $repoReadId
             # Relational Properties
-            environment_name      = Normalize-Null $Organization.properties.login
-            environment_id        = Normalize-Null $Organization.properties.node_id
+            environment_name       = Normalize-Null $Organization.properties.login
+            environment_id         = Normalize-Null $Organization.properties.node_id
             repository_name        = Normalize-Null $repo.name
             repository_id          = Normalize-Null $repo.node_id
             # Node Specific Properties
             short_name             = Normalize-Null 'read'
             type                   = Normalize-Null 'default'
             # Accordion Panel Queries
-            query_explicit_users         = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {id:'$($repoReadId)'}) RETURN p"
-            query_explicit_teams         = "MATCH p=(:GH_Team)-[:GH_HasRole]->(:GH_RepoRole {id:'$($repoReadId)'}) RETURN p"
-            query_unrolled_members       = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ReadRepoContents*1..]->(reporole:GH_RepoRole {id:'$($repoReadId)'})-[*1..]->(:GH_Repository) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) MATCH p2=(reporole)<-[:GH_HasRole]-(:GH_User) RETURN p,p1,p2"
-            query_repository_permissions = "MATCH p=(:GH_RepoRole {id:'$($repoReadId)'})-[*1..]->(:GH_Repository) RETURN p"
+            query_explicit_users         = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {node_id:'$($repoReadId)'}) RETURN p"
+            query_explicit_teams         = "MATCH p=(:GH_Team)-[:GH_HasRole]->(:GH_RepoRole {node_id:'$($repoReadId)'}) RETURN p"
+            query_unrolled_members       = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ReadRepoContents*1..]->(reporole:GH_RepoRole {node_id:'$($repoReadId)'})-[*1..]->(:GH_Repository) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) MATCH p2=(reporole)<-[:GH_HasRole]-(:GH_User) RETURN p,p1,p2"
+            query_repository_permissions = "MATCH p=(:GH_RepoRole {node_id:'$($repoReadId)'})-[*1..]->(:GH_Repository) RETURN p"
         }
         $null = $nodes.Add((New-GitHoundNode -Id $repoReadId -Kind 'GH_RepoRole', 'GH_Role' -Properties $repoReadProps))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoMetadata' -StartId $repoReadId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoContents' -StartId $repoReadId -EndId $repo.node_id -Properties @{traversable=$false}))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoPullRequests' -StartId $repoReadId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgAllRepoReadId -EndId $repoReadId -Properties @{traversable=$true}))
+        # Organization members can read internal repositories by default, so add a GH_HasRole edge from org members role to repo read role for internal repos
+        if($repo.visibility -eq 'internal')
+        {
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartId $orgMembersId -EndId $repoReadId -Properties @{traversable=$true}))
+        }
 
         # Write Role
         $repoWriteId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_write"))
         $repoWriteProps = [pscustomobject]@{
             # Common Properties
-            id                     = Normalize-Null $repoWriteId
             name                   = Normalize-Null "$($repo.full_name)/write"
+            node_id                = Normalize-Null $repoWriteId
             # Relational Properties
-            environment_name      = Normalize-Null $Organization.properties.login
-            environment_id        = Normalize-Null $Organization.properties.node_id
+            environment_name       = Normalize-Null $Organization.properties.login
+            environment_id         = Normalize-Null $Organization.properties.node_id
             repository_name        = Normalize-Null $repo.name
             repository_id          = Normalize-Null $repo.node_id
             # Node Specific Properties
             short_name             = Normalize-Null 'write'
             type                   = Normalize-Null 'default'
             # Accordion Panel Queries
-            query_explicit_users         = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {id:'$($repoWriteId)'}) RETURN p"
-            query_explicit_teams         = "MATCH p=(:GH_Team)-[:GH_HasRole]->(:GH_RepoRole {id:'$($repoWriteId)'}) RETURN p"
-            query_unrolled_members       = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ReadRepoContents*1..]->(reporole:GH_RepoRole {id:'$($repoWriteId)'})-[*1..]->(:GH_Repository) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) MATCH p2=(reporole)<-[:GH_HasRole]-(:GH_User) RETURN p,p1,p2"
-            query_repository_permissions = "MATCH p=(:GH_RepoRole {id:'$($repoWriteId)'})-[*1..]->(:GH_Repository) RETURN p"
+            query_explicit_users         = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {node_id:'$($repoWriteId)'}) RETURN p"
+            query_explicit_teams         = "MATCH p=(:GH_Team)-[:GH_HasRole]->(:GH_RepoRole {node_id:'$($repoWriteId)'}) RETURN p"
+            query_unrolled_members       = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ReadRepoContents*1..]->(reporole:GH_RepoRole {node_id:'$($repoWriteId)'})-[*1..]->(:GH_Repository) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) MATCH p2=(reporole)<-[:GH_HasRole]-(:GH_User) RETURN p,p1,p2"
+            query_repository_permissions = "MATCH p=(:GH_RepoRole {node_id:'$($repoWriteId)'})-[*1..]->(:GH_Repository) RETURN p"
         }
         $null = $nodes.Add((New-GitHoundNode -Id $repoWriteId -Kind 'GH_RepoRole', 'GH_Role' -Properties $repoWriteProps))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoMetadata' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
@@ -1607,21 +1628,21 @@ function Git-HoundRepository
         $repoAdminId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_admin"))
         $repoAdminProps = [pscustomobject]@{
             # Common Properties
-            id                     = Normalize-Null $repoAdminId
             name                   = Normalize-Null "$($repo.full_name)/admin"
+            node_id                = Normalize-Null $repoAdminId
             # Relational Properties
-            environment_name      = Normalize-Null $Organization.properties.login
-            environment_id        = Normalize-Null $Organization.properties.node_id
+            environment_name       = Normalize-Null $Organization.properties.login
+            environment_id         = Normalize-Null $Organization.properties.node_id
             repository_name        = Normalize-Null $repo.name
             repository_id          = Normalize-Null $repo.node_id
             # Node Specific Properties
             short_name             = Normalize-Null 'admin'
             type                   = Normalize-Null 'default'
             # Accordion Panel Queries
-            query_explicit_users         = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {id:'$($repoAdminId)'}) RETURN p"
-            query_explicit_teams         = "MATCH p=(:GH_Team)-[:GH_HasRole]->(:GH_RepoRole {id:'$($repoAdminId)'}) RETURN p"
-            query_unrolled_members       = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ReadRepoContents*1..]->(reporole:GH_RepoRole {id:'$($repoAdminId)'})-[*1..]->(:GH_Repository) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) MATCH p2=(reporole)<-[:GH_HasRole]-(:GH_User) RETURN p,p1,p2"
-            query_repository_permissions = "MATCH p=(:GH_RepoRole {id:'$($repoAdminId)'})-[*1..]->(:GH_Repository) RETURN p"
+            query_explicit_users         = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {node_id:'$($repoAdminId)'}) RETURN p"
+            query_explicit_teams         = "MATCH p=(:GH_Team)-[:GH_HasRole]->(:GH_RepoRole {node_id:'$($repoAdminId)'}) RETURN p"
+            query_unrolled_members       = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ReadRepoContents*1..]->(reporole:GH_RepoRole {node_id:'$($repoAdminId)'})-[*1..]->(:GH_Repository) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) MATCH p2=(reporole)<-[:GH_HasRole]-(:GH_User) RETURN p,p1,p2"
+            query_repository_permissions = "MATCH p=(:GH_RepoRole {node_id:'$($repoAdminId)'})-[*1..]->(:GH_Repository) RETURN p"
         }
         $null = $nodes.Add((New-GitHoundNode -Id $repoAdminId -Kind 'GH_RepoRole', 'GH_Role' -Properties $repoAdminProps))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AdminTo' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
@@ -1695,21 +1716,21 @@ function Git-HoundRepository
         $repoTriageId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_triage"))
         $repoTriageProps = [pscustomobject]@{
             # Common Properties
-            id                     = Normalize-Null $repoTriageId
             name                   = Normalize-Null "$($repo.full_name)/triage"
+            node_id                = Normalize-Null $repoTriageId
             # Relational Properties
-            environment_name      = Normalize-Null $Organization.properties.login
-            environment_id        = Normalize-Null $Organization.properties.node_id
+            environment_name       = Normalize-Null $Organization.properties.login
+            environment_id         = Normalize-Null $Organization.properties.node_id
             repository_name        = Normalize-Null $repo.name
             repository_id          = Normalize-Null $repo.node_id
             # Node Specific Properties
             short_name             = Normalize-Null 'triage'
             type                   = Normalize-Null 'default'
             # Accordion Panel Queries
-            query_explicit_users         = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {id:'$($repoTriageId)'}) RETURN p"
-            query_explicit_teams         = "MATCH p=(:GH_Team)-[:GH_HasRole]->(:GH_RepoRole {id:'$($repoTriageId)'}) RETURN p"
-            query_unrolled_members       = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ReadRepoContents*1..]->(reporole:GH_RepoRole {id:'$($repoTriageId)'})-[*1..]->(:GH_Repository) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) MATCH p2=(reporole)<-[:GH_HasRole]-(:GH_User) RETURN p,p1,p2"
-            query_repository_permissions = "MATCH p=(:GH_RepoRole {id:'$($repoTriageId)'})-[*1..]->(:GH_Repository) RETURN p"
+            query_explicit_users         = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {node_id:'$($repoTriageId)'}) RETURN p"
+            query_explicit_teams         = "MATCH p=(:GH_Team)-[:GH_HasRole]->(:GH_RepoRole {node_id:'$($repoTriageId)'}) RETURN p"
+            query_unrolled_members       = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ReadRepoContents*1..]->(reporole:GH_RepoRole {node_id:'$($repoTriageId)'})-[*1..]->(:GH_Repository) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) MATCH p2=(reporole)<-[:GH_HasRole]-(:GH_User) RETURN p,p1,p2"
+            query_repository_permissions = "MATCH p=(:GH_RepoRole {node_id:'$($repoTriageId)'})-[*1..]->(:GH_Repository) RETURN p"
         }
         $null = $nodes.Add((New-GitHoundNode -Id $repoTriageId -Kind 'GH_RepoRole', 'GH_Role' -Properties $repoTriageProps))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddLabel' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
@@ -1743,21 +1764,21 @@ function Git-HoundRepository
         $repoMaintainId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_maintain"))
         $repoMaintainProps = [pscustomobject]@{
             # Common Properties
-            id                     = Normalize-Null $repoMaintainId
             name                   = Normalize-Null "$($repo.full_name)/maintain"
+            node_id                = Normalize-Null $repoMaintainId
             # Relational Properties
-            environment_name      = Normalize-Null $Organization.properties.login
-            environment_id        = Normalize-Null $Organization.properties.node_id
+            environment_name       = Normalize-Null $Organization.properties.login
+            environment_id         = Normalize-Null $Organization.properties.node_id
             repository_name        = Normalize-Null $repo.name
             repository_id          = Normalize-Null $repo.node_id
             # Node Specific Properties
             short_name             = Normalize-Null 'maintain'
             type                   = Normalize-Null 'default'
             # Accordion Panel Queries
-            query_explicit_users         = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {id:'$($repoMaintainId)'}) RETURN p"
-            query_explicit_teams         = "MATCH p=(:GH_Team)-[:GH_HasRole]->(:GH_RepoRole {id:'$($repoMaintainId)'}) RETURN p"
-            query_unrolled_members       = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ReadRepoContents*1..]->(reporole:GH_RepoRole {id:'$($repoMaintainId)'})-[*1..]->(:GH_Repository) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) MATCH p2=(reporole)<-[:GH_HasRole]-(:GH_User) RETURN p,p1,p2"
-            query_repository_permissions = "MATCH p=(:GH_RepoRole {id:'$($repoMaintainId)'})-[*1..]->(:GH_Repository) RETURN p"
+            query_explicit_users         = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {node_id:'$($repoMaintainId)'}) RETURN p"
+            query_explicit_teams         = "MATCH p=(:GH_Team)-[:GH_HasRole]->(:GH_RepoRole {node_id:'$($repoMaintainId)'}) RETURN p"
+            query_unrolled_members       = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ReadRepoContents*1..]->(reporole:GH_RepoRole {node_id:'$($repoMaintainId)'})-[*1..]->(:GH_Repository) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) MATCH p2=(reporole)<-[:GH_HasRole]-(:GH_User) RETURN p,p1,p2"
+            query_repository_permissions = "MATCH p=(:GH_RepoRole {node_id:'$($repoMaintainId)'})-[*1..]->(:GH_Repository) RETURN p"
         }
         $null = $nodes.Add((New-GitHoundNode -Id $repoMaintainId -Kind 'GH_RepoRole', 'GH_Role' -Properties $repoMaintainProps))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageTopics' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
@@ -1781,21 +1802,21 @@ function Git-HoundRepository
             $customRepoRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_$($customRepoRole.name)"))
             $customRepoRoleProps = [pscustomobject]@{
                 # Common Properties
-                id                     = Normalize-Null $customRepoRoleId
                 name                   = Normalize-Null "$($repo.full_name)/$($customRepoRole.name)"
+                node_id                = Normalize-Null $customRepoRoleId
                 # Relational Properties
-                environment_name      = Normalize-Null $Organization.properties.login
-                environment_id        = Normalize-Null $Organization.properties.node_id
+                environment_name       = Normalize-Null $Organization.properties.login
+                environment_id         = Normalize-Null $Organization.properties.node_id
                 repository_name        = Normalize-Null $repo.name
                 repository_id          = Normalize-Null $repo.node_id
                 # Node Specific Properties
                 short_name             = Normalize-Null $customRepoRole.name
                 type                   = Normalize-Null 'custom'
                 # Accordion Panel Queries
-            query_explicit_users         = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {id:'$($customRepoRoleId)'}) RETURN p"
-            query_explicit_teams         = "MATCH p=(:GH_Team)-[:GH_HasRole]->(:GH_RepoRole {id:'$($customRepoRoleId)'}) RETURN p"
-            query_unrolled_members       = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ReadRepoContents*1..]->(reporole:GH_RepoRole {id:'$($customRepoRoleId)'})-[*1..]->(:GH_Repository) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) MATCH p2=(reporole)<-[:GH_HasRole]-(:GH_User) RETURN p,p1,p2"
-            query_repository_permissions = "MATCH p=(:GH_RepoRole {id:'$($customRepoRoleId)'})-[*1..]->(:GH_Repository) RETURN p"
+                query_explicit_users         = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_RepoRole {node_id:'$($customRepoRoleId)'}) RETURN p"
+                query_explicit_teams         = "MATCH p=(:GH_Team)-[:GH_HasRole]->(:GH_RepoRole {node_id:'$($customRepoRoleId)'}) RETURN p"
+                query_unrolled_members       = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ReadRepoContents*1..]->(reporole:GH_RepoRole {node_id:'$($customRepoRoleId)'})-[*1..]->(:GH_Repository) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) MATCH p2=(reporole)<-[:GH_HasRole]-(:GH_User) RETURN p,p1,p2"
+                query_repository_permissions = "MATCH p=(:GH_RepoRole {node_id:'$($customRepoRoleId)'})-[*1..]->(:GH_Repository) RETURN p"
             }
             $null = $nodes.Add((New-GitHoundNode -Id $customRepoRoleId -Kind 'GH_RepoRole', 'GH_Role' -Properties $customRepoRoleProps))
 
@@ -2322,13 +2343,19 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
                 }
 
                 $props = [pscustomobject]@{
+                    # Common Properties
                     name               = Normalize-Null "$($repo.name)\$($ref.name)"
-                    id                 = Normalize-Null $branchId
-                    organization       = Normalize-Null $orgLogin
+                    node_id            = Normalize-Null $branchId
+                    # Relational Properties
+                    environment_name   = Normalize-Null $orgLogin
                     environment_id     = Normalize-Null $orgNodeId
+                    repository_name    = Normalize-Null $repo.name
+                    repository_id      = Normalize-Null $repo.id
+                    # Node Specific Properties
                     short_name         = Normalize-Null $ref.name
                     commit_hash        = Normalize-Null $ref.target.oid
                     protected          = Normalize-Null ($null -ne $rule)
+                    # Accordion Panel Queries
                     query_branch_write = "MATCH p=(:GH_User)-[:GH_CanWriteBranch|GH_CanEditAndWriteBranch]->(:GH_Branch {objectid:'$($branchId)'}) RETURN p"
                 }
 
@@ -2417,13 +2444,21 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
                 }
 
                 $props = [pscustomobject]@{
+                    # Common Properties
                     name               = Normalize-Null "$($overflowRepo.name)\$($ref.name)"
-                    id                 = Normalize-Null $branchId
-                    organization       = Normalize-Null $orgLogin
+                    node_id            = Normalize-Null $branchId
+                    # Relational Properties
+                    environment_name   = Normalize-Null $orgLogin
                     environment_id     = Normalize-Null $orgNodeId
+                    repository_name    = Normalize-Null $repo.name
+                    repository_id      = Normalize-Null $repo.id
+                    # Node Specific Properties
                     short_name         = Normalize-Null $ref.name
                     commit_hash        = Normalize-Null $ref.target.oid
                     protected          = Normalize-Null ($null -ne $rule)
+                    # Accordion Panel Queries
+                    query_repo         = "MATCH p=(:GH_Repository)-[:GH_HasBranch]->(:GH_Branch {objectid:'$($branchId)'}) RETURN p"
+                    query_protection   = "MATCH p=(:GH_BranchProtectionRule)-[:GH_ProtectedBy]->(:GH_Branch {objectid:'$($branchId)'}) RETURN p"
                     query_branch_write = "MATCH p=(:GH_User)-[:GH_CanWriteBranch|GH_CanEditAndWriteBranch]->(:GH_Branch {objectid:'$($branchId)'}) RETURN p"
                 }
 
@@ -2542,10 +2577,15 @@ query ProtectionRulesByIds($ids: [ID!]!) {
 
                 # Create GH_BranchProtectionRule node
                 $props = [pscustomobject]@{
+                    # Common Properties
                     name                            = Normalize-Null $rule.pattern
-                    id                              = Normalize-Null $ruleId
+                    node_id                         = Normalize-Null $ruleId
+                    # Relational Properties
                     environment_name                = Normalize-Null $orgLogin
                     environment_id                  = Normalize-Null $orgNodeId
+                    repository_name                 = Normalize-Null $repo.name
+                    repository_id                   = Normalize-Null $repo.id
+                    # Node Specific Properties
                     pattern                         = Normalize-Null $rule.pattern
                     enforce_admins                  = Normalize-Null $rule.isAdminEnforced
                     lock_branch                     = Normalize-Null $rule.lockBranch
@@ -2560,11 +2600,12 @@ query ProtectionRulesByIds($ids: [ID!]!) {
                     allows_force_pushes             = Normalize-Null $rule.allowsForcePushes
                     allows_deletions                = Normalize-Null $rule.allowsDeletions
                     # Accordion Panel Queries
-                    query_user_exceptions           = "MATCH p=(:GH_User)-[]->(:GH_BranchProtectionRule {id:'$($rule.id)'}) RETURN p"
-                    query_branches                  = "MATCH p=(:GH_BranchProtectionRule {id:'$($rule.id)'})-[:GH_ProtectedBy]->(:GH_Branch) RETURN p"
+                    query_user_exceptions           = "MATCH p=(:GH_User)-[]->(:GH_BranchProtectionRule {node_id:'$($rule.id)'}) RETURN p"
+                    query_branches                  = "MATCH p=(:GH_BranchProtectionRule {node_id:'$($rule.id)'})-[:GH_ProtectedBy]->(:GH_Branch) RETURN p"
                 }
 
                 $null = $nodes.Add((New-GitHoundNode -Id $ruleId -Kind GH_BranchProtectionRule -Properties $props))
+                $null = $edges.Add((New-GitHoundEdge -Kind GH_Contains -StartId $repo.id -EndId $ruleId -Properties @{ traversable = $false }))
 
                 # Create GH_ProtectedBy edges from this rule to its branches
                 foreach ($branchId in $ruleToBranches[$ruleId]) {
@@ -2783,21 +2824,21 @@ function Git-HoundWorkflow
                     $props = [pscustomobject]@{
                         # Common Properties
                         name              = Normalize-Null "$($repo.properties.name)\$($workflow.name)"
-                        id                = Normalize-Null $workflow.id
+                        #id                = Normalize-Null $workflow.id
                         node_id           = Normalize-Null $workflow.node_id
                         # Relational Properties
-                        environment_name = Normalize-Null $repo.properties.environment_name
-                        environment_id   = Normalize-Null $repo.properties.environment_id
-                        repository_name   = Normalize-Null $repo.properties.full_name
-                        repository_id     = Normalize-Null $repo.properties.node_id
+                        environment_name  = Normalize-Null $repo.properties.environment_name
+                        environment_id    = Normalize-Null $repo.properties.environment_id
+                        repository_name   = Normalize-Null $repo.name
+                        repository_id     = Normalize-Null $repo.id
                         # Node Specific Properties
                         short_name        = Normalize-Null $workflow.name
                         path              = Normalize-Null $workflow.path
                         state             = Normalize-Null $workflow.state
                         url               = Normalize-Null $workflow.url
                         # Accordion Panel Queries
-                        query_repository = "MATCH p=(:GH_Repository)-[:GH_HasWorkflow]->(:GH_Workflow {node_id: '$($workflow.node_id)'}) RETURN p"
-                        query_editors    = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_WriteRepoContents|GH_WriteRepoPullRequests*1..]->(r:GH_Repository)-[:GH_HasWorkflow]->(:GH_Workflow {node_id:'$($workflow.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
+                        query_repository  = "MATCH p=(:GH_Repository)-[:GH_HasWorkflow]->(:GH_Workflow {node_id: '$($workflow.node_id)'}) RETURN p"
+                        query_editors     = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_WriteRepoContents|GH_WriteRepoPullRequests*1..]->(r:GH_Repository)-[:GH_HasWorkflow]->(:GH_Workflow {node_id:'$($workflow.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
                     }
 
                     $null = $nodes.Add((New-GitHoundNode -Id $workflow.node_id -Kind GH_Workflow -Properties $props))
@@ -2942,13 +2983,13 @@ function Git-HoundEnvironment
                 $props = [pscustomobject]@{
                     # Common Properties
                     name              = Normalize-Null "$($repo.properties.name)\$($environment.name)"
-                    id                = Normalize-Null $environment.id
+                    #id                = Normalize-Null $environment.id
                     node_id           = Normalize-Null $environment.node_id
                     # Relational Properties
                     environment_name  = Normalize-Null $repo.properties.environment_name
                     environment_id    = Normalize-Null $repo.properties.environment_id
-                    repository_name   = Normalize-Null $repo.properties.full_name
-                    repository_id     = Normalize-Null $repo.properties.node_id
+                    repository_name   = Normalize-Null $repo.name
+                    repository_id     = Normalize-Null $repo.id
                     # Node Specific Properties
                     short_name        = Normalize-Null $environment.name
                     can_admins_bypass = Normalize-Null $environment.can_admins_bypass
@@ -2978,11 +3019,13 @@ function Git-HoundEnvironment
                     $secretId = "GH_EnvironmentSecret_$($environment.node_id)_$($secret.name)"
                     $properties = @{
                         # Common Properties
-                        id                              = Normalize-Null $secretId
                         name                            = Normalize-Null $secret.name
+                        node_id                         = Normalize-Null $secretId
                         # Relational Properties
                         environment_name                = Normalize-Null $repo.properties.environment_name
                         environment_id                  = Normalize-Null $repo.properties.environment_id
+                        repository_name                 = Normalize-Null $repo.name
+                        repository_id                   = Normalize-Null $repo.id
                         deployment_environment_name     = Normalize-Null $environment.name
                         deployment_environment_id       = Normalize-Null $environment.node_id
                         # Node Specific Properties
@@ -2991,7 +3034,7 @@ function Git-HoundEnvironment
                         # Accordion Panel Queries
                     }
 
-                    $null = $nodes.Add((New-GitHoundNode -Id $secretId -Kind 'GH_EnvironmentSecret' -Properties $properties))
+                    $null = $nodes.Add((New-GitHoundNode -Id $secretId -Kind 'GH_EnvironmentSecret', 'GH_Secret' -Properties $properties))
                     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $environment.node_id -EndId $secretId -Properties @{ traversable = $false }))
                     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecret' -StartId $environment.node_id -EndId $secretId -Properties @{ traversable = $false }))
                 }
@@ -3106,17 +3149,17 @@ function Git-HoundOrganizationSecret
             $secretId = "GH_OrgSecret_$($orgNodeId)_$($secret.name)"
             $properties = @{
                 # Common Properties
-                id                   = Normalize-Null $secretId
                 name                 = Normalize-Null $secret.name
+                node_id              = Normalize-Null $secretId
                 # Relational Properties
-                environment_name    = Normalize-Null $orgLogin
-                environment_id      = Normalize-Null $orgNodeId
+                environment_name     = Normalize-Null $orgLogin
+                environment_id       = Normalize-Null $orgNodeId
                 # Node Specific Properties
                 created_at           = Normalize-Null $secret.created_at
                 updated_at           = Normalize-Null $secret.updated_at
                 visibility           = Normalize-Null $secret.visibility
                 # Accordion Panel Queries
-                query_visible_repositories = "MATCH p=(:GH_OrgSecret {id:'$secretId'})<-[:GH_HasSecret]-(:GH_Repository) RETURN p"
+                query_visible_repositories = "MATCH p=(:GH_OrgSecret {node_id:'$secretId'})<-[:GH_HasSecret]-(:GH_Repository) RETURN p"
             }
 
             $null = $nodes.Add((New-GitHoundNode -Id $secretId -Kind 'GH_OrgSecret', 'GH_Secret' -Properties $properties))
@@ -3309,19 +3352,19 @@ function Git-HoundSecret
                     $secretId = "GH_Secret_$($repo.properties.node_id)_$($secret.name)"
                     $properties = @{
                         # Common Properties
-                        id                   = Normalize-Null $secretId
                         name                 = Normalize-Null $secret.name
+                        node_id              = Normalize-Null $secretId
                         # Relational Properties
-                        environment_name    = Normalize-Null $orgName
-                        environment_id      = Normalize-Null $repo.properties.environment_id
-                        repository_name      = Normalize-Null $repo.properties.name
-                        repository_id        = Normalize-Null $repo.properties.node_id
+                        environment_name     = Normalize-Null $repo.properties.environment_name
+                        environment_id       = Normalize-Null $repo.properties.environment_id
+                        repository_name      = Normalize-Null $repo.name
+                        repository_id        = Normalize-Null $repo.id
                         # Node Specific Properties
                         created_at           = Normalize-Null $secret.created_at
                         updated_at           = Normalize-Null $secret.updated_at
                         visibility           = Normalize-Null $secret.visibility
                         # Accordion Panel Queries
-                        query_visible_repositories = "MATCH p=(:GH_RepoSecret {id:'$secretId'})<-[:GH_HasSecret]-(:GH_Repository) RETURN p"
+                        query_visible_repositories = "MATCH p=(:GH_RepoSecret {node_id:'$secretId'})<-[:GH_HasSecret]-(:GH_Repository) RETURN p"
                         # There could be a query for workflows that use this secret
                         # There could be a query for users that can overwrite workflows to use this secret
                     }
@@ -3454,8 +3497,8 @@ function Git-HoundSecretScanningAlert
         $alertId = "SSA_$($Organization.id)_$($alert.repository.node_id)_$($alert.number)"
         $properties =[pscustomobject]@{
             # Common Properties
-            node_id                  = Normalize-Null $alertId
             name                     = Normalize-Null $alert.number
+            node_id                  = Normalize-Null $alertId
             # Relational Properties
             environment_name         = Normalize-Null $alert.repository.owner.login
             environment_id           = Normalize-Null $alert.repository.owner.node_id
@@ -3471,12 +3514,13 @@ function Git-HoundSecretScanningAlert
             updated_at               = Normalize-Null $alert.updated_at
             url                      = Normalize-Null $alert.html_url
             # Accordion Panel Queries
-            query_repository         = "MATCH p=(r:GH_SecretScanningAlert {id:'$alertId'})<-[:GH_HasSecretScanningAlert]-(repo:GH_Repository) RETURN p"
+            query_repository         = "MATCH p=(r:GH_SecretScanningAlert {node_id:'$alertId'})<-[:GH_HasSecretScanningAlert]-(repo:GH_Repository) RETURN p"
             # This currently doesn't take into account that there is an organization-level permission that can allow users to view alerts without having any repository permissions, but it's a start. We can iterate on the queries in future releases.
-            query_alert_viewers      = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ViewSecretScanningAlerts*1..]->(:GH_Repository)-[:GH_HasSecretScanningAlert]->(:GH_SecretScanningAlert {id:'$alertId'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
+            query_alert_viewers      = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ViewSecretScanningAlerts*1..]->(:GH_Repository)-[:GH_HasSecretScanningAlert]->(:GH_SecretScanningAlert {node_id:'$alertId'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
         }
 
         $null = $nodes.Add((New-GitHoundNode -Id $alertId -Kind 'GH_SecretScanningAlert' -Properties $properties))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $alert.repository.owner.node_id -EndId $alertId -Properties @{ traversable = $false }))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecretScanningAlert' -StartId $alert.repository.node_id -EndId $alertId -Properties @{ traversable = $false }))
     }
 
@@ -3535,11 +3579,11 @@ function Git-HoundAppInstallation
     {
         $properties = @{
             # Common Properties
-            id                   = Normalize-Null $app.client_id
             name                 = Normalize-Null $app.app_slug
+            id                   = Normalize-Null $app.client_id
             # Relational Properties
-            environment_name    = Normalize-Null $app.account.login
-            environment_id      = Normalize-Null $app.account.node_id
+            environment_name     = Normalize-Null $app.account.login
+            environment_id       = Normalize-Null $app.account.node_id
             repositories_url     = Normalize-Null $app.repositories_url
             # Node Specific Properties
             repository_selection = Normalize-Null $app.repository_selection
@@ -3554,7 +3598,7 @@ function Git-HoundAppInstallation
         }
 
         $null = $nodes.Add((New-GitHoundNode -Id $app.client_id -Kind 'GH_AppInstallation' -Properties $properties))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $app.account.node_id -EndId $app.client_id -Properties @{ traversable = $false }))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $app.account.node_id -EndId $app.client_id -Properties @{ traversable = $false }))
     }
 
     Write-Output ([PSCustomObject]@{
@@ -3650,13 +3694,13 @@ function Git-HoundPersonalAccessToken
 
             $properties = @{
                 # Common Properties
-                id                   = Normalize-Null $patId
                 name                 = Normalize-Null $pat.token_name
+                node_id              = Normalize-Null $patId
                 # Relational Properties
                 environment_name     = Normalize-Null $orgLogin
                 environment_id       = Normalize-Null $orgNodeId
                 owner_login          = Normalize-Null $pat.owner.login
-                owner_id             = Normalize-Null $pat.owner.id
+                #owner_id             = Normalize-Null $pat.owner.id
                 owner_node_id        = Normalize-Null $pat.owner.node_id
                 # Node Specific Properties
                 token_id             = Normalize-Null $pat.token_id
@@ -3668,9 +3712,9 @@ function Git-HoundPersonalAccessToken
                 access_granted_at    = Normalize-Null $pat.access_granted_at
                 permissions          = Normalize-Null ($pat.permissions | ConvertTo-Json -Depth 10)
                 # Accordion Panel Queries
-                query_organization_permissions = "MATCH p=(:GH_PersonalAccessToken {id: '$($patId)'})-[:GH_CanAccess]->(:GH_Organization) RETURN p"
-                query_user                     = "MATCH p=(:GH_User)-[:GH_HasPersonalAccessToken]->(:GH_PersonalAccessToken {id: '$($patId)'}) RETURN p"
-                query_repositories             = "MATCH p=(:GH_PersonalAccessToken {id: '$($patId)'})-[:GH_CanAccess]->(:GH_Repository) RETURN p LIMIT 1000"
+                query_organization_permissions = "MATCH p=(:GH_PersonalAccessToken {node_id: '$($patId)'})-[:GH_CanAccess]->(:GH_Organization) RETURN p"
+                query_user                     = "MATCH p=(:GH_User)-[:GH_HasPersonalAccessToken]->(:GH_PersonalAccessToken {node_id: '$($patId)'}) RETURN p"
+                query_repositories             = "MATCH p=(:GH_PersonalAccessToken {node_id: '$($patId)'})-[:GH_CanAccess]->(:GH_Repository) RETURN p LIMIT 1000"
             }
 
             $null = $nodes.Add((New-GitHoundNode -Id $patId -Kind 'GH_PersonalAccessToken' -Properties $properties))
@@ -3767,13 +3811,13 @@ function Git-HoundPersonalAccessTokenRequest
 
         $properties = @{
             # Common Properties
-            id                   = Normalize-Null $requestId
             name                 = Normalize-Null $request.token_name
+            node_id              = Normalize-Null $requestId
             # Relational Properties
             environment_name     = Normalize-Null $orgLogin
             environment_id       = Normalize-Null $orgNodeId
             owner_login          = Normalize-Null $request.owner.login
-            owner_id             = Normalize-Null $request.owner.id
+            #owner_id             = Normalize-Null $request.owner.id
             owner_node_id        = Normalize-Null $request.owner.node_id
             # Node Specific Properties
             token_id             = Normalize-Null $request.token_id
@@ -3786,9 +3830,9 @@ function Git-HoundPersonalAccessTokenRequest
             created_at           = Normalize-Null $request.created_at
             permissions          = Normalize-Null ($request.permissions | ConvertTo-Json -Depth 10)
             # Accordion Panel Queries
-            query_organization_permissions = "MATCH p=(:GH_PersonalAccessTokenRequest {id: '$($requestId)'})-[:GH_CanAccess]->(:GH_Organization) RETURN p"
-            query_user                     = "MATCH p=(:GH_User)-[:GH_HasPersonalAccessTokenRequest]->(:GH_PersonalAccessTokenRequest {id: '$($requestId)'}) RETURN p"
-            query_repositories             = "MATCH p=(:GH_PersonalAccessTokenRequest {id: '$($requestId)'})-[:GH_CanAccess]->(:GH_Repository) RETURN p LIMIT 1000"
+            query_organization_permissions = "MATCH p=(:GH_PersonalAccessTokenRequest {node_id: '$($requestId)'})-[:GH_CanAccess]->(:GH_Organization) RETURN p"
+            query_user                     = "MATCH p=(:GH_User)-[:GH_HasPersonalAccessTokenRequest]->(:GH_PersonalAccessTokenRequest {node_id: '$($requestId)'}) RETURN p"
+            query_repositories             = "MATCH p=(:GH_PersonalAccessTokenRequest {node_id: '$($requestId)'})-[:GH_CanAccess]->(:GH_Repository) RETURN p LIMIT 1000"
         }
 
         $null = $nodes.Add((New-GitHoundNode -Id $requestId -Kind 'GH_PersonalAccessTokenRequest' -Properties $properties))
@@ -3837,8 +3881,11 @@ function Git-HoundScimUser
         foreach($scimIdentity in $result.Resources)
         {
             $props = [pscustomobject]@{
-                id = Normalize-Null $scimIdentity.id
+                # Common Properties
                 name = Normalize-Null $scimIdentity.externalId
+                id = Normalize-Null $scimIdentity.id
+                # Relational Properties
+                # Node Specific Properties
                 externalId = Normalize-Null $scimIdentity.externalId
                 userName = Normalize-Null $scimIdentity.userName
                 enabled = Normalize-Null $scimIdentity.active
@@ -3861,6 +3908,7 @@ function Git-HoundScimUser
                 #created = Normalize-Null $scimIdentity.meta.created
                 #lastModified = Normalize-Null $scimIdentity.meta.lastModified
                 #schemas = Normalize-Null $scimIdentity.schemas
+                # Accordion Panel Queries
             }
             
             $null = $nodes.Add((New-GitHoundNode -Kind SCIM_User -Id $scimIdentity.id -Properties $props))
@@ -4629,6 +4677,7 @@ function Invoke-GitHound
     if($saml.edges) { $samlEdges.AddRange(@($saml.edges)) }
 
     $payload = [PSCustomObject]@{
+        '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
         graph = [PSCustomObject]@{
             nodes = @($samlNodes | Where-Object { $_ -ne $null })
             edges = @($samlEdges | Where-Object { $_ -ne $null })
@@ -4645,6 +4694,7 @@ function Invoke-GitHound
         if($scim.edges) { $scimEdges.AddRange(@($scim.edges)) }
 
         $payload = [PSCustomObject]@{
+            '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
             graph = [PSCustomObject]@{
                 nodes = @($scimNodes | Where-Object { $_ -ne $null })
                 edges = @($scimEdges | Where-Object { $_ -ne $null })
@@ -4668,6 +4718,7 @@ function Invoke-GitHound
             if($oidc.edges.Count -gt 0)
             {
                 $payload = [PSCustomObject]@{
+                    '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
                     graph = [PSCustomObject]@{
                         nodes = @()
                         edges = @($oidc.Edges | Where-Object { $_ -ne $null })
