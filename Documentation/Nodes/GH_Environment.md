@@ -44,20 +44,17 @@ flowchart TD
     GH_Repository[fa:fa-box-archive GH_Repository]
     GH_Branch[fa:fa-code-branch GH_Branch]
     GH_EnvironmentSecret[fa:fa-lock GH_EnvironmentSecret]
-    AWSRole[fa:fa-user-tag AWSRole]
     AZFederatedIdentityCredential[fa:fa-id-card AZFederatedIdentityCredential]
 
     style GH_Environment fill:#D5F2C2
     style GH_Repository fill:#9EECFF
     style GH_Branch fill:#FF80D2
     style GH_EnvironmentSecret fill:#6FB94A
-    style AWSRole fill:#FF8E40
     style AZFederatedIdentityCredential fill:#FF80D2
 
-    GH_Repository -.->|GH_HasEnvironment| GH_Environment
+    GH_Repository -->|GH_HasEnvironment| GH_Environment
     GH_Branch -.->|GH_HasEnvironment| GH_Environment
     GH_Environment -.->|GH_Contains| GH_EnvironmentSecret
     GH_Environment -.->|GH_HasSecret| GH_EnvironmentSecret
-    GH_Environment -.->|GH_CanAssumeAWSRole| AWSRole
     GH_Environment -->|CanAssumeIdentity| AZFederatedIdentityCredential
 ```

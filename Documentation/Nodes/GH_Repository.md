@@ -54,9 +54,26 @@ Created by: `Git-HoundRepository`
 
 ### Inbound Edges
 
-| Edge Kind | Source Node    | Traversable | Description                        |
-| --------- | -------------- | ----------- | ---------------------------------- |
-| GH_Owns    | GH_Organization | Yes         | Organization owns this repository. |
+| Edge Kind                        | Source Node     | Traversable | Description                                           |
+| -------------------------------- | --------------- | ----------- | ----------------------------------------------------- |
+| GH_Owns                          | GH_Organization | Yes         | Organization owns this repository.                    |
+| GH_ReadRepoContents              | GH_RepoRole     | No          | Repo role can read repository contents.               |
+| GH_WriteRepoContents             | GH_RepoRole     | No          | Repo role can push to the repository.                 |
+| GH_WriteRepoPullRequests         | GH_RepoRole     | No          | Repo role can create and merge pull requests.         |
+| GH_AdminTo                       | GH_RepoRole     | No          | Repo role has full administrative access.             |
+| GH_ManageWebhooks                | GH_RepoRole     | No          | Repo role can manage webhooks.                        |
+| GH_ManageDeployKeys              | GH_RepoRole     | No          | Repo role can manage deploy keys.                     |
+| GH_PushProtectedBranch           | GH_RepoRole     | No          | Repo role can push to protected branches.             |
+| GH_DeleteAlertsCodeScanning      | GH_RepoRole     | No          | Repo role can delete code scanning alerts.            |
+| GH_ViewSecretScanningAlerts      | GH_RepoRole     | No          | Repo role can view secret scanning alerts.            |
+| GH_RunOrgMigration               | GH_RepoRole     | No          | Repo role can run organization migrations.            |
+| GH_BypassBranchProtection        | GH_RepoRole     | No          | Repo role can bypass branch protection rules.         |
+| GH_ManageSecurityProducts        | GH_RepoRole     | No          | Repo role can manage security products.               |
+| GH_ManageRepoSecurityProducts    | GH_RepoRole     | No          | Repo role can manage repo security products.          |
+| GH_EditRepoProtections           | GH_RepoRole     | No          | Repo role can edit branch protection rules.           |
+| GH_JumpMergeQueue                | GH_RepoRole     | No          | Repo role can jump the merge queue.                   |
+| GH_CreateSoloMergeQueueEntry     | GH_RepoRole     | No          | Repo role can create solo merge queue entries.        |
+| GH_EditRepoCustomPropertiesValue | GH_RepoRole     | No          | Repo role can edit custom property values.            |
 
 ## Diagram
 
@@ -71,7 +88,6 @@ flowchart TD
     GH_RepoSecret[fa:fa-lock GH_RepoSecret]
     GH_SecretScanningAlert[fa:fa-key GH_SecretScanningAlert]
     GH_RepoRole[fa:fa-user-tie GH_RepoRole]
-    AWSRole[fa:fa-user-tag AWSRole]
     AZFederatedIdentityCredential[fa:fa-id-card AZFederatedIdentityCredential]
 
     style GH_Repository fill:#9EECFF
@@ -83,25 +99,21 @@ flowchart TD
     style GH_RepoSecret fill:#32BEE6
     style GH_SecretScanningAlert fill:#3C7A6E
     style GH_RepoRole fill:#DEFEFA
-    style AWSRole fill:#FF8E40
     style AZFederatedIdentityCredential fill:#FF80D2
 
-    GH_Organization -.->|GH_Owns| GH_Repository
-    GH_Repository -.->|GH_HasBranch| GH_Branch
+    GH_Organization -->|GH_Owns| GH_Repository
+    GH_Repository -->|GH_HasBranch| GH_Branch
     GH_Repository -.->|GH_HasWorkflow| GH_Workflow
-    GH_Repository -.->|GH_HasEnvironment| GH_Environment
+    GH_Repository -->|GH_HasEnvironment| GH_Environment
     GH_Repository -.->|GH_HasSecret| GH_OrgSecret
     GH_Repository -.->|GH_Contains| GH_RepoSecret
     GH_Repository -.->|GH_HasSecret| GH_RepoSecret
     GH_Repository -.->|GH_HasSecretScanningAlert| GH_SecretScanningAlert
-    GH_RepoRole -.->|GH_CanPull| GH_Repository
     GH_RepoRole -.->|GH_ReadRepoContents| GH_Repository
-    GH_RepoRole -.->|GH_CanPush| GH_Repository
     GH_RepoRole -.->|GH_WriteRepoContents| GH_Repository
-    GH_RepoRole -->|GH_AdminTo| GH_Repository
+    GH_RepoRole -.->|GH_AdminTo| GH_Repository
+    GH_RepoRole -.->|GH_BypassBranchProtection| GH_Repository
+    GH_RepoRole -.->|GH_EditRepoProtections| GH_Repository
     GH_RepoRole -.->|GH_ViewSecretScanningAlerts| GH_Repository
-    GH_RepoRole -.->|GH_BypassProtections| GH_Repository
-    GH_RepoRole -.->|GH_EditProtections| GH_Repository
-    GH_Repository -.->|GH_CanAssumeAWSRole| AWSRole
     GH_Repository -->|CanAssumeIdentity| AZFederatedIdentityCredential
 ```
