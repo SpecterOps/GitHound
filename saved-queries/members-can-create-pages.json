@@ -1,0 +1,5 @@
+{
+  "name": "Members Can Create GitHub Pages",
+  "query": "MATCH (org:GH_Organization {members_can_create_pages: true}) RETURN org",
+  "description": "Finds organizations where members can create GitHub Pages sites. Pages can be used to host phishing content, data exfiltration endpoints, or other malicious resources."
+}
