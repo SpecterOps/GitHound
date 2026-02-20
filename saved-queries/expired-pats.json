@@ -1,0 +1,5 @@
+{
+  "name": "Expired Personal Access Tokens",
+  "query": "MATCH p=(:GH_User)-[:GH_HasPersonalAccessToken]->(token:GH_PersonalAccessToken {token_expired: true}) RETURN p",
+  "description": "Finds expired personal access tokens that still exist. Expired tokens should be cleaned up to reduce credential inventory and audit noise."
+}
