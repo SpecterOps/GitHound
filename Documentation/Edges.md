@@ -6,7 +6,7 @@ The following table summarizes the custom edge kinds used by `GitHound`:
 
 | Edge Type | Source Node Kinds | Target Node Kinds | Traversable |
 |-----------|-------------------|-------------------|-------------|
-| [GH_Contains] | [GH_Organization] | [GH_User], [GH_Team], [GH_Repository], [GH_OrgRole], [GH_RepoRole], [GH_TeamRole], [GH_OrgSecret], [GH_PersonalAccessToken], [GH_PersonalAccessTokenRequest] | ❌ |
+| [GH_Contains] | [GH_Organization] | [GH_User], [GH_Team], [GH_Repository], [GH_OrgRole], [GH_RepoRole], [GH_TeamRole], [GH_OrgSecret], [GH_AppInstallation], [GH_PersonalAccessToken], [GH_PersonalAccessTokenRequest] | ❌ |
 |               | [GH_Repository]   | [GH_RepoSecret] | ❌ |
 |               | [GH_Environment]  | [GH_EnvironmentSecret] | ❌ |
 | [GH_Owns] | [GH_Organization] | [GH_Repository] | ✅ |
@@ -72,7 +72,9 @@ The following table summarizes the custom edge kinds used by `GitHound`:
 | [GH_MapsToUser] | [GH_ExternalIdentity] | [GH_User] | ❌ |
 | [GH_HasPersonalAccessToken] | [GH_User] | [GH_PersonalAccessToken] | ❌ |
 | [GH_HasPersonalAccessTokenRequest] | [GH_User] | [GH_PersonalAccessTokenRequest] | ❌ |
+| [GH_InstalledAs] | [GH_App] | [GH_AppInstallation] | ✅ |
 | [GH_CanAccess] | [GH_PersonalAccessToken] | [GH_Repository] | ❌ |
+|                 | [GH_AppInstallation]     | [GH_Repository] | ❌ |
 
 ## Hybrid Edges
 
@@ -169,6 +171,7 @@ Hybrid edges connect GitHub entities to entities from other supported BloodHound
 [GH_MapsToUser]: Nodes/GH_ExternalIdentity.md#outbound-edges
 [GH_HasPersonalAccessToken]: Nodes/GH_User.md#outbound-edges
 [GH_HasPersonalAccessTokenRequest]: Nodes/GH_User.md#outbound-edges
+[GH_InstalledAs]: Nodes/GH_App.md#outbound-edges
 [GH_CanAccess]: Nodes/GH_PersonalAccessToken.md#outbound-edges
 [SyncedToGHUser]: Nodes/GH_User.md#inbound-edges
 [GH_CanAssumeAWSRole]: Nodes/GH_Repository.md#outbound-edges
@@ -190,6 +193,7 @@ Hybrid edges connect GitHub entities to entities from other supported BloodHound
 [GH_SecretScanningAlert]: Nodes/GH_SecretScanningAlert.md
 [GH_SamlIdentityProvider]: Nodes/GH_SamlIdentityProvider.md
 [GH_ExternalIdentity]: Nodes/GH_ExternalIdentity.md
+[GH_App]: Nodes/GH_App.md
 [GH_AppInstallation]: Nodes/GH_AppInstallation.md
 [GH_PersonalAccessToken]: Nodes/GH_PersonalAccessToken.md
 [GH_PersonalAccessTokenRequest]: Nodes/GH_PersonalAccessTokenRequest.md

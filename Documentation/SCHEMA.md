@@ -8,6 +8,7 @@ For individual node documentation with properties and diagrams, see the [Nodes](
 
 | Node                    | Icon              | Color     | Description                                                                                        |
 |-------------------------|-------------------|-----------|----------------------------------------------------------------------------------------------------|
+| GH_App                  | cube              | #7EC8E3 | A GitHub App definition. The app owner controls the private key used to generate installation tokens. |
 | GH_AppInstallation      | plug              | #A8D8EA | A GitHub App installed on the organization with specific permissions and repository access.        |
 | GH_Branch               | code-branch       | #FF80D2 | A named reference in a repository (e.g. `main`, `develop`) representing a line of development.     |
 | GH_BranchProtectionRule | shield            | #FFB347 | A branch protection rule that applies to one or more branches via pattern matching.                |
@@ -36,6 +37,7 @@ These edges represent organizational hierarchy and ownership.
 | Edge Type     | Source            | Target                 | Traversable | Description                              |
 |---------------|-------------------|------------------------|-------------|------------------------------------------|
 | `GH_Contains` | `GH_Organization` | `GH_OrgSecret`         | No          | Organization contains this secret.       |
+| `GH_Contains` | `GH_Organization` | `GH_AppInstallation`   | No          | Organization contains this app installation. |
 | `GH_Contains` | `GH_Repository`   | `GH_RepoSecret`        | No          | Repository contains this secret.         |
 | `GH_Contains` | `GH_Environment`  | `GH_EnvironmentSecret` | No          | Environment contains this secret.        |
 | `GH_Owns`     | `GH_Organization` | `GH_Repository`        | Yes         | Organization owns this repository.       |
@@ -136,6 +138,15 @@ These edges connect repositories to their resources.
 | `GH_HasSecret`             | `GH_Environment`| `GH_EnvironmentSecret`   | No          | Environment has this secret.                   |
 | `GH_HasSecretScanningAlert`| `GH_Repository` | `GH_SecretScanningAlert` | No          | Repository has this secret scanning alert.     |
 
+### App Installation Edges
+
+These edges connect GitHub Apps to their installations and installations to accessible repositories.
+
+| Edge Type                  | Source               | Target                | Traversable | Description                                                |
+|----------------------------|----------------------|-----------------------|-------------|------------------------------------------------------------|
+| `GH_InstalledAs`           | `GH_App`             | `GH_AppInstallation`  | Yes         | App is installed as this installation on an organization.  |
+| `GH_CanAccess`             | `GH_AppInstallation` | `GH_Repository`       | No          | App installation can access this repository.               |
+
 ### Identity Provider Edges
 
 These edges connect SAML/SCIM identity providers to external identities.
@@ -212,6 +223,7 @@ The following edges are marked as "traversable" and form the primary attack path
 | Edge Type             | Description                                        |
 |-----------------------|----------------------------------------------------|
 | `GH_HasRole`          | User/Team has a role assignment                    |
+| `GH_InstalledAs`      | App is installed as this installation              |
 | `GH_MemberOf`         | Team role membership or nested team membership     |
 | `GH_AddMember`        | Team role can add members (maintainer privilege)   |
 | `GH_HasBaseRole`      | Role inherits from another role                    |

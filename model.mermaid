@@ -5,6 +5,7 @@ config:
 flowchart TD
     AZFederatedIdentityCredential[fa:fa-id-card AZFederatedIdentityCredential]
     AZUser[fa:fa-user AZUser]
+    GH_App[fa:fa-cube GH_App]
     GH_AppInstallation[fa:fa-plug GH_AppInstallation]
     GH_Branch[fa:fa-code-branch GH_Branch]
     GH_BranchProtectionRule[fa:fa-shield GH_BranchProtectionRule]
@@ -31,6 +32,7 @@ flowchart TD
 
     style AZFederatedIdentityCredential fill:#FF80D2
     style AZUser fill:#FF80D2
+    style GH_App fill:#7EC8E3
     style GH_AppInstallation fill:#A8D8EA
     style GH_Branch fill:#FF80D2
     style GH_BranchProtectionRule fill:#FFB347
@@ -126,6 +128,10 @@ flowchart TD
     GH_Organization -.->|GH_Contains| GH_PersonalAccessToken
     GH_Organization -.->|GH_Contains| GH_PersonalAccessTokenRequest
     GH_PersonalAccessToken -.->|GH_CanAccess| GH_Repository
+
+    GH_App -->|GH_InstalledAs| GH_AppInstallation
+    GH_Organization -.->|GH_Contains| GH_AppInstallation
+    GH_AppInstallation -.->|GH_CanAccess| GH_Repository
 
     GH_Organization -.->|GH_HasSamlIdentityProvider| GH_SamlIdentityProvider
     GH_SamlIdentityProvider -.->|GH_HasExternalIdentity| GH_ExternalIdentity

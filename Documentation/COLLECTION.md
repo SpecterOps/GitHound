@@ -147,7 +147,7 @@ For organizations with thousands of repositories, collection can exceed the hour
 | Git-HoundOrganizationSecret  | REST    | Selected Secrets (S)     | 1 + S                                     | No               | No            |
 | Git-HoundSecret              | REST    | Repository Count (R)     | R (chunked)                               | Yes              | Yes           |
 | Git-HoundSecretScanningAlert | REST    | Alert Count              | ceil(Count / 100)                         | No               | No            |
-| Git-HoundAppInstallation              | REST    | None                     | 1                                         | No               | No            |
+| Git-HoundAppInstallation              | REST    | Installation Count (I)   | 1 + unique app slugs                      | No               | No            |
 | Git-HoundPersonalAccessToken          | REST    | PAT Count (P)            | ceil(P / 100)                             | No               | No            |
 | Git-HoundPersonalAccessTokenRequest   | REST    | Request Count            | ceil(Count / 100)                         | No               | No            |
 | Git-HoundGraphQlSamlProvider          | GraphQL | SAML Identities (I)      | ceil(I / 100)                             | No               | No            |
@@ -425,7 +425,7 @@ For maximum control and reliability in large environments, run each collection f
 
     ```powershell
     Write-Host "[*] Enumerating App Installations"
-    $appInstallations = $org.nodes[0] | Git-HoundAppInstallation -Session $Session
+    $appInstallations = $repos | Git-HoundAppInstallation -Session $Session -Organization $org.nodes[0]
     if($appInstallations.nodes) { $nodes.AddRange(@($appInstallations.nodes)) }
     if($appInstallations.edges) { $edges.AddRange(@($appInstallations.edges)) }
 
