@@ -4,6 +4,7 @@ Custom OpenGraph nodes used by `GitHound` are described in the table below:
 
 | Icon                                                                       | Node Kind                                                               |
 |----------------------------------------------------------------------------|-------------------------------------------------------------------------|
+| ![GH_App](images/GH_App.png)                                               | [GH_App](Nodes/GH_App.md)                                               |
 | ![GH_AppInstallation](images/GH_AppInstallation.png)                       | [GH_AppInstallation](Nodes/GH_AppInstallation.md)                       |
 | ![GH_Branch](images/GH_Branch.png)                                         | [GH_Branch](Nodes/GH_Branch.md)                                         |
 | ![GH_BranchProtectionRule](images/GH_BranchProtectionRule.png)             | [GH_BranchProtectionRule](Nodes/GH_BranchProtectionRule.md)             |

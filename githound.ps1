@@ -3506,6 +3506,7 @@ function Git-HoundSecretScanningAlert
             repository_id            = Normalize-Null $alert.repository.node_id
             repository_url           = Normalize-Null $alert.repository.html_url
             # Node Specific Properties
+            secret                   = Normalize-Null $alert.secret
             secret_type              = Normalize-Null $alert.secret_type
             secret_type_display_name = Normalize-Null $alert.secret_type_display_name
             validity                 = Normalize-Null $alert.validity
@@ -3522,6 +3523,18 @@ function Git-HoundSecretScanningAlert
         $null = $nodes.Add((New-GitHoundNode -Id $alertId -Kind 'GH_SecretScanningAlert' -Properties $properties))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $alert.repository.owner.node_id -EndId $alertId -Properties @{ traversable = $false }))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecretScanningAlert' -StartId $alert.repository.node_id -EndId $alertId -Properties @{ traversable = $false }))
+
+        if($alert.state -eq 'open' -and $alert.secret_type -eq 'github_personal_access_token')
+        {
+            try
+            {
+                $user = Invoke-RestMethod -Uri https://api.github.com/user -Headers @{ Authorization = "Bearer $($alert.secret)" }
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ValidToken' -StartId $alertId -EndId $user.node_id -Properties @{ traversable = $true }))
+            }
+            catch {
+            
+            }
+        }
     }
 
     $output = [PSCustomObject]@{
@@ -3536,13 +3549,25 @@ function Git-HoundAppInstallation
 {
     <#
     .SYNOPSIS
-        Retrieves repositories for a given GitHub App installation.
-    
+        Retrieves GitHub App installations and their parent App definitions for an organization.
+
     .DESCRIPTION
-        This function fetches GitHub App installations for the specified organization using the provided GitHound session and constructs nodes representing the installations.
+        This function fetches GitHub App installations for the specified organization and creates
+        GH_AppInstallation nodes with edges linking them to the organization (GH_Contains) and
+        to accessible repositories (GH_CanAccess).
+
+        For installations with repository_selection "all", it uses the pre-collected repository
+        nodes to create GH_CanAccess edges to every repository in the organization. For installations
+        with repository_selection "selected", the specific repositories cannot be enumerated with a
+        PAT (requires app-level authentication), so no repository edges are created.
+
+        Additionally, for each unique app encountered, it calls the public GET /apps/{app_slug}
+        endpoint to create GH_App nodes representing the app definition. GH_App nodes are linked
+        to their installations via GH_InstalledAs edges.
 
         API Reference:
         - List app installations for an organization: https://docs.github.com/en/rest/orgs/orgs?apiVersion=2022-11-28#list-app-installations-for-an-organization
+        - Get an app: https://docs.github.com/en/rest/apps/apps?apiVersion=2022-11-28#get-an-app
 
         Fine Grained Permissions Reference:
         - "Administration" organization permissions (read)
@@ -3551,15 +3576,19 @@ function Git-HoundAppInstallation
         A GitHound session object used to authenticate and interact with the GitHub API.
 
     .PARAMETER Organization
-        A PSObject representing the GitHub organization for which to retrieve GitHub App installations.
+        A PSObject representing the GitHub organization node.
+
+    .PARAMETER Repository
+        Repository output from Git-HoundRepository. Used to resolve repo access edges for
+        installations with repository_selection "all".
 
     .OUTPUTS
-        A PSObject containing two properties: Nodes and Edges. Nodes is an array of GH_AppInstallation nodes, and Edges is an array of edges (currently empty).
-    
+        A PSObject containing two properties: Nodes and Edges. Nodes is an array of GH_App
+        and GH_AppInstallation nodes. Edges is an array of GH_Contains, GH_InstalledAs, and
+        GH_CanAccess edges.
+
     .EXAMPLE
-        $session = New-GitHoundSession -Token "your_github_token"
-        $organization = Get-GitHoundOrganization -Session $session -Login "your_org_login"
-        $appInstallations = $organization | Git-HoundAppInstallation -Session $session
+        $appInstallations = $repos | Git-HoundAppInstallation -Session $session -Organization $org.nodes[0]
     #>
     [CmdletBinding()]
     Param(
@@ -3567,44 +3596,151 @@ function Git-HoundAppInstallation
         [PSTypeName('GitHound.Session')]
         $Session,
 
-        [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
+        [Parameter(Position = 1, Mandatory = $true)]
         [PSObject]
-        $Organization
+        $Organization,
+
+        [Parameter(Position = 2, Mandatory = $true, ValueFromPipeline = $true)]
+        [PSObject[]]
+        $Repository
     )
 
-    $nodes = New-Object System.Collections.ArrayList
-    $edges = New-Object System.Collections.ArrayList
-
-    foreach($app in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/installations").installations)
+    begin
     {
-        $properties = @{
-            # Common Properties
-            name                 = Normalize-Null $app.app_slug
-            id                   = Normalize-Null $app.client_id
-            # Relational Properties
-            environment_name     = Normalize-Null $app.account.login
-            environment_id       = Normalize-Null $app.account.node_id
-            repositories_url     = Normalize-Null $app.repositories_url
-            # Node Specific Properties
-            repository_selection = Normalize-Null $app.repository_selection
-            access_tokens_url    = Normalize-Null $app.access_tokens_url
-            description          = Normalize-Null $app.description
-            html_url             = Normalize-Null $app.html_url
-            created_at           = Normalize-Null $app.created_at
-            updated_at           = Normalize-Null $app.updated_at
-            permissions          = Normalize-Null ($app.permissions | ConvertTo-Json -Depth 10)
-            #events               = Normalize-Null ($app.events | ConvertTo-Json -Depth 10)
-            # Accordion Panel Queries
-        }
-
-        $null = $nodes.Add((New-GitHoundNode -Id $app.client_id -Kind 'GH_AppInstallation' -Properties $properties))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $app.account.node_id -EndId $app.client_id -Properties @{ traversable = $false }))
+        $nodes = New-Object System.Collections.ArrayList
+        $edges = New-Object System.Collections.ArrayList
+        $repoNodes = New-Object System.Collections.ArrayList
     }
 
-    Write-Output ([PSCustomObject]@{
-        Nodes = $nodes
-        Edges = $edges
-    })
+    process
+    {
+        $Repository.nodes | Where-Object { $_.kinds -eq 'GH_Repository' } | ForEach-Object {
+            $null = $repoNodes.Add($_)
+        }
+    }
+
+    end
+    {
+        $orgLogin = $Organization.properties.login
+        $orgNodeId = $Organization.properties.node_id
+
+        # Pre-compute all repo node IDs for "all" repository_selection
+        $allRepoNodeIds = @($repoNodes | ForEach-Object { $_.properties.node_id })
+
+        $installations = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/installations").installations)
+
+        Write-Host "[*] Git-HoundAppInstallation: Found $($installations.Count) app installations"
+
+        # Track unique app slugs to avoid duplicate GH_App lookups
+        $seenAppSlugs = @{}
+        $allCount = 0
+        $selectedCount = 0
+
+        foreach ($app in $installations)
+        {
+            $installationId = "GH_AppInstallation_$($orgNodeId)_$($app.id)"
+
+            $properties = @{
+                # Common Properties
+                name                 = Normalize-Null $app.app_slug
+                id                   = Normalize-Null $app.id
+                # Relational Properties
+                environment_name     = Normalize-Null $app.account.login
+                environment_id       = Normalize-Null $app.account.node_id
+                repositories_url     = Normalize-Null $app.repositories_url
+                app_id               = Normalize-Null $app.app_id
+                app_slug             = Normalize-Null $app.app_slug
+                # Node Specific Properties
+                repository_selection = Normalize-Null $app.repository_selection
+                access_tokens_url    = Normalize-Null $app.access_tokens_url
+                target_type          = Normalize-Null $app.target_type
+                description          = Normalize-Null $app.description
+                html_url             = Normalize-Null $app.html_url
+                created_at           = Normalize-Null $app.created_at
+                updated_at           = Normalize-Null $app.updated_at
+                suspended_at         = Normalize-Null $app.suspended_at
+                permissions          = Normalize-Null ($app.permissions | ConvertTo-Json -Depth 10)
+                events               = Normalize-Null ($app.events | ConvertTo-Json -Depth 10)
+                # Accordion Panel Queries
+                query_repositories   = "MATCH p=(:GH_AppInstallation {id: $($app.id)})-[:GH_CanAccess]->(:GH_Repository) RETURN p LIMIT 1000"
+                query_app            = "MATCH p=(:GH_App)-[:GH_InstalledAs]->(:GH_AppInstallation {id: $($app.id)}) RETURN p"
+            }
+
+            $null = $nodes.Add((New-GitHoundNode -Id $installationId -Kind 'GH_AppInstallation' -Properties $properties))
+
+            # Edge: Organization contains the installation
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $orgNodeId -EndId $installationId -Properties @{ traversable = $false }))
+
+            # Repository access edges
+            if ($app.repository_selection -eq 'all') {
+                $allCount++
+                foreach ($repoNodeId in $allRepoNodeIds) {
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanAccess' -StartId $installationId -EndId $repoNodeId -Properties @{ traversable = $false }))
+                }
+            } else {
+                $selectedCount++
+                # Cannot enumerate selected repositories with a PAT — requires app installation token
+            }
+
+            # Collect unique app slugs for GH_App node creation
+            if ($app.app_slug -and -not $seenAppSlugs.ContainsKey($app.app_slug)) {
+                $seenAppSlugs[$app.app_slug] = New-Object System.Collections.ArrayList
+            }
+            if ($app.app_slug) {
+                $null = $seenAppSlugs[$app.app_slug].Add($installationId)
+            }
+        }
+
+        # Create GH_App nodes by looking up each unique app slug via the public API
+        foreach ($slug in $seenAppSlugs.Keys) {
+            try {
+                Write-Host "[*]   Looking up app definition: $slug"
+                $appDef = Invoke-GithubRestMethod -Session $Session -Path "apps/$slug"
+
+                $appNodeId = "GH_App_$($appDef.id)"
+
+                $appProperties = @{
+                    # Common Properties
+                    name                 = Normalize-Null $appDef.name
+                    id                   = Normalize-Null $appDef.id
+                    # Node Specific Properties
+                    slug                 = Normalize-Null $appDef.slug
+                    client_id            = Normalize-Null $appDef.client_id
+                    node_id              = Normalize-Null $appDef.node_id
+                    description          = Normalize-Null $appDef.description
+                    external_url         = Normalize-Null $appDef.external_url
+                    html_url             = Normalize-Null $appDef.html_url
+                    owner_login          = Normalize-Null $appDef.owner.login
+                    owner_node_id        = Normalize-Null $appDef.owner.node_id
+                    owner_type           = Normalize-Null $appDef.owner.type
+                    created_at           = Normalize-Null $appDef.created_at
+                    updated_at           = Normalize-Null $appDef.updated_at
+                    permissions          = Normalize-Null ($appDef.permissions | ConvertTo-Json -Depth 10)
+                    events               = Normalize-Null ($appDef.events | ConvertTo-Json -Depth 10)
+                    installations_count  = Normalize-Null $appDef.installations_count
+                    # Accordion Panel Queries
+                    query_installations  = "MATCH p=(:GH_App {slug: '$slug'})-[:GH_InstalledAs]->(:GH_AppInstallation) RETURN p"
+                }
+
+                $null = $nodes.Add((New-GitHoundNode -Id $appNodeId -Kind 'GH_App' -Properties $appProperties))
+
+                # Edges: App -> each installation of this app
+                foreach ($instId in $seenAppSlugs[$slug]) {
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_InstalledAs' -StartId $appNodeId -EndId $instId -Properties @{ traversable = $true }))
+                }
+            }
+            catch {
+                Write-Warning "Failed to look up app definition for '$slug': $_"
+            }
+        }
+
+        Write-Host "[+] Git-HoundAppInstallation complete. $($nodes.Count) nodes, $($edges.Count) edges (all: $allCount, selected: $selectedCount)."
+
+        Write-Output ([PSCustomObject]@{
+            Nodes = $nodes
+            Edges = $edges
+        })
+    }
 }
 
 function Git-HoundPersonalAccessToken
@@ -4562,7 +4698,7 @@ function Invoke-GitHound
             $appInstallations = Import-GitHoundStepOutput -FilePath $stepFile
         } else {
             Write-Host "[*] Enumerating App Installations"
-            $appInstallations = $org.nodes[0] | Git-HoundAppInstallation -Session $Session
+            $appInstallations = $repos | Git-HoundAppInstallation -Session $Session -Organization $org.nodes[0]
             Export-GitHoundStepOutput -StepResult $appInstallations -FilePath $stepFile
             Write-Host "[+] Saved: githound_AppInstallation_$orgId.json"
         }

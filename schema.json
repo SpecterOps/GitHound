@@ -142,6 +142,14 @@
       "color": "0x8A8F98"
     },
     {
+      "name": "GH_App",
+      "display_name": "GitHub App",
+      "description": "A GitHub App definition representing the registered application. The app owner controls the private key used to generate installation tokens.",
+      "is_display_kind": true,
+      "icon": "cube",
+      "color": "0x7EC8E3"
+    },
+    {
       "name": "GH_AppInstallation",
       "display_name": "GitHub App Installation",
       "description": "A GitHub App installed on the organization with specific permissions and repository access",
@@ -458,8 +466,13 @@
       "is_traversable": false
     },
     {
+      "name": "GH_InstalledAs",
+      "description": "GitHub App is installed as this app installation on an organization",
+      "is_traversable": true
+    },
+    {
       "name": "GH_CanAccess",
-      "description": "Personal access token can access this repository",
+      "description": "Personal access token or app installation can access this repository or organization",
       "is_traversable": false
     }
   ],
