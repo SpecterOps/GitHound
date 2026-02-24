@@ -142,18 +142,42 @@
       "color": "0x8A8F98"
     },
     {
+      "name": "GH_App",
+      "display_name": "GitHub App",
+      "description": "A GitHub App definition representing the registered application. The app owner controls the private key used to generate installation tokens.",
+      "is_display_kind": true,
+      "icon": "cube",
+      "color": "0x7EC8E3"
+    },
+    {
       "name": "GH_AppInstallation",
       "display_name": "GitHub App Installation",
       "description": "A GitHub App installed on the organization with specific permissions and repository access",
       "is_display_kind": true,
       "icon": "plug",
       "color": "0xA8D8EA"
+    },
+    {
+      "name": "GH_PersonalAccessToken",
+      "display_name": "GitHub Personal Access Token",
+      "description": "A fine-grained personal access token granted access to organization resources",
+      "is_display_kind": true,
+      "icon": "key",
+      "color": "0xF5A623"
+    },
+    {
+      "name": "GH_PersonalAccessTokenRequest",
+      "display_name": "GitHub Personal Access Token Request",
+      "description": "A pending request from an organization member to access organization resources with a fine-grained personal access token",
+      "is_display_kind": true,
+      "icon": "key",
+      "color": "0xD4A017"
     }
   ],
   "relationship_kinds": [
     {
       "name": "GH_Contains",
-      "description": "Container relationship for organizational hierarchy (org contains users, teams, roles, secrets, etc.)",
+      "description": "Container relationship for organizational hierarchy (org contains secrets, repo contains secrets, environment contains secrets)",
       "is_traversable": false
     },
     {
@@ -182,23 +206,18 @@
       "is_traversable": true
     },
     {
-      "name": "GH_CanPull",
-      "description": "Repo role can clone/pull the repository",
-      "is_traversable": true
-    },
-    {
       "name": "GH_ReadRepoContents",
       "description": "Repo role can read repository contents",
-      "is_traversable": true
-    },
-    {
-      "name": "GH_CanPush",
-      "description": "Repo role can push to the repository",
       "is_traversable": false
     },
     {
       "name": "GH_WriteRepoContents",
       "description": "Repo role can write repository contents",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_WriteRepoPullRequests",
+      "description": "Repo role can create and merge pull requests",
       "is_traversable": false
     },
     {
@@ -217,28 +236,68 @@
       "is_traversable": false
     },
     {
-      "name": "GH_EditRepoProtections",
-      "description": "Repo role can modify or remove branch protection rules",
+      "name": "GH_ManageWebhooks",
+      "description": "Repo role can manage repository webhooks",
       "is_traversable": false
     },
     {
-      "name": "GH_CanCreateBranch",
-      "description": "Repo role (or user/team via per-rule allowance) can create new branches in the repository (computed from permissions + branch protection rule state)",
-      "is_traversable": true
+      "name": "GH_ManageDeployKeys",
+      "description": "Repo role can manage deploy keys",
+      "is_traversable": false
     },
     {
-      "name": "GH_CanWriteBranch",
-      "description": "Repo role (or user/team via per-rule allowance) can push to this branch or all branches in the repository (computed from permissions + branch protection rule state)",
-      "is_traversable": true
+      "name": "GH_PushProtectedBranch",
+      "description": "Repo role can push to protected branches",
+      "is_traversable": false
     },
     {
-      "name": "GH_CanEditProtection",
-      "description": "Repo role can modify or remove this branch protection rule (computed from edit_repo_protections or admin permission)",
+      "name": "GH_DeleteAlertsCodeScanning",
+      "description": "Repo role can delete code scanning alerts",
       "is_traversable": false
     },
     {
       "name": "GH_ViewSecretScanningAlerts",
-      "description": "Repo role can view secret scanning alerts",
+      "description": "Role can view secret scanning alerts",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_RunOrgMigration",
+      "description": "Repo role can run organization migrations",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_BypassBranchProtection",
+      "description": "Repo role can bypass branch protection rules",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ManageSecurityProducts",
+      "description": "Repo role can manage security products",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ManageRepoSecurityProducts",
+      "description": "Repo role can manage repo-level security products",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_EditRepoProtections",
+      "description": "Repo role can edit branch protection rules",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_JumpMergeQueue",
+      "description": "Repo role can jump the merge queue",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_CreateSoloMergeQueueEntry",
+      "description": "Repo role can create solo merge queue entries",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_EditRepoCustomPropertiesValue",
+      "description": "Repo role can edit custom property values on the repository",
       "is_traversable": false
     },
     {
@@ -282,6 +341,61 @@
       "is_traversable": false
     },
     {
+      "name": "GH_OrgReviewAndManageSecretScanningBypassRequests",
+      "description": "Org role can review and manage secret scanning bypass requests",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_OrgReviewAndManageSecretScanningClosureRequests",
+      "description": "Org role can review and manage secret scanning closure requests",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ReadOrganizationActionsUsageMetrics",
+      "description": "Org role can read Actions usage metrics",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ReadOrganizationCustomOrgRole",
+      "description": "Org role can read custom org role definitions",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ReadOrganizationCustomRepoRole",
+      "description": "Org role can read custom repo role definitions",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ResolveSecretScanningAlerts",
+      "description": "Org role can resolve secret scanning alerts",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_WriteOrganizationActionsSecrets",
+      "description": "Org role can write Actions secrets",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_WriteOrganizationActionsSettings",
+      "description": "Org role can write Actions settings",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_WriteOrganizationCustomOrgRole",
+      "description": "Org role can write custom org role definitions",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_WriteOrganizationCustomRepoRole",
+      "description": "Org role can write custom repo role definitions",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_WriteOrganizationNetworkConfigurations",
+      "description": "Org role can write network configurations",
+      "is_traversable": false
+    },
+    {
       "name": "GH_BypassPullRequestAllowances",
       "description": "User or team can bypass pull request requirements on a branch protection rule",
       "is_traversable": false
@@ -294,7 +408,7 @@
     {
       "name": "GH_HasBranch",
       "description": "Repository has this branch",
-      "is_traversable": false
+      "is_traversable": true
     },
     {
       "name": "GH_ProtectedBy",
@@ -309,7 +423,7 @@
     {
       "name": "GH_HasEnvironment",
       "description": "Repository or branch has/can deploy to this environment",
-      "is_traversable": false
+      "is_traversable": true
     },
     {
       "name": "GH_HasSecret",
@@ -342,14 +456,34 @@
       "is_traversable": true
     },
     {
-      "name": "GH_CanAssumeAWSRole",
-      "description": "GitHub repository, branch, or environment can assume an AWS IAM role via OIDC federation",
+      "name": "SCIMProvisioned",
+      "description": "SCIM user is provisioned and mapped to a GitHub user",
       "is_traversable": true
     },
     {
       "name": "CanAssumeIdentity",
       "description": "GitHub repository, branch, or environment can assume an Azure federated identity via OIDC",
       "is_traversable": true
+    },
+    {
+      "name": "GH_HasPersonalAccessToken",
+      "description": "User owns this personal access token that has been granted access to the organization",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_HasPersonalAccessTokenRequest",
+      "description": "User has a pending personal access token request for the organization",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_InstalledAs",
+      "description": "GitHub App is installed as this app installation on an organization",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_CanAccess",
+      "description": "Personal access token or app installation can access this repository or organization",
+      "is_traversable": false
     }
   ],
   "environments": [

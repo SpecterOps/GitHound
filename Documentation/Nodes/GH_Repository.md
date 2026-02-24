@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHRepository.png" width="50"/> GH_Repository
+# <img src="../images/GH_Repository.png" width="50"/> GH_Repository
 
 Represents a GitHub repository within the organization. Repository nodes capture metadata about the repo including visibility, Actions enablement status, and security configuration. Repository role nodes (GH_RepoRole) are created alongside each repository to represent the permission levels available.
 
@@ -77,8 +77,6 @@ flowchart TD
     GH_RepoSecret[fa:fa-lock GH_RepoSecret]
     GH_SecretScanningAlert[fa:fa-key GH_SecretScanningAlert]
     GH_RepoRole[fa:fa-user-tie GH_RepoRole]
-    GH_User[fa:fa-user GH_User]
-    GH_Team[fa:fa-user-group GH_Team]
     AWSRole[fa:fa-user-tag AWSRole]
     AZFederatedIdentityCredential[fa:fa-id-card AZFederatedIdentityCredential]
 
@@ -93,28 +91,28 @@ flowchart TD
     style GH_RepoSecret fill:#32BEE6
     style GH_SecretScanningAlert fill:#3C7A6E
     style GH_RepoRole fill:#DEFEFA
-    style AWSRole fill:#FF8E40
     style AZFederatedIdentityCredential fill:#FF80D2
+
+    GH_PersonalAccessToken[fa:fa-key GH_PersonalAccessToken]
+
+    style GH_PersonalAccessToken fill:#F5A623
 
     GH_Organization -.->|GH_Owns| GH_Repository
     GH_Repository -.->|GH_HasBranch| GH_Branch
     GH_Repository -.->|GH_HasWorkflow| GH_Workflow
     GH_Repository -.->|GH_HasEnvironment| GH_Environment
-    GH_Repository -->|GH_HasSecret| GH_OrgSecret
+    GH_Repository -.->|GH_HasSecret| GH_OrgSecret
     GH_Repository -.->|GH_Contains| GH_RepoSecret
     GH_Repository -->|GH_HasSecret| GH_RepoSecret
     GH_Repository -.->|GH_HasSecretScanningAlert| GH_SecretScanningAlert
-    GH_RepoRole -.->|GH_CanPull| GH_Repository
     GH_RepoRole -.->|GH_ReadRepoContents| GH_Repository
-    GH_RepoRole -.->|GH_CanPush| GH_Repository
     GH_RepoRole -.->|GH_WriteRepoContents| GH_Repository
-    GH_RepoRole -->|GH_AdminTo| GH_Repository
-    GH_RepoRole -.->|GH_ViewSecretScanningAlerts| GH_Repository
+    GH_RepoRole -.->|GH_AdminTo| GH_Repository
     GH_RepoRole -.->|GH_BypassBranchProtection| GH_Repository
-    GH_RepoRole -.->|GH_PushProtectedBranch| GH_Repository
     GH_RepoRole -.->|GH_EditRepoProtections| GH_Repository
-    GH_RepoRole -->|GH_CanCreateBranch| GH_Repository
-    GH_RepoRole -->|GH_CanWriteBranch| GH_Repository
+    GH_RepoRole -.->|GH_ViewSecretScanningAlerts| GH_Repository
+    GH_RepoRole -.->|GH_BypassProtections| GH_Repository
+    GH_RepoRole -.->|GH_EditProtections| GH_Repository
     GH_Repository -.->|GH_CanAssumeAWSRole| AWSRole
     GH_Repository -->|CanAssumeIdentity| AZFederatedIdentityCredential
 ```

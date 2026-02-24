@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHTeam.png" width="50"/> GH_Team
+# <img src="../images/GH_Team.png" width="50"/> GH_Team
 
 Represents a GitHub team within the organization. Teams can have parent-child relationships, contain members with different roles (Member, Maintainer), and be assigned to repository roles.
 
@@ -23,13 +23,13 @@ Created by: `Git-HoundTeam`
 
 ### Outbound Edges
 
-| Edge Kind            | Target Node             | Traversable | Description                                                           |
-| -------------------- | ----------------------- | ----------- | --------------------------------------------------------------------- |
-| GH_MemberOf          | GH_Team                 | Yes         | Team is a child of a parent team.                                     |
-| GH_HasRole           | GH_OrgRole              | Yes         | Team is assigned to a custom organization role.                       |
-| GH_HasRole           | GH_RepoRole             | Yes         | Team is assigned to a repository role (from Git-HoundRepositoryRole). |
-| GH_CanCreateBranch   | GH_Repository           | Yes         | Team can create new branches via per-rule allowance (computed — delta only, when role alone doesn't grant access). |
-| GH_CanWriteBranch    | GH_Branch or GH_Repository | Yes      | Team can push via per-rule allowance (computed — delta only, when role alone doesn't grant access). |
+| Edge Kind                      | Target Node             | Traversable | Description                                                           |
+| ------------------------------ | ----------------------- | ----------- | --------------------------------------------------------------------- |
+| GH_MemberOf                     | GH_Team                  | Yes         | Team is a child of a parent team.                                     |
+| GH_HasRole                      | GH_OrgRole               | Yes         | Team is assigned to a custom organization role.                       |
+| GH_HasRole                      | GH_RepoRole              | Yes         | Team is assigned to a repository role (from Git-HoundRepositoryRole). |
+| GH_BypassPullRequestAllowances | GH_BranchProtectionRule | No          | Team can bypass PR requirements on this protection rule.              |
+| GH_RestrictionsCanPush          | GH_BranchProtectionRule | No          | Team is allowed to push to branches protected by this rule.           |
 
 ### Inbound Edges
 
@@ -46,25 +46,19 @@ flowchart TD
     GH_OrgRole[fa:fa-user-tie GH_OrgRole]
     GH_RepoRole[fa:fa-user-tie GH_RepoRole]
     GH_TeamRole[fa:fa-user-tie GH_TeamRole]
-    GH_Repository[fa:fa-box-archive GH_Repository]
     GH_Branch[fa:fa-code-branch GH_Branch]
-    GH_BranchProtectionRule[fa:fa-shield GH_BranchProtectionRule]
 
     style GH_Team fill:#C06EFF
     style GH_OrgRole fill:#BFFFD1
     style GH_RepoRole fill:#DEFEFA
     style GH_TeamRole fill:#D0B0FF
-    style GH_Repository fill:#9EECFF
     style GH_Branch fill:#FF80D2
-    style GH_BranchProtectionRule fill:#FFB347
 
     GH_Team -->|GH_MemberOf| GH_Team
     GH_Team -->|GH_HasRole| GH_OrgRole
     GH_Team -->|GH_HasRole| GH_RepoRole
     GH_Team -.->|GH_BypassPullRequestAllowances| GH_Branch
     GH_Team -.->|GH_RestrictionsCanPush| GH_Branch
-    GH_Team -->|GH_CanCreateBranch| GH_Repository
-    GH_Team -->|GH_CanWriteBranch| GH_Branch
     GH_TeamRole -->|GH_MemberOf| GH_Team
     GH_TeamRole -->|GH_AddMember| GH_Team
 ```

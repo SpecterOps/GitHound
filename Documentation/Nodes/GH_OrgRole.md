@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHOrgRole.png" width="50"/> GH_OrgRole
+# <img src="../images/GH_OrgRole.png" width="50"/> GH_OrgRole
 
 Represents an organization-level role such as Owner, Member, or a custom organization role. Org roles define what permissions a user or team has at the organization level. The Owner and Member roles are default (built-in), while custom roles inherit from a base role and can have additional permissions.
 
@@ -30,20 +30,20 @@ Created by: `Git-HoundOrganization`
 | GH_HasBaseRole                                     | GH_RepoRole     | Yes         | Role inherits access to all repositories via an `all_repo_*` role (e.g., Owners → all_repo_admin). |
 | GH_HasBaseRole                                     | GH_OrgRole      | Yes         | Custom role inherits from a base org role.                                                         |
 | GH_ManageOrganizationWebhooks                      | GH_Organization | No          | Custom role permission.                                                                            |
-| GHWriteOrganizationActionsSecrets                 | GH_Organization | No          | Custom role permission.                                                                            |
-| GHWriteOrganizationActionsSettings                | GH_Organization | No          | Custom role permission.                                                                            |
-| GH_ViewSecretScanningAlerts                        | GH_Organization | No          | Custom role permission.                                                                            |
-| GHResolveSecretScanningAlerts                     | GH_Organization | No          | Custom role permission.                                                                            |
-| GHReadOrganizationActionsUsageMetrics             | GH_Organization | No          | Custom role permission.                                                                            |
-| GHReadOrganizationCustomOrgRole                   | GH_Organization | No          | Custom role permission.                                                                            |
-| GHReadOrganizationCustomRepoRole                  | GH_Organization | No          | Custom role permission.                                                                            |
-| GHWriteOrganizationCustomOrgRole                  | GH_Organization | No          | Custom role permission.                                                                            |
-| GHWriteOrganizationCustomRepoRole                 | GH_Organization | No          | Custom role permission.                                                                            |
-| GHWriteOrganizationNetworkConfigurations          | GH_Organization | No          | Custom role permission.                                                                            |
-| GH_OrgBypassCodeScanningDismissalRequests          | GH_Organization | No          | Custom role permission.                                                                            |
-| GH_OrgBypassSecretScanningClosureRequests          | GH_Organization | No          | Custom role permission.                                                                            |
-| GHOrgReviewAndManageSecretScanningBypassRequests  | GH_Organization | No          | Custom role permission.                                                                            |
-| GHOrgReviewAndManageSecretScanningClosureRequests | GH_Organization | No          | Custom role permission.                                                                            |
+| GH_WriteOrganizationActionsSecrets                       | GH_Organization | No          | Custom role permission.                                                                            |
+| GH_WriteOrganizationActionsSettings                      | GH_Organization | No          | Custom role permission.                                                                            |
+| GH_ViewSecretScanningAlerts                              | GH_Organization | No          | Custom role permission.                                                                            |
+| GH_ResolveSecretScanningAlerts                           | GH_Organization | No          | Custom role permission.                                                                            |
+| GH_ReadOrganizationActionsUsageMetrics                   | GH_Organization | No          | Custom role permission.                                                                            |
+| GH_ReadOrganizationCustomOrgRole                         | GH_Organization | No          | Custom role permission.                                                                            |
+| GH_ReadOrganizationCustomRepoRole                        | GH_Organization | No          | Custom role permission.                                                                            |
+| GH_WriteOrganizationCustomOrgRole                        | GH_Organization | No          | Custom role permission.                                                                            |
+| GH_WriteOrganizationCustomRepoRole                       | GH_Organization | No          | Custom role permission.                                                                            |
+| GH_WriteOrganizationNetworkConfigurations                | GH_Organization | No          | Custom role permission.                                                                            |
+| GH_OrgBypassCodeScanningDismissalRequests                | GH_Organization | No          | Custom role permission.                                                                            |
+| GH_OrgBypassSecretScanningClosureRequests                | GH_Organization | No          | Custom role permission.                                                                            |
+| GH_OrgReviewAndManageSecretScanningBypassRequests        | GH_Organization | No          | Custom role permission.                                                                            |
+| GH_OrgReviewAndManageSecretScanningClosureRequests       | GH_Organization | No          | Custom role permission.                                                                            |
 
 ### Inbound Edges
 
@@ -79,6 +79,5 @@ flowchart TD
     GH_OrgRole -.->|GH_AddCollaborator| GH_Organization
     GH_OrgRole -.->|GH_CreateTeam| GH_Organization
     GH_OrgRole -.->|GH_TransferRepository| GH_Organization
-    GH_OrgRole -->|GH_HasBaseRole| GH_Organization
     GH_OrgRole -->|GH_HasBaseRole| GH_RepoRole
 ```

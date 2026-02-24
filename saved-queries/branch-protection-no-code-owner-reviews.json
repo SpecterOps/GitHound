@@ -1,0 +1,5 @@
+{
+  "name": "Branch Protection Rules - No Code Owner Reviews",
+  "query": "MATCH p=(:GH_BranchProtectionRule {require_code_owner_reviews: false})-[:GH_ProtectedBy]->(:GH_Branch) RETURN p",
+  "description": "Finds branches where code owner reviews are not required. Changes to security-critical paths can be merged without authorization from the designated code owners."
+}
