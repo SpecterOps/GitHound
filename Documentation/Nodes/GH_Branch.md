@@ -26,11 +26,13 @@ Created by: `Git-HoundBranch`
 
 ### Inbound Edges
 
-| Edge Kind        | Source Node             | Traversable | Description                                                                               |
-| ---------------- | ----------------------- | ----------- | ----------------------------------------------------------------------------------------- |
-| GH_HasBranch     | GH_Repository           | Yes         | Repository has this branch.                                                               |
-| GH_ProtectedBy   | GH_BranchProtectionRule | Yes         | Branch protection rule protects this branch.                                              |
-| GH_HasEnvironment| GH_Branch               | No          | Branch has a deployment environment via custom branch policy (from Git-HoundEnvironment). |
+| Edge Kind         | Source Node             | Traversable | Description                                                                               |
+| ----------------- | ----------------------- | ----------- | ----------------------------------------------------------------------------------------- |
+| GH_HasBranch      | GH_Repository           | Yes         | Repository has this branch.                                                               |
+| GH_ProtectedBy    | GH_BranchProtectionRule | Yes         | Branch protection rule protects this branch.                                              |
+| GH_HasEnvironment | GH_Branch               | No          | Branch has a deployment environment via custom branch policy (from Git-HoundEnvironment). |
+| GH_CanWriteBranch | GH_RepoRole             | Yes         | Repo role can push to this branch (computed from permissions + branch protection rules).     |
+| GH_CanWriteBranch | GH_User or GH_Team      | Yes         | User or team can push to this branch via per-rule allowance (computed — delta only).         |
 
 ## Diagram
 
@@ -41,12 +43,14 @@ flowchart TD
     GH_BranchProtectionRule[fa:fa-shield GH_BranchProtectionRule]
     GH_Environment[fa:fa-leaf GH_Environment]
     AWSRole[fa:fa-user-tag AWSRole]
+    GH_RepoRole[fa:fa-user-tie GH_RepoRole]
     AZFederatedIdentityCredential[fa:fa-id-card AZFederatedIdentityCredential]
 
     style GH_Branch fill:#FF80D2
     style GH_Repository fill:#9EECFF
     style GH_BranchProtectionRule fill:#FFB347
     style GH_Environment fill:#D5F2C2
+    style GH_RepoRole fill:#DEFEFA
     style AWSRole fill:#FF8E40
     style AZFederatedIdentityCredential fill:#FF80D2
 
@@ -55,4 +59,5 @@ flowchart TD
     GH_Branch -.->|GH_HasEnvironment| GH_Environment
     GH_Branch -.->|GH_CanAssumeAWSRole| AWSRole
     GH_Branch -->|CanAssumeIdentity| AZFederatedIdentityCredential
+    GH_RepoRole -->|GH_CanWriteBranch| GH_Branch
 ```

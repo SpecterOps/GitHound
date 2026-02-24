@@ -26,7 +26,6 @@ Created by: `Git-HoundEnvironment`
 | Edge Kind         | Target Node                   | Traversable | Description                                                                          |
 | ----------------- | ----------------------------- | ----------- | ------------------------------------------------------------------------------------ |
 | GH_Contains        | GH_EnvironmentSecret           | No          | Environment contains an environment-level secret.                                    |
-| GH_HasSecret       | GH_EnvironmentSecret           | No          | Environment has an environment-level secret.                                         |
 | CanAssumeIdentity | AZFederatedIdentityCredential | Yes         | Environment can assume an Azure federated identity via OIDC (subject: environment:{envName}). |
 
 ### Inbound Edges
@@ -57,7 +56,6 @@ flowchart TD
     GH_Repository -.->|GH_HasEnvironment| GH_Environment
     GH_Branch -.->|GH_HasEnvironment| GH_Environment
     GH_Environment -.->|GH_Contains| GH_EnvironmentSecret
-    GH_Environment -.->|GH_HasSecret| GH_EnvironmentSecret
     GH_Environment -.->|GH_CanAssumeAWSRole| AWSRole
     GH_Environment -->|CanAssumeIdentity| AZFederatedIdentityCredential
 ```

@@ -756,6 +756,7 @@ function Git-HoundOrganization
 
     $org = Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Session.OrganizationName)"
     $actions = Invoke-GithubRestMethod -Session $session -Path "orgs/$($Session.OrganizationName)/actions/permissions"
+    $workflowPerms = Invoke-GithubRestMethod -Session $session -Path "orgs/$($Session.OrganizationName)/actions/permissions/workflow"
 
     $properties = [pscustomobject]@{
         # Common Properties
@@ -819,6 +820,8 @@ function Git-HoundOrganization
         actions_enabled_repositories                                 = Normalize-Null $actions.enabled_repositories
         actions_allowed_actions                                      = Normalize-Null $actions.allowed_actions
         actions_sha_pinning_required                                 = Normalize-Null $actions.sha_pinning_required
+        default_workflow_permissions                                 = Normalize-Null $workflowPerms.default_workflow_permissions
+        can_approve_pull_request_reviews                             = Normalize-Null $workflowPerms.can_approve_pull_request_reviews
         # Accordion Panel Queries
         query_users                                    = "MATCH (n:GH_User {environment_id:'$($org.node_id)}) RETURN n"
         query_teams                                    = "MATCH (n:GH_Team {environment_id:'$($org.node_id)}) RETURN n"
@@ -1607,7 +1610,7 @@ function Git-HoundRepository
             query_repository       = "MATCH p=(:GH_RepoRole {id:'$($repoAdminId)'})-[*]->(:GH_Repository) RETURN p"
         }
         $null = $nodes.Add((New-GitHoundNode -Id $repoAdminId -Kind 'GH_RepoRole', 'GH_Role' -Properties $repoAdminProps))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AdminTo' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AdminTo' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$true}))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoMetadata' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoContents' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteRepoContents' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
@@ -1787,7 +1790,8 @@ function Git-HoundRepository
 
             foreach($permission in $customRepoRole.permissions)
             {
-                $null = $edges.Add((New-GitHoundEdge -Kind "GH$(ConvertTo-PascalCase -String $permission)" -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false}))
+                $edgeKind = "GH_$(ConvertTo-PascalCase -String $permission)"
+                $null = $edges.Add((New-GitHoundEdge -Kind $edgeKind -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false}))
             }
         }
 
@@ -2230,7 +2234,7 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
                     short_name         = Normalize-Null $ref.name
                     commit_hash        = Normalize-Null $ref.target.oid
                     protected          = Normalize-Null ($null -ne $rule)
-                    query_branch_write = "MATCH p=(:GH_User)-[:GH_CanWriteBranch|GH_CanEditAndWriteBranch]->(:GH_Branch {objectid:'$($branchId)'}) RETURN p"
+                    query_branch_write = "MATCH p1=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_CanWriteBranch]->(b:GH_Branch {objectid:'$($branchId.ToUpper())'}) OPTIONAL MATCH p2=(b)<-[:GH_CanWriteBranch]-(:GH_User) RETURN p1, p2"
                 }
 
                 $null = $nodes.Add((New-GitHoundNode -Id $branchId -Kind GH_Branch -Properties $props))
@@ -2317,7 +2321,7 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
                     short_name         = Normalize-Null $ref.name
                     commit_hash        = Normalize-Null $ref.target.oid
                     protected          = Normalize-Null ($null -ne $rule)
-                    query_branch_write = "MATCH p=(:GH_User)-[:GH_CanWriteBranch|GH_CanEditAndWriteBranch]->(:GH_Branch {objectid:'$($branchId)'}) RETURN p"
+                    query_branch_write = "MATCH p1=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_CanWriteBranch]->(b:GH_Branch {objectid:'$($branchId.ToUpper())'}) OPTIONAL MATCH p2=(b)<-[:GH_CanWriteBranch]-(:GH_User) RETURN p1, p2"
                 }
 
                 $null = $nodes.Add((New-GitHoundNode -Id $branchId -Kind GH_Branch -Properties $props))
@@ -2374,6 +2378,7 @@ query ProtectionRulesByIds($ids: [ID!]!) {
             pattern
             isAdminEnforced
             lockBranch
+            blocksCreations
             requiresApprovingReviews
             requiredApprovingReviewCount
             requiresCodeOwnerReviews
@@ -2438,6 +2443,7 @@ query ProtectionRulesByIds($ids: [ID!]!) {
                     pattern                         = Normalize-Null $rule.pattern
                     enforce_admins                  = Normalize-Null $rule.isAdminEnforced
                     lock_branch                     = Normalize-Null $rule.lockBranch
+                    blocks_creations                = Normalize-Null $rule.blocksCreations
                     required_pull_request_reviews   = Normalize-Null $rule.requiresApprovingReviews
                     required_approving_review_count = Normalize-Null $rule.requiredApprovingReviewCount
                     require_code_owner_reviews      = Normalize-Null $rule.requiresCodeOwnerReviews
@@ -2508,6 +2514,700 @@ query ProtectionRulesByIds($ids: [ID!]!) {
     $output = [PSCustomObject]@{
         Nodes = $nodes
         Edges = $edges
+    }
+
+    Write-Output $output
+}
+
+function Compute-GitHoundBranchAccess
+{
+    <#
+    .SYNOPSIS
+        Computes effective branch access edges from accumulated collection data.
+
+    .DESCRIPTION
+        This function evaluates effective push access by cross-referencing role permissions
+        with branch protection rule (BPR) settings and per-rule allowances. It produces
+        traversable computed edges that represent the final evaluated access:
+
+        - GH_CanCreateBranch (User/Team -> Repository): Actor can create new branches
+        - GH_CanWriteBranch  (User/Team -> Branch or Repository): Actor can push to branch(es)
+        - GH_CanEditProtection (User/Team -> BPR): Actor can modify/remove this BPR (non-traversable)
+
+        The computation evaluates two independent gates per branch:
+
+        Merge gate (PR reviews, lock branch):
+          Bypassed by: bypass_branch_protection (suppressed by enforce_admins),
+                       bypassPullRequestAllowances (PR reviews only, suppressed by enforce_admins)
+
+        Push gate (push restrictions, blocks creations):
+          Bypassed by: admin, push_protected_branch, pushAllowances
+          NOT affected by enforce_admins
+
+        This function makes no API calls — it is a pure in-memory computation over
+        previously collected nodes and edges.
+
+    .PARAMETER Nodes
+        ArrayList of all accumulated nodes from prior collection steps.
+
+    .PARAMETER Edges
+        ArrayList of all accumulated edges from prior collection steps.
+
+    .OUTPUTS
+        PSCustomObject with Nodes (empty) and Edges (computed edges).
+
+    .EXAMPLE
+        $result = Compute-GitHoundBranchAccess -Nodes $nodes -Edges $edges
+    #>
+    Param(
+        [Parameter(Mandatory = $true)]
+        [System.Collections.ArrayList]
+        $Nodes,
+
+        [Parameter(Mandatory = $true)]
+        [System.Collections.ArrayList]
+        $Edges
+    )
+
+    $computedEdges = New-Object System.Collections.ArrayList
+    $emittedEdges = @{} # Deduplication: "actorId|targetId|edgeKind" -> $true
+
+    # ── Phase 1: Build indexes ─────────────────────────────────────────────
+
+    Write-Host "[*]   Phase 1: Building indexes from $($Nodes.Count) nodes and $($Edges.Count) edges..."
+
+    # Node lookup by ID
+    $nodeById = @{}
+    foreach ($node in $Nodes) {
+        if ($node.id) {
+            $nodeById[$node.id] = $node
+        }
+    }
+
+    # Edge direction indexes: outbound["kind|startId"] -> [endIds], inbound["kind|endId"] -> [startIds]
+    $outbound = @{}
+    $inbound = @{}
+    foreach ($edge in $Edges) {
+        $startId = $edge.start.value
+        $endId = $edge.end.value
+        $kind = $edge.kind
+
+        $outKey = "$kind|$startId"
+        if (-not $outbound.ContainsKey($outKey)) {
+            $outbound[$outKey] = New-Object System.Collections.ArrayList
+        }
+        $null = $outbound[$outKey].Add($endId)
+
+        $inKey = "$kind|$endId"
+        if (-not $inbound.ContainsKey($inKey)) {
+            $inbound[$inKey] = New-Object System.Collections.ArrayList
+        }
+        $null = $inbound[$inKey].Add($startId)
+    }
+
+    # Repo -> Branches mapping (from GH_HasBranch edges)
+    $repoBranches = @{}
+    foreach ($edge in $Edges) {
+        if ($edge.kind -eq 'GH_HasBranch') {
+            $repoId = $edge.start.value
+            if (-not $repoBranches.ContainsKey($repoId)) {
+                $repoBranches[$repoId] = New-Object System.Collections.ArrayList
+            }
+            $null = $repoBranches[$repoId].Add($edge.end.value)
+        }
+    }
+
+    # Branch -> BPR mapping (from GH_ProtectedBy edges: BPR -> Branch)
+    $branchToBPR = @{}
+    foreach ($edge in $Edges) {
+        if ($edge.kind -eq 'GH_ProtectedBy') {
+            $branchToBPR[$edge.end.value] = $edge.start.value
+        }
+    }
+
+    # BPR -> Repo mapping (derived: BPR -> ProtectedBy -> Branch -> HasBranch -> Repo)
+    $bprToRepo = @{}
+    foreach ($branchId in $branchToBPR.Keys) {
+        $bprId = $branchToBPR[$branchId]
+        if (-not $bprToRepo.ContainsKey($bprId)) {
+            # Find which repo this branch belongs to via inbound GH_HasBranch
+            $hasBranchKey = "GH_HasBranch|$branchId"
+            if ($inbound.ContainsKey($hasBranchKey)) {
+                $bprToRepo[$bprId] = $inbound[$hasBranchKey][0]
+            }
+        }
+    }
+
+    # Role -> Permissions mapping (from permission edges: Role -> Repo)
+    $rolePermissions = @{}
+    $roleToRepo = @{}
+    $permissionEdgeKinds = @('GH_WriteRepoContents', 'GH_AdminTo', 'GH_PushProtectedBranch',
+                              'GH_BypassBranchProtection', 'GH_EditRepoProtections')
+    foreach ($edge in $Edges) {
+        if ($edge.kind -in $permissionEdgeKinds) {
+            $roleId = $edge.start.value
+            if (-not $rolePermissions.ContainsKey($roleId)) {
+                $rolePermissions[$roleId] = New-Object System.Collections.Generic.HashSet[string]
+            }
+            $null = $rolePermissions[$roleId].Add($edge.kind)
+            $roleToRepo[$roleId] = $edge.end.value
+        }
+    }
+
+    # Per-rule allowance actors (from GH_RestrictionsCanPush and GH_BypassPullRequestAllowances edges)
+    $pushAllowanceActors = @{}
+    $bypassPRActors = @{}
+    foreach ($edge in $Edges) {
+        if ($edge.kind -eq 'GH_RestrictionsCanPush') {
+            $bprId = $edge.end.value
+            if (-not $pushAllowanceActors.ContainsKey($bprId)) {
+                $pushAllowanceActors[$bprId] = New-Object System.Collections.Generic.HashSet[string]
+            }
+            $null = $pushAllowanceActors[$bprId].Add($edge.start.value)
+        }
+        elseif ($edge.kind -eq 'GH_BypassPullRequestAllowances') {
+            $bprId = $edge.end.value
+            if (-not $bypassPRActors.ContainsKey($bprId)) {
+                $bypassPRActors[$bprId] = New-Object System.Collections.Generic.HashSet[string]
+            }
+            $null = $bypassPRActors[$bprId].Add($edge.start.value)
+        }
+    }
+
+    # Collect all repos (nodes with GH_Repository kind)
+    $repoIds = New-Object System.Collections.ArrayList
+    foreach ($node in $Nodes) {
+        if ($node.kinds -contains 'GH_Repository') {
+            $null = $repoIds.Add($node.id)
+        }
+    }
+
+    # Collect all BPR nodes per repo
+    $repoBPRs = @{}
+    foreach ($node in $Nodes) {
+        if ($node.kinds -contains 'GH_BranchProtectionRule') {
+            $bprId = $node.id
+            if ($bprToRepo.ContainsKey($bprId)) {
+                $repoId = $bprToRepo[$bprId]
+                if (-not $repoBPRs.ContainsKey($repoId)) {
+                    $repoBPRs[$repoId] = New-Object System.Collections.ArrayList
+                }
+                $null = $repoBPRs[$repoId].Add($bprId)
+            }
+        }
+    }
+
+    Write-Host "[*]   Phase 1 complete. $($repoIds.Count) repos, $($repoBranches.Count) repos with branches, $($branchToBPR.Count) protected branches."
+
+    # ── Phase 2: Build role full permission sets ─────────────────────────
+
+    Write-Host "[*]   Phase 2: Resolving role permissions..."
+
+    # Helper: Get all roles that inherit from a given role (reverse-transitive closure of GH_HasBaseRole)
+    # GH_HasBaseRole goes from child -> parent (child inherits from parent)
+    # We want: given a parent role, find all child roles that inherit from it
+    function Get-InheritingRoles {
+        param([string]$RoleId, [hashtable]$VisitedRoles)
+        if ($VisitedRoles.ContainsKey($RoleId)) { return @() }
+        $VisitedRoles[$RoleId] = $true
+
+        $result = @($RoleId)
+        $inKey = "GH_HasBaseRole|$RoleId"
+        if ($inbound.ContainsKey($inKey)) {
+            foreach ($childRoleId in $inbound[$inKey]) {
+                $result += Get-InheritingRoles -RoleId $childRoleId -VisitedRoles $VisitedRoles
+            }
+        }
+        return $result
+    }
+
+    # Helper: Collect full permission set for a role by following outbound GH_HasBaseRole (forward traversal)
+    # A role inherits all permissions from its base roles
+    function Get-BaseRolePerms {
+        param([string]$RoleId, [hashtable]$Visited)
+        if ($Visited.ContainsKey($RoleId)) { return @() }
+        $Visited[$RoleId] = $true
+
+        $perms = @()
+        if ($rolePermissions.ContainsKey($RoleId)) {
+            $perms = @($rolePermissions[$RoleId])
+        }
+
+        # Follow outbound GH_HasBaseRole to collect inherited perms
+        $outKey = "GH_HasBaseRole|$RoleId"
+        if ($outbound.ContainsKey($outKey)) {
+            foreach ($baseRoleId in $outbound[$outKey]) {
+                $perms += Get-BaseRolePerms -RoleId $baseRoleId -Visited $Visited
+            }
+        }
+        return $perms
+    }
+
+    # Build: $roleFullPerms[roleId] = HashSet of ALL permission edge kinds (direct + inherited)
+    # Build: $repoWriteRoles[repoId] = list of roleIds with write access
+    $roleFullPerms = @{}
+    $repoWriteRoles = @{}
+
+    # Collect all roles that have any direct permission edges
+    $allPermRoleIds = New-Object System.Collections.Generic.HashSet[string]
+    foreach ($roleId in $rolePermissions.Keys) {
+        $null = $allPermRoleIds.Add($roleId)
+    }
+
+    # Also find roles that inherit from permissioned roles (they might have their own perms too)
+    # We need all RepoRole nodes that map to a repo
+    foreach ($node in $Nodes) {
+        if ($node.kinds -contains 'GH_RepoRole') {
+            $null = $allPermRoleIds.Add($node.id)
+        }
+    }
+
+    foreach ($roleId in $allPermRoleIds) {
+        if ($roleFullPerms.ContainsKey($roleId)) { continue }
+
+        $perms = Get-BaseRolePerms -RoleId $roleId -Visited @{}
+        $permSet = New-Object System.Collections.Generic.HashSet[string]
+        foreach ($p in $perms) { $null = $permSet.Add($p) }
+        $roleFullPerms[$roleId] = $permSet
+
+        # Determine which repo this role grants access to
+        $repoId = $roleToRepo[$roleId]
+        if (-not $repoId) {
+            # This role might not have direct perm edges but inherits from one that does
+            # Follow HasBaseRole forward to find the repo
+            $outKey = "GH_HasBaseRole|$roleId"
+            if ($outbound.ContainsKey($outKey)) {
+                foreach ($baseId in $outbound[$outKey]) {
+                    if ($roleToRepo.ContainsKey($baseId)) {
+                        $repoId = $roleToRepo[$baseId]
+                        break
+                    }
+                }
+            }
+        }
+        if (-not $repoId) { continue }
+
+        $hasWrite = $permSet.Contains('GH_WriteRepoContents') -or $permSet.Contains('GH_AdminTo')
+        if ($hasWrite) {
+            if (-not $repoWriteRoles.ContainsKey($repoId)) {
+                $repoWriteRoles[$repoId] = New-Object System.Collections.ArrayList
+            }
+            $null = $repoWriteRoles[$repoId].Add($roleId)
+        }
+    }
+
+    # Build: $actorRepoRoles[repoId][actorId] = [leaf roleIds the actor reaches on this repo]
+    # Needed for Phase 3b to compute delta for per-actor allowance edges
+    $actorRepoRoles = @{}
+
+    foreach ($roleId in $rolePermissions.Keys) {
+        $repoId = $roleToRepo[$roleId]
+        if (-not $repoId) { continue }
+
+        # Find all roles that eventually inherit from this role
+        $allRoles = Get-InheritingRoles -RoleId $roleId -VisitedRoles @{}
+
+        foreach ($roleInChain in $allRoles) {
+            # Find actors (Users/Teams) with GH_HasRole to this role
+            $hasRoleKey = "GH_HasRole|$roleInChain"
+            if (-not $inbound.ContainsKey($hasRoleKey)) { continue }
+
+            foreach ($actorId in $inbound[$hasRoleKey]) {
+                $actorNode = $nodeById[$actorId]
+                if (-not $actorNode) { continue }
+                if ($actorNode.kinds -notcontains 'GH_User' -and $actorNode.kinds -notcontains 'GH_Team') { continue }
+
+                if (-not $actorRepoRoles.ContainsKey($repoId)) {
+                    $actorRepoRoles[$repoId] = @{}
+                }
+                if (-not $actorRepoRoles[$repoId].ContainsKey($actorId)) {
+                    $actorRepoRoles[$repoId][$actorId] = New-Object System.Collections.Generic.HashSet[string]
+                }
+                # Map actor to the leaf role (the one with direct permission edges)
+                $null = $actorRepoRoles[$repoId][$actorId].Add($roleId)
+            }
+        }
+    }
+
+    $totalRoleRepoPairs = 0
+    foreach ($repoId in $repoWriteRoles.Keys) {
+        $totalRoleRepoPairs += $repoWriteRoles[$repoId].Count
+    }
+    Write-Host "[*]   Phase 2 complete. $totalRoleRepoPairs role-repo write pairs resolved."
+
+    # ── Phase 3a: Role-level computed edges ────────────────────────────────
+
+    Write-Host "[*]   Phase 3a: Computing role-level access edges..."
+
+    # Helper: Check if a BPR boolean property is true (handles both boolean and string after Normalize-Null)
+    function Test-BPRProperty {
+        param($Value)
+        if ($Value -is [bool]) { return $Value }
+        if ($Value -is [string]) { return $Value -eq 'True' }
+        return $false
+    }
+
+    # Helper: Emit a computed edge with deduplication
+    function Add-ComputedEdge {
+        param(
+            [string]$Kind,
+            [string]$StartId,
+            [string]$EndId,
+            [hashtable]$Properties
+        )
+        $dedupKey = "$StartId|$EndId|$Kind"
+        if ($emittedEdges.ContainsKey($dedupKey)) { return }
+        $emittedEdges[$dedupKey] = $true
+        $null = $computedEdges.Add((New-GitHoundEdge -Kind $Kind -StartId $StartId -EndId $EndId -Properties $Properties))
+    }
+
+    # Helper: Evaluate branch gates for a permission set (role-level, no per-actor allowances)
+    # Returns: hashtable { accessible = [branchIds]; reasons = @{ branchId = reason } }
+    function Invoke-RoleGateEvaluation {
+        param(
+            [System.Collections.Generic.HashSet[string]]$Perms,
+            [System.Collections.ArrayList]$Branches,
+            [hashtable]$BranchToBPR
+        )
+
+        $hasAdmin = $Perms.Contains('GH_AdminTo')
+        $hasPushProtected = $Perms.Contains('GH_PushProtectedBranch')
+        $hasBypassBranch = $Perms.Contains('GH_BypassBranchProtection')
+
+        $accessible = New-Object System.Collections.ArrayList
+        $reasons = @{}
+
+        foreach ($branchId in $Branches) {
+            $bprId = if ($BranchToBPR.ContainsKey($branchId)) { $BranchToBPR[$branchId] } else { $null }
+
+            if (-not $bprId) {
+                $null = $accessible.Add($branchId)
+                $reasons[$branchId] = 'no_protection'
+                continue
+            }
+
+            $bprNode = $nodeById[$bprId]
+            if (-not $bprNode) {
+                $null = $accessible.Add($branchId)
+                $reasons[$branchId] = 'no_protection'
+                continue
+            }
+            $bp = $bprNode.properties
+
+            $enforceAdmins = Test-BPRProperty $bp.enforce_admins
+            $hasPRReviews = Test-BPRProperty $bp.required_pull_request_reviews
+            $hasLockBranch = Test-BPRProperty $bp.lock_branch
+            $hasPushRestrictions = Test-BPRProperty $bp.push_restrictions
+
+            # ── Evaluate merge gate ──
+            $mergeGateBlocked = $hasPRReviews -or $hasLockBranch
+            $passesMergeGate = $false
+            $mergeReason = $null
+
+            if (-not $mergeGateBlocked) {
+                $passesMergeGate = $true
+            }
+            elseif ($hasAdmin -and -not $enforceAdmins) {
+                $passesMergeGate = $true
+                $mergeReason = 'admin'
+            }
+            elseif ($hasBypassBranch -and -not $enforceAdmins) {
+                $passesMergeGate = $true
+                $mergeReason = 'bypass_branch_protection'
+            }
+            # Note: bypassPRAllowances is per-actor, not evaluated here (handled in Phase 3b)
+
+            # ── Evaluate push gate ──
+            $pushGateBlocked = $hasPushRestrictions
+            $passesPushGate = $false
+            $pushReason = $null
+
+            if (-not $pushGateBlocked) {
+                $passesPushGate = $true
+            }
+            elseif ($hasAdmin) {
+                $passesPushGate = $true
+                $pushReason = 'admin'
+            }
+            elseif ($hasPushProtected) {
+                $passesPushGate = $true
+                $pushReason = 'push_protected_branch'
+            }
+            # Note: pushAllowances is per-actor, not evaluated here (handled in Phase 3b)
+
+            # ── Combined result ──
+            if ($passesMergeGate -and $passesPushGate) {
+                $null = $accessible.Add($branchId)
+                if ($mergeReason -and $pushReason) {
+                    $reasons[$branchId] = $mergeReason
+                }
+                elseif ($mergeReason) {
+                    $reasons[$branchId] = $mergeReason
+                }
+                elseif ($pushReason) {
+                    $reasons[$branchId] = $pushReason
+                }
+                else {
+                    $reasons[$branchId] = 'no_protection'
+                }
+            }
+        }
+
+        return @{ accessible = $accessible; reasons = $reasons }
+    }
+
+    # Track role-level accessible branches for Phase 3b delta computation
+    $roleAccessibleBranches = @{}
+    # Track whether each role got GH_CanCreateBranch for Phase 3b
+    $roleCanCreate = @{}
+
+    foreach ($repoId in $repoIds) {
+        if (-not $repoWriteRoles.ContainsKey($repoId)) { continue }
+
+        if ($repoBranches.ContainsKey($repoId)) { $branches = $repoBranches[$repoId] } else { $branches = @() }
+        if ($repoBPRs.ContainsKey($repoId)) { $bprs = $repoBPRs[$repoId] } else { $bprs = @() }
+
+        # Find the wildcard (*) BPR with push_restrictions + blocks_creations
+        $wildcardBlockingBPR = $null
+        foreach ($bprId in $bprs) {
+            $bprNode = $nodeById[$bprId]
+            if (-not $bprNode) { continue }
+            $p = $bprNode.properties
+            if ($p.pattern -eq '*' -and (Test-BPRProperty $p.push_restrictions) -and (Test-BPRProperty $p.blocks_creations)) {
+                $wildcardBlockingBPR = $bprNode
+                break
+            }
+        }
+
+        foreach ($roleId in $repoWriteRoles[$repoId]) {
+            $perms = $roleFullPerms[$roleId]
+            $hasAdmin = $perms.Contains('GH_AdminTo')
+            $hasPushProtected = $perms.Contains('GH_PushProtectedBranch')
+            $hasBypassBranch = $perms.Contains('GH_BypassBranchProtection')
+            $hasEditProtections = $perms.Contains('GH_EditRepoProtections')
+
+            # ── GH_CanEditProtection (role -> each BPR on this repo) ──
+            if ($hasEditProtections -or $hasAdmin) {
+                foreach ($bprId in $bprs) {
+                    Add-ComputedEdge -Kind 'GH_CanEditProtection' -StartId $roleId -EndId $bprId `
+                        -Properties @{ traversable = $false; reason = 'edit_repo_protections';
+                            query_composition = "MATCH p1=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[:GH_EditRepoProtections|GH_AdminTo]->(:GH_Repository) OPTIONAL MATCH p2=(:GH_BranchProtectionRule {objectid:'$($bprId.ToUpper())'})-[:GH_ProtectedBy]->(:GH_Branch) RETURN p1, p2" }
+                }
+            }
+
+            # ── GH_CanCreateBranch (role -> repo) ──
+            $roleCanCreate[$roleId] = $false
+            if (-not $wildcardBlockingBPR) {
+                Add-ComputedEdge -Kind 'GH_CanCreateBranch' -StartId $roleId -EndId $repoId `
+                    -Properties @{ traversable = $true; reason = 'no_protection';
+                        query_composition = "MATCH p=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[]->(:GH_Repository {objectid:'$($repoId.ToUpper())'}) RETURN p" }
+                $roleCanCreate[$roleId] = $true
+            }
+            else {
+                $wildcardBPRId = $wildcardBlockingBPR.properties.id
+                if ($hasAdmin) {
+                    Add-ComputedEdge -Kind 'GH_CanCreateBranch' -StartId $roleId -EndId $repoId `
+                        -Properties @{ traversable = $true; reason = 'admin';
+                            query_composition = "MATCH p1=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[]->(r:GH_Repository {objectid:'$($repoId.ToUpper())'}) OPTIONAL MATCH p2=(r)-[:GH_HasBranch]->(:GH_Branch)<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule {pattern:'*'}) RETURN p1, p2" }
+                    $roleCanCreate[$roleId] = $true
+                }
+                elseif ($hasPushProtected) {
+                    Add-ComputedEdge -Kind 'GH_CanCreateBranch' -StartId $roleId -EndId $repoId `
+                        -Properties @{ traversable = $true; reason = 'push_protected_branch';
+                            query_composition = "MATCH p1=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[]->(r:GH_Repository {objectid:'$($repoId.ToUpper())'}) OPTIONAL MATCH p2=(r)-[:GH_HasBranch]->(:GH_Branch)<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule {pattern:'*'}) RETURN p1, p2" }
+                    $roleCanCreate[$roleId] = $true
+                }
+            }
+
+            # ── GH_CanWriteBranch (role -> branch or repo) ──
+            $gateResult = Invoke-RoleGateEvaluation -Perms $perms -Branches $branches -BranchToBPR $branchToBPR
+            $accessibleBranches = $gateResult.accessible
+            $branchReasons = $gateResult.reasons
+
+            $roleAccessibleBranches[$roleId] = New-Object System.Collections.Generic.HashSet[string]
+            foreach ($bid in $accessibleBranches) {
+                $null = $roleAccessibleBranches[$roleId].Add($bid)
+            }
+
+            if ($branches.Count -gt 0 -and $accessibleBranches.Count -eq $branches.Count) {
+                $reason = if ($bprs.Count -eq 0) { 'no_protection' }
+                          elseif ($hasAdmin) { 'admin' }
+                          elseif ($hasPushProtected -and $hasBypassBranch) { 'push_protected_branch' }
+                          elseif ($hasPushProtected) { 'push_protected_branch' }
+                          elseif ($hasBypassBranch) { 'bypass_branch_protection' }
+                          else { 'no_protection' }
+
+                Add-ComputedEdge -Kind 'GH_CanWriteBranch' -StartId $roleId -EndId $repoId `
+                    -Properties @{ traversable = $true; reason = $reason;
+                        query_composition = "MATCH p1=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[]->(r:GH_Repository {objectid:'$($repoId.ToUpper())'}) OPTIONAL MATCH p2=(r)-[:GH_HasBranch]->(:GH_Branch)<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule) RETURN p1, p2" }
+            }
+            elseif ($accessibleBranches.Count -gt 0) {
+                foreach ($branchId in $accessibleBranches) {
+                    $reason = $branchReasons[$branchId]
+                    Add-ComputedEdge -Kind 'GH_CanWriteBranch' -StartId $roleId -EndId $branchId `
+                        -Properties @{ traversable = $true; reason = $reason;
+                            query_composition = "MATCH p1=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[]->(:GH_Repository)-[:GH_HasBranch]->(b:GH_Branch {objectid:'$($branchId.ToUpper())'}) OPTIONAL MATCH p2=(b)<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule) RETURN p1, p2" }
+                }
+            }
+        }
+    }
+
+    Write-Host "[+]   Phase 3a complete. $($computedEdges.Count) role-level edges."
+
+    # ── Phase 3b: Per-actor allowance edges (delta only) ───────────────────
+
+    Write-Host "[*]   Phase 3b: Computing per-actor allowance edges..."
+
+    $allowanceEdgesBefore = $computedEdges.Count
+
+    foreach ($repoId in $repoIds) {
+        if ($repoBranches.ContainsKey($repoId)) { $branches = $repoBranches[$repoId] } else { $branches = @() }
+        if ($repoBPRs.ContainsKey($repoId)) { $bprs = $repoBPRs[$repoId] } else { $bprs = @() }
+        if ($branches.Count -eq 0 -and $bprs.Count -eq 0) { continue }
+
+        # Find the wildcard (*) BPR
+        $wildcardBlockingBPR = $null
+        foreach ($bprId in $bprs) {
+            $bprNode = $nodeById[$bprId]
+            if (-not $bprNode) { continue }
+            $p = $bprNode.properties
+            if ($p.pattern -eq '*' -and (Test-BPRProperty $p.push_restrictions) -and (Test-BPRProperty $p.blocks_creations)) {
+                $wildcardBlockingBPR = $bprNode
+                break
+            }
+        }
+
+        # Collect all actors who appear in per-rule allowances for BPRs on this repo
+        $allowanceActors = New-Object System.Collections.Generic.HashSet[string]
+        foreach ($bprId in $bprs) {
+            if ($pushAllowanceActors.ContainsKey($bprId)) {
+                foreach ($aid in $pushAllowanceActors[$bprId]) { $null = $allowanceActors.Add($aid) }
+            }
+            if ($bypassPRActors.ContainsKey($bprId)) {
+                foreach ($aid in $bypassPRActors[$bprId]) { $null = $allowanceActors.Add($aid) }
+            }
+        }
+
+        foreach ($actorId in $allowanceActors) {
+            # Find branches already covered by the actor's role-level edges
+            $coveredBranches = New-Object System.Collections.Generic.HashSet[string]
+            $actorRoleCanCreate = $false
+
+            if ($actorRepoRoles.ContainsKey($repoId) -and $actorRepoRoles[$repoId].ContainsKey($actorId)) {
+                foreach ($leafRoleId in $actorRepoRoles[$repoId][$actorId]) {
+                    if ($roleAccessibleBranches.ContainsKey($leafRoleId)) {
+                        foreach ($bid in $roleAccessibleBranches[$leafRoleId]) {
+                            $null = $coveredBranches.Add($bid)
+                        }
+                    }
+                    if ($roleCanCreate.ContainsKey($leafRoleId) -and $roleCanCreate[$leafRoleId]) {
+                        $actorRoleCanCreate = $true
+                    }
+                }
+            }
+
+            # Check if actor has write access (needed as prerequisite)
+            $actorHasWrite = $false
+            if ($actorRepoRoles.ContainsKey($repoId) -and $actorRepoRoles[$repoId].ContainsKey($actorId)) {
+                foreach ($leafRoleId in $actorRepoRoles[$repoId][$actorId]) {
+                    if ($roleFullPerms.ContainsKey($leafRoleId)) {
+                        $rp = $roleFullPerms[$leafRoleId]
+                        if ($rp.Contains('GH_WriteRepoContents') -or $rp.Contains('GH_AdminTo')) {
+                            $actorHasWrite = $true
+                            break
+                        }
+                    }
+                }
+            }
+            if (-not $actorHasWrite) { continue }
+
+            # ── GH_CanCreateBranch: delta for pushAllowances on wildcard BPR ──
+            if ($wildcardBlockingBPR -and -not $actorRoleCanCreate) {
+                $wildcardBPRId = $wildcardBlockingBPR.properties.id
+                $inPushAllowances = $pushAllowanceActors.ContainsKey($wildcardBPRId) -and $pushAllowanceActors[$wildcardBPRId].Contains($actorId)
+                if ($inPushAllowances) {
+                    Add-ComputedEdge -Kind 'GH_CanCreateBranch' -StartId $actorId -EndId $repoId `
+                        -Properties @{ traversable = $true; reason = 'push_allowance';
+                            query_composition = "MATCH p1=(a {objectid:'$($actorId.ToUpper())'})-[:GH_RestrictionsCanPush]->(:GH_BranchProtectionRule {pattern:'*'})-[:GH_ProtectedBy]->(:GH_Branch)<-[:GH_HasBranch]-(r:GH_Repository {objectid:'$($repoId.ToUpper())'}) OPTIONAL MATCH p2=(a)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[]->(r) RETURN p1, p2" }
+                }
+            }
+
+            # ── GH_CanWriteBranch: delta for branches not covered by role-level edges ──
+            $deltaAccessible = New-Object System.Collections.ArrayList
+            $deltaReasons = @{}
+
+            foreach ($branchId in $branches) {
+                if ($coveredBranches.Contains($branchId)) { continue }
+
+                $bprId = if ($branchToBPR.ContainsKey($branchId)) { $branchToBPR[$branchId] } else { $null }
+                if (-not $bprId) { continue } # Unprotected branches are always covered at role level
+
+                $bprNode = $nodeById[$bprId]
+                if (-not $bprNode) { continue }
+                $bp = $bprNode.properties
+
+                $enforceAdmins = Test-BPRProperty $bp.enforce_admins
+                $hasPRReviews = Test-BPRProperty $bp.required_pull_request_reviews
+                $hasLockBranch = Test-BPRProperty $bp.lock_branch
+                $hasPushRestrictions = Test-BPRProperty $bp.push_restrictions
+
+                # Re-evaluate merge gate considering bypassPRAllowances
+                $mergeGateBlocked = $hasPRReviews -or $hasLockBranch
+                $passesMergeGate = $false
+                $mergeReason = $null
+
+                if (-not $mergeGateBlocked) {
+                    $passesMergeGate = $true
+                }
+                elseif (-not $hasLockBranch -and -not $enforceAdmins) {
+                    $inBypassPR = $bypassPRActors.ContainsKey($bprId) -and $bypassPRActors[$bprId].Contains($actorId)
+                    if ($inBypassPR) {
+                        $passesMergeGate = $true
+                        $mergeReason = 'bypass_pr_allowance'
+                    }
+                }
+
+                # Re-evaluate push gate considering pushAllowances
+                $pushGateBlocked = $hasPushRestrictions
+                $passesPushGate = $false
+                $pushReason = $null
+
+                if (-not $pushGateBlocked) {
+                    $passesPushGate = $true
+                }
+                else {
+                    $inPushAllow = $pushAllowanceActors.ContainsKey($bprId) -and $pushAllowanceActors[$bprId].Contains($actorId)
+                    if ($inPushAllow) {
+                        $passesPushGate = $true
+                        $pushReason = 'push_allowance'
+                    }
+                }
+
+                if ($passesMergeGate -and $passesPushGate) {
+                    $null = $deltaAccessible.Add($branchId)
+                    if ($mergeReason) { $deltaReasons[$branchId] = $mergeReason }
+                    elseif ($pushReason) { $deltaReasons[$branchId] = $pushReason }
+                    else { $deltaReasons[$branchId] = 'no_protection' }
+                }
+            }
+
+            # Emit per-actor edges for the delta branches
+            foreach ($branchId in $deltaAccessible) {
+                $reason = $deltaReasons[$branchId]
+                Add-ComputedEdge -Kind 'GH_CanWriteBranch' -StartId $actorId -EndId $branchId `
+                    -Properties @{ traversable = $true; reason = $reason;
+                        query_composition = "MATCH p1=(a {objectid:'$($actorId.ToUpper())'})-[:GH_RestrictionsCanPush|GH_BypassPullRequestAllowances]->(:GH_BranchProtectionRule)-[:GH_ProtectedBy]->(b:GH_Branch {objectid:'$($branchId.ToUpper())'}) OPTIONAL MATCH p2=(a)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[]->(:GH_Repository)-[:GH_HasBranch]->(b) RETURN p1, p2" }
+            }
+        }
+    }
+
+    $allowanceEdges = $computedEdges.Count - $allowanceEdgesBefore
+    Write-Host "[+]   Phase 3b complete. $allowanceEdges per-actor allowance edges."
+    Write-Host "[+]   Total: $($computedEdges.Count) computed edges."
+
+    $output = [PSCustomObject]@{
+        Nodes = (New-Object System.Collections.ArrayList)
+        Edges = $computedEdges
     }
 
     Write-Output $output
@@ -2877,7 +3577,6 @@ function Git-HoundEnvironment
 
                     $null = $nodes.Add((New-GitHoundNode -Id $secretId -Kind 'GH_EnvironmentSecret' -Properties $properties))
                     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $environment.node_id -EndId $secretId -Properties @{ traversable = $false }))
-                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecret' -StartId $environment.node_id -EndId $secretId -Properties @{ traversable = $false }))
                 }
             }
         } -ThrottleLimit 25
@@ -3009,12 +3708,12 @@ function Git-HoundOrganizationSecret
             switch ($secret.visibility) {
                 'all' {
                     foreach ($repoNodeId in $allRepoNodeIds) {
-                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecret' -StartId $repoNodeId -EndId $secretId -Properties @{ traversable = $false }))
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecret' -StartId $repoNodeId -EndId $secretId -Properties @{ traversable = $true }))
                     }
                 }
                 'private' {
                     foreach ($repoNodeId in $privateRepoNodeIds) {
-                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecret' -StartId $repoNodeId -EndId $secretId -Properties @{ traversable = $false }))
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecret' -StartId $repoNodeId -EndId $secretId -Properties @{ traversable = $true }))
                     }
                 }
                 'selected' {
@@ -3023,7 +3722,7 @@ function Git-HoundOrganizationSecret
                     # https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-selected-repositories-for-an-organization-secret
                     $selectedRepos = (Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/secrets/$($secret.name)/repositories").repositories
                     foreach ($selectedRepo in $selectedRepos) {
-                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecret' -StartId $selectedRepo.node_id -EndId $secretId -Properties @{ traversable = $false }))
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecret' -StartId $selectedRepo.node_id -EndId $secretId -Properties @{ traversable = $true }))
                     }
                 }
             }
@@ -3208,7 +3907,7 @@ function Git-HoundSecret
 
                     $null = $nodes.Add((New-GitHoundNode -Id $secretId -Kind 'GH_RepoSecret' -Properties $properties))
                     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $repo.properties.node_id -EndId $secretId -Properties @{ traversable = $false }))
-                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecret' -StartId $repo.properties.node_id -EndId $secretId -Properties @{ traversable = $false }))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecret' -StartId $repo.properties.node_id -EndId $secretId -Properties @{ traversable = $true }))
                 }
             } -ThrottleLimit 25
 
@@ -4026,6 +4725,12 @@ function Invoke-GitHound
     }
     if($branches.nodes) { $nodes.AddRange(@($branches.nodes)) }
     if($branches.edges) { $edges.AddRange(@($branches.edges)) }
+
+    # ── Step 6.5: Compute Branch Access ──────────────────────────────────
+    Write-Host "[*] Computing effective branch access edges"
+    $branchAccess = Compute-GitHoundBranchAccess -Nodes $nodes -Edges $edges
+    if($branchAccess.edges) { $edges.AddRange(@($branchAccess.edges)) }
+    Write-Host "[+] Branch access computation complete. $($branchAccess.edges.Count) computed edges."
 
     # ── Step 7: Workflows (requires -CollectAll) ────────────────────────────
     if ($CollectAll) {

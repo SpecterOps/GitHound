@@ -91,7 +91,7 @@ flowchart TD
     GH_RepoRole -.->|GH_ReadRepoContents| GH_Repository
     GH_OrgRole -->|GH_HasBaseRole| GH_RepoRole
     GH_RepoRole -.->|GH_CanPush| GH_Repository
-    GH_RepoRole -.->|GH_WriteRepoContents| GH_Repository
+    GH_RepoRole -->|GH_WriteRepoContents| GH_Repository
     %%GH_RepoRole -.->|GHWriteRepoPullRequests| GH_Repository
     GH_RepoRole -->|GH_AdminTo| GH_Repository
     %%GH_RepoRole -.->|GHManageWebhooks| GH_Repository
@@ -110,12 +110,11 @@ flowchart TD
     GH_RepoRole -->|GH_HasBaseRole| GH_RepoRole
     GH_User -->|GH_HasRole| GH_RepoRole
     GH_Team -->|GH_HasRole| GH_RepoRole
-    GH_Repository -.->|GH_HasSecret| GH_OrgSecret
+    GH_Repository -->|GH_HasSecret| GH_OrgSecret
     GH_Repository -.->|GH_Contains| GH_RepoSecret
-    GH_Repository -.->|GH_HasSecret| GH_RepoSecret
+    GH_Repository -->|GH_HasSecret| GH_RepoSecret
     GH_Repository -.->|GH_HasSecretScanningAlert| GH_SecretScanningAlert
     GH_Environment -.->|GH_Contains| GH_EnvironmentSecret
-    GH_Environment -.->|GH_HasSecret| GH_EnvironmentSecret
 
     GH_Organization -.->|GH_HasSamlIdentityProvider| GH_SamlIdentityProvider
     GH_SamlIdentityProvider -.->|GH_HasExternalIdentity| GH_ExternalIdentity

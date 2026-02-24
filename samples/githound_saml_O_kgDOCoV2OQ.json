@@ -76,8 +76,8 @@
         },
         "end": {
           "value": "jatkinson@specterops.io",
-          "match_by": "name",
-          "kind": "OktaUser"
+          "kind": "OktaUser",
+          "match_by": "name"
         },
         "properties": {
           "traversable": false
@@ -99,8 +99,8 @@
         "kind": "SyncedToGHUser",
         "start": {
           "value": "jatkinson@specterops.io",
-          "match_by": "name",
-          "kind": "OktaUser"
+          "kind": "OktaUser",
+          "match_by": "name"
         },
         "end": {
           "value": "MDQ6VXNlcjEzMjc4MjEw"

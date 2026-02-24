@@ -29,6 +29,8 @@ Created by: `Git-HoundOrganization`
 | actions_enabled_repositories                   | string    | Which repositories have GitHub Actions enabled: `all`, `selected`, or `none`.                                                                                                                 |
 | actions_allowed_actions                        | string    | Which Actions are allowed to run: `all`, `local_only`, or `selected`.                                                                                                                         |
 | actions_sha_pinning_required                   | boolean   | Whether SHA pinning is required for GitHub Actions.                                                                                                                                           |
+| default_workflow_permissions                   | string    | Default `GITHUB_TOKEN` permissions for workflows: `read` or `write`. When `write`, workflows without an explicit `permissions:` block get a token with write access to the repository.        |
+| can_approve_pull_request_reviews               | boolean   | Whether GitHub Actions workflows can create and approve pull request reviews.                                                                                                                 |
 
 ## Edges
 

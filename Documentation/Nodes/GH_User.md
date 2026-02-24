@@ -26,11 +26,13 @@ Created by: `Git-HoundUser`
 
 ### Outbound Edges
 
-| Edge Kind | Target Node | Traversable | Description                                                                    |
-| --------- | ----------- | ----------- | ------------------------------------------------------------------------------ |
-| GH_HasRole | GH_OrgRole   | Yes         | User is assigned to an organization role (Owner or Member).                    |
-| GH_HasRole | GH_RepoRole  | Yes         | User is directly assigned to a repository role (from Git-HoundRepositoryRole). |
-| GH_HasRole | GH_TeamRole  | Yes         | User has a team role (Member or Maintainer).                                   |
+| Edge Kind              | Target Node             | Traversable | Description                                                                    |
+| ---------------------- | ----------------------- | ----------- | ------------------------------------------------------------------------------ |
+| GH_HasRole             | GH_OrgRole              | Yes         | User is assigned to an organization role (Owner or Member).                    |
+| GH_HasRole             | GH_RepoRole             | Yes         | User is directly assigned to a repository role (from Git-HoundRepositoryRole). |
+| GH_HasRole             | GH_TeamRole             | Yes         | User has a team role (Member or Maintainer).                                   |
+| GH_CanCreateBranch     | GH_Repository           | Yes         | User can create new branches via per-rule allowance (computed — delta only, when role alone doesn't grant access). |
+| GH_CanWriteBranch      | GH_Branch or GH_Repository | Yes      | User can push via per-rule allowance (computed — delta only, when role alone doesn't grant access). |
 
 ### Inbound Edges
 
@@ -46,7 +48,9 @@ flowchart TD
     GH_OrgRole[fa:fa-user-tie GH_OrgRole]
     GH_RepoRole[fa:fa-user-tie GH_RepoRole]
     GH_TeamRole[fa:fa-user-tie GH_TeamRole]
+    GH_Repository[fa:fa-box-archive GH_Repository]
     GH_Branch[fa:fa-code-branch GH_Branch]
+    GH_BranchProtectionRule[fa:fa-shield GH_BranchProtectionRule]
     GH_ExternalIdentity[fa:fa-arrows-left-right GH_ExternalIdentity]
     AZUser[fa:fa-user AZUser]
     OktaUser[fa:fa-user OktaUser]
@@ -56,7 +60,9 @@ flowchart TD
     style GH_OrgRole fill:#BFFFD1
     style GH_RepoRole fill:#DEFEFA
     style GH_TeamRole fill:#D0B0FF
+    style GH_Repository fill:#9EECFF
     style GH_Branch fill:#FF80D2
+    style GH_BranchProtectionRule fill:#FFB347
     style GH_ExternalIdentity fill:#8A8F98
     style AZUser fill:#FF80D2
     style OktaUser fill:#FFE4A1
@@ -67,6 +73,8 @@ flowchart TD
     GH_User -->|GH_HasRole| GH_RepoRole
     GH_User -.->|GH_BypassPullRequestAllowances| GH_Branch
     GH_User -.->|GH_RestrictionsCanPush| GH_Branch
+    GH_User -->|GH_CanCreateBranch| GH_Repository
+    GH_User -->|GH_CanWriteBranch| GH_Branch
     GH_ExternalIdentity -.->|GH_MapsToUser| GH_User
     AZUser -->|SyncedToGH_User| GH_User
     OktaUser -->|SyncedToGH_User| GH_User
