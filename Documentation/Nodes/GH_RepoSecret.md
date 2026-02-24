@@ -30,7 +30,7 @@ None
 | Edge Kind   | Source Node  | Traversable | Description                      |
 | ----------- | ------------ | ----------- | -------------------------------- |
 | GH_Contains  | GH_Repository | No          | Repository contains this secret. |
-| GH_HasSecret | GH_Repository | No          | Repository has this secret.      |
+| GH_HasSecret | GH_Repository | Yes         | Repository has this secret. Traversable because any user with write access to the repository can access repo secrets by creating a GitHub Actions workflow. |
 
 ## Diagram
 
@@ -43,5 +43,5 @@ flowchart TD
     style GH_Repository fill:#9EECFF
 
     GH_Repository -.->|GH_Contains| GH_RepoSecret
-    GH_Repository -.->|GH_HasSecret| GH_RepoSecret
+    GH_Repository -->|GH_HasSecret| GH_RepoSecret
 ```

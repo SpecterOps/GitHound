@@ -29,7 +29,6 @@ None
 | Edge Kind   | Source Node   | Traversable | Description                       |
 | ----------- | ------------- | ----------- | --------------------------------- |
 | GH_Contains  | GH_Environment | No          | Environment contains this secret. |
-| GH_HasSecret | GH_Environment | No          | Environment has this secret.      |
 
 ## Diagram
 
@@ -42,5 +41,4 @@ flowchart TD
     style GH_EnvironmentSecret fill:#6FB94A
 
     GH_Environment -.->|GH_Contains| GH_EnvironmentSecret
-    GH_Environment -.->|GH_HasSecret| GH_EnvironmentSecret
 ```

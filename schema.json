@@ -222,7 +222,17 @@
     },
     {
       "name": "GH_AdminTo",
-      "description": "Repo role has admin access to the repository",
+      "description": "Repo role has admin access to the repository. Traversable because admin confers full control.",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_BypassBranchProtection",
+      "description": "Repo role can bypass merge-gate branch protections (PR reviews, lock branch). Suppressed by enforce_admins.",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_PushProtectedBranch",
+      "description": "Repo role can push to branches with push restrictions. Not affected by enforce_admins.",
       "is_traversable": false
     },
     {
@@ -418,7 +428,7 @@
     {
       "name": "GH_HasSecret",
       "description": "Repository or environment has access to this secret",
-      "is_traversable": false
+      "is_traversable": true
     },
     {
       "name": "GH_HasSecretScanningAlert",

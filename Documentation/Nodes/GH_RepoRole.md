@@ -42,6 +42,9 @@ Created by: `Git-HoundRepository`
 | GH_CreateSoloMergeQueueEntry     | GH_Repository | No          | Admin role can create solo merge queue entries.                         |
 | GH_EditRepoCustomPropertiesValue | GH_Repository | No          | Admin role can edit custom property values.                             |
 | GH_HasBaseRole                   | GH_RepoRole   | Yes         | Role inherits from a base role (e.g., Triage → Read, Maintain → Write). |
+| GH_CanCreateBranch               | GH_Repository | Yes         | Role can create new branches (computed from permissions + BPR state).    |
+| GH_CanWriteBranch                | GH_Branch or GH_Repository | Yes | Role can push to this branch or all branches (computed from permissions + BPR state). |
+| GH_CanEditProtection             | GH_BranchProtectionRule | No  | Role can modify/remove this branch protection rule (computed from edit_repo_protections or admin). |
 
 ### Inbound Edges
 
@@ -58,12 +61,16 @@ Created by: `Git-HoundRepository`
 flowchart TD
     GH_RepoRole[fa:fa-user-tie GH_RepoRole]
     GH_Repository[fa:fa-box-archive GH_Repository]
+    GH_Branch[fa:fa-code-branch GH_Branch]
+    GH_BranchProtectionRule[fa:fa-shield GH_BranchProtectionRule]
     GH_User[fa:fa-user GH_User]
     GH_Team[fa:fa-user-group GH_Team]
     GH_OrgRole[fa:fa-user-tie GH_OrgRole]
 
     style GH_RepoRole fill:#DEFEFA
     style GH_Repository fill:#9EECFF
+    style GH_Branch fill:#FF80D2
+    style GH_BranchProtectionRule fill:#FFB347
     style GH_User fill:#FF8E40
     style GH_Team fill:#C06EFF
     style GH_OrgRole fill:#BFFFD1
@@ -72,8 +79,8 @@ flowchart TD
     GH_RepoRole -.->|GH_WriteRepoContents| GH_Repository
     GH_RepoRole -.->|GH_AdminTo| GH_Repository
     GH_RepoRole -.->|GH_ViewSecretScanningAlerts| GH_Repository
-    GH_RepoRole -.->|GH_BypassBranchProtection| GH_Repository
-    GH_RepoRole -.->|GH_EditRepoProtections| GH_Repository
+    GH_RepoRole -.->|GH_BypassProtections| GH_Repository
+    GH_RepoRole -.->|GH_EditProtections| GH_Repository
     GH_RepoRole -->|GH_HasBaseRole| GH_RepoRole
     GH_User -->|GH_HasRole| GH_RepoRole
     GH_Team -->|GH_HasRole| GH_RepoRole
