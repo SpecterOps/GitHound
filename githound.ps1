@@ -5283,12 +5283,6 @@ function Invoke-GitHound
     if($branches.nodes) { $nodes.AddRange(@($branches.nodes)) }
     if($branches.edges) { $edges.AddRange(@($branches.edges)) }
 
-    # ── Step 6.5: Compute Branch Access ──────────────────────────────────
-    Write-Host "[*] Computing effective branch access edges"
-    $branchAccess = Compute-GitHoundBranchAccess -Nodes $nodes -Edges $edges
-    if($branchAccess.edges) { $edges.AddRange(@($branchAccess.edges)) }
-    Write-Host "[+] Branch access computation complete. $($branchAccess.edges.Count) computed edges."
-
     # ── Step 7: Workflows (requires -CollectAll) ────────────────────────────
     if ($CollectAll) {
         $stepFile = Join-Path $CheckpointPath "githound_Workflow_$orgId.json"

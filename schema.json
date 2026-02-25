@@ -411,6 +411,11 @@
       "is_traversable": true
     },
     {
+      "name": "GH_CanEditProtection",
+      "description": "Repo role can modify or remove the branch protection rules governing this branch (computed from GH_EditRepoProtections + GH_ProtectedBy)",
+      "is_traversable": true
+    },
+    {
       "name": "GH_ProtectedBy",
       "description": "Branch protection rule protects this branch",
       "is_traversable": true

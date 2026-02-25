@@ -24,6 +24,7 @@ Created by: `Git-HoundRepository`
 
 | Edge Kind                       | Target Node  | Traversable | Description                                                             |
 | ------------------------------- | ------------ | ----------- | ----------------------------------------------------------------------- |
+| GH_CanEditProtection             | GH_Branch     | Yes         | Role can modify or remove the protection rules governing this branch (computed). |
 | GH_ReadRepoContents              | GH_Repository | No          | Read role can read repository contents.                                 |
 | GH_WriteRepoContents             | GH_Repository | No          | Write/Admin role can push to the repository.                            |
 | GH_WriteRepoPullRequests         | GH_Repository | No          | Write/Admin role can create and merge pull requests.                    |
@@ -69,12 +70,11 @@ flowchart TD
 
     style GH_RepoRole fill:#DEFEFA
     style GH_Repository fill:#9EECFF
-    style GH_Branch fill:#FF80D2
-    style GH_BranchProtectionRule fill:#FFB347
     style GH_User fill:#FF8E40
     style GH_Team fill:#C06EFF
     style GH_OrgRole fill:#BFFFD1
 
+    GH_RepoRole -.->|GH_CanPull| GH_Repository
     GH_RepoRole -.->|GH_ReadRepoContents| GH_Repository
     GH_RepoRole -.->|GH_WriteRepoContents| GH_Repository
     GH_RepoRole -.->|GH_AdminTo| GH_Repository
