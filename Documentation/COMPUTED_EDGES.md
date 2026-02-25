@@ -87,9 +87,7 @@ Each computed edge follows the standard GitHound edge format (created by `New-Gi
 | `GH_CanCreateBranch` | `GH_RepoRole` | `GH_Repository` | Yes | Role can create new branches |
 | `GH_CanCreateBranch` | `GH_User` or `GH_Team` | `GH_Repository` | Yes | Per-rule allowance delta — actor can create branches when role alone doesn't grant access |
 | `GH_CanWriteBranch` | `GH_RepoRole` | `GH_Branch` | Yes | Role can push to this specific branch |
-| `GH_CanWriteBranch` | `GH_RepoRole` | `GH_Repository` | Yes | Role can push to ALL branches in this repository |
 | `GH_CanWriteBranch` | `GH_User` or `GH_Team` | `GH_Branch` | Yes | Per-rule allowance delta — actor can push when role alone doesn't grant access |
-| `GH_CanWriteBranch` | `GH_User` or `GH_Team` | `GH_Repository` | Yes | Per-rule allowance delta — actor can push to ALL branches via allowances |
 | `GH_CanEditProtection` | `GH_RepoRole` | `GH_BranchProtectionRule` | No | Role can modify/remove this BPR (indirect bypass path) |
 
 Most edges emit from `GH_RepoRole`. Per-actor edges from `GH_User`/`GH_Team` are only emitted when per-rule allowances (`pushAllowances`, `bypassPullRequestAllowances`) grant access beyond what the role provides. `GH_CanEditProtection` is always role-level (it has no per-actor component).
@@ -117,7 +115,6 @@ The query varies by edge type:
 | Edge Type | Source | What the query shows |
 |-----------|--------|---------------------|
 | `GH_CanWriteBranch` | RepoRole → Branch | Role's permission edges + BPR protecting the branch |
-| `GH_CanWriteBranch` | RepoRole → Repository | Role's permission edges + all BPRs on the repo |
 | `GH_CanCreateBranch` | RepoRole → Repository | Role's permission edges + wildcard BPR (if any) |
 | `GH_CanEditProtection` | RepoRole → BPR | Role's edit/admin permission edge + BPR's protected branches |
 | `GH_CanWriteBranch` | User/Team → Branch | Actor's allowance edges to the BPR + actor's role path with permissions |
@@ -226,8 +223,7 @@ Calls `Invoke-RoleGateEvaluation` to evaluate the merge gate and push gate for e
 4. Branch is accessible only if both gates pass
 
 **Edge emission logic:**
-- **All branches accessible** → single edge `role → repo` (repo-level rollup)
-- **Some branches accessible** → per-branch edges `role → branch`
+- **One or more branches accessible** → per-branch edges `role → branch`
 - **No branches accessible** → no edges
 
 The function tracks `$roleAccessibleBranches[roleId]` and `$roleCanCreate[roleId]` for use in Phase 3b.
@@ -254,10 +250,6 @@ Only unprotected branches are skipped during delta evaluation (they are always c
 ## Edge Deduplication
 
 The `Add-ComputedEdge` helper maintains an `$emittedEdges` hashtable keyed by `"startId|endId|kind"`. If an edge with the same key already exists, the duplicate is silently skipped. This prevents redundant edges when multiple code paths could emit the same edge.
-
-## Repo-Level Rollup
-
-When a role or actor can push to **all** branches in a repository, a single `GH_CanWriteBranch` edge is emitted to the `GH_Repository` node instead of individual edges to each `GH_Branch`. This optimization reduces edge count while maintaining graph traversability — BloodHound can still find paths through `Repository → GH_HasBranch → Branch`.
 
 ## Graph Traversal Paths
 

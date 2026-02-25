@@ -250,9 +250,7 @@ The analysis above is complex — determining whether a user can actually push t
 | `GH_CanCreateBranch` | RepoRole | Repository | Yes | Role can create new branches (enables secret exfiltration via workflow creation) |
 | `GH_CanCreateBranch` | User/Team | Repository | Yes | Per-rule allowance delta — user/team can create branches when role alone doesn't grant access |
 | `GH_CanWriteBranch` | RepoRole | Branch | Yes | Role can push to this specific branch |
-| `GH_CanWriteBranch` | RepoRole | Repository | Yes | Role can push to ALL branches (no restrictions block this role) |
 | `GH_CanWriteBranch` | User/Team | Branch | Yes | Per-rule allowance delta — user/team can push when role alone doesn't grant access |
-| `GH_CanWriteBranch` | User/Team | Repository | Yes | Per-rule allowance delta — user/team can push to ALL branches via allowances |
 | `GH_CanEditProtection` | RepoRole | BPR | No | Role can modify/remove this branch protection rule (indirect bypass) |
 
 **Separation of concerns:** `GH_CanWriteBranch` and `GH_CanCreateBranch` represent **direct** push capability only — they evaluate the merge-gate and push-gate for each branch. `GH_CanEditProtection` represents the ability to weaken or remove protections — a separate indirect bypass path. An analyst combines these visually: "this user can edit this BPR, which protects these branches, and the user also has write access."
@@ -271,7 +269,7 @@ The computation operates in two phases: **role-level evaluation** and **per-acto
 - Bypassed by admin access (NOT affected by `enforce_admins`)
 - Bypassed by `push_protected_branch` permission (NOT affected by `enforce_admins`)
 
-A role can push to a branch only if it passes **both** gates. If a role can push to all branches, a single `GH_CanWriteBranch` edge is emitted from the role to the Repository instead of per-branch edges. Since users reach roles via traversable `GH_HasRole` and `GH_HasBaseRole` edges, this significantly reduces edge count while maintaining full graph traversability.
+A role can push to a branch only if it passes **both** gates. For each accessible branch, a `GH_CanWriteBranch` edge is emitted from the role to the branch. Since users reach roles via traversable `GH_HasRole` and `GH_HasBaseRole` edges, paths flow through the role chain to each individual branch.
 
 **Phase 2: Per-actor allowance delta.** Per-rule allowances (`pushAllowances`, `bypassPullRequestAllowances`) are actor-specific — they grant access to individual users or teams, not to roles. For actors listed in these allowances, the computation identifies branches the actor's role(s) already cover, then evaluates only the uncovered branches considering the actor's allowance memberships. Edges are emitted from the user/team directly to the branch only for the delta — branches the role alone doesn't grant access to.
 
