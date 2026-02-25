@@ -104,6 +104,7 @@ flowchart TD
     %%GH_RepoRole -.->|GHManageSecurityProducts| GH_Repository
     %%GH_RepoRole -.->|GHManageRepoSecurityProducts| GH_Repository
     GH_RepoRole -.->|GH_EditProtections| GH_Repository
+    GH_RepoRole -->|GH_CanEditProtection| GH_Branch
     %%GH_RepoRole -.->|GHJumpMergeQueue| GH_Repository
     %%GH_RepoRole -.->|GHCreateSoloMergeQueueEntry| GH_Repository
     %%GH_RepoRole -.->|GHEditRepoCustomPropertiesValues| GH_Repository

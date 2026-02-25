@@ -98,13 +98,14 @@ These edges represent permissions that repo roles grant on repositories.
 
 These edges represent branch-level permissions and protections.
 
-| Edge Type                        | Source                    | Target                    | Traversable | Description                                                |
-|----------------------------------|---------------------------|---------------------------|-------------|------------------------------------------------------------|
-| `GH_ProtectedBy`                 | `GH_BranchProtectionRule` | `GH_Branch`               | Yes         | Branch protection rule protects this branch.               |
-| `GH_BypassPullRequestAllowances` | `GH_User`                 | `GH_BranchProtectionRule` | No          | User can bypass PR requirements on this protection rule.   |
-| `GH_BypassPullRequestAllowances` | `GH_Team`                 | `GH_BranchProtectionRule` | No          | Team can bypass PR requirements on this protection rule.   |
-| `GH_RestrictionsCanPush`         | `GH_User`                 | `GH_BranchProtectionRule` | No          | User is allowed to push to branches protected by this rule.|
-| `GH_RestrictionsCanPush`         | `GH_Team`                 | `GH_BranchProtectionRule` | No          | Team is allowed to push to branches protected by this rule.|
+| Edge Type                        | Source                    | Target                    | Traversable | Computed | Description                                                                      |
+|----------------------------------|---------------------------|---------------------------|-------------|----------|----------------------------------------------------------------------------------|
+| `GH_CanEditProtection`           | `GH_RepoRole`            | `GH_Branch`               | Yes         | Yes      | Role can modify or remove the protection rules governing this branch.            |
+| `GH_ProtectedBy`                 | `GH_BranchProtectionRule` | `GH_Branch`               | Yes         | No       | Branch protection rule protects this branch.                                     |
+| `GH_BypassPullRequestAllowances` | `GH_User`                 | `GH_BranchProtectionRule` | No          | No       | User can bypass PR requirements on this protection rule.                         |
+| `GH_BypassPullRequestAllowances` | `GH_Team`                 | `GH_BranchProtectionRule` | No          | No       | Team can bypass PR requirements on this protection rule.                         |
+| `GH_RestrictionsCanPush`         | `GH_User`                 | `GH_BranchProtectionRule` | No          | No       | User is allowed to push to branches protected by this rule.                      |
+| `GH_RestrictionsCanPush`         | `GH_Team`                 | `GH_BranchProtectionRule` | No          | No       | Team is allowed to push to branches protected by this rule.                      |
 
 ### Resource Relationship Edges
 

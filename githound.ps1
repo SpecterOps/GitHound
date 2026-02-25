@@ -1787,7 +1787,7 @@ function Git-HoundRepository
 
             foreach($permission in $customRepoRole.permissions)
             {
-                $null = $edges.Add((New-GitHoundEdge -Kind "GH$(ConvertTo-PascalCase -String $permission)" -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false}))
+                $null = $edges.Add((New-GitHoundEdge -Kind "GH_$(ConvertTo-PascalCase -String $permission)" -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false}))
             }
         }
 
@@ -4026,6 +4026,77 @@ function Invoke-GitHound
     }
     if($branches.nodes) { $nodes.AddRange(@($branches.nodes)) }
     if($branches.edges) { $edges.AddRange(@($branches.edges)) }
+
+    # ── Computed Edge: GH_CanEditProtection ─────────────────────────────────
+    # Roles that can edit branch protections on a repository effectively control the
+    # branches governed by those protections. This step resolves the indirection through
+    # BranchProtectionRules to emit traversable edges directly from RepoRoles to Branches.
+    #
+    # Inputs (from collected edges):
+    #   GH_EditRepoProtections  RepoRole → Repository  (role has edit-protections permission)
+    #   GH_HasBranch            Repository → Branch     (repo contains this branch)
+    #   GH_ProtectedBy          BPR → Branch            (branch is governed by a protection rule)
+    #
+    # Output:
+    #   GH_CanEditProtection    RepoRole → Branch       (traversable, for path finding)
+    Write-Host "[*] Computing GH_CanEditProtection edges"
+
+    $repoEditRoles = @{}         # repoId → HashSet<roleId>
+    $repoAdminRoles = @{}        # repoId → HashSet<roleId>  (roles with GH_AdminTo)
+    $repoBranches = @{}           # repoId → HashSet<branchId>
+    $protectedBranchIds = [System.Collections.Generic.HashSet[string]]::new()
+
+    foreach ($edge in $edges) {
+        switch ($edge.kind) {
+            'GH_EditRepoProtections' {
+                $repoId = $edge.end.value
+                $roleId = $edge.start.value
+                if (-not $repoEditRoles.ContainsKey($repoId)) {
+                    $repoEditRoles[$repoId] = [System.Collections.Generic.HashSet[string]]::new()
+                }
+                $null = $repoEditRoles[$repoId].Add($roleId)
+            }
+            'GH_AdminTo' {
+                $repoId = $edge.end.value
+                $roleId = $edge.start.value
+                if (-not $repoAdminRoles.ContainsKey($repoId)) {
+                    $repoAdminRoles[$repoId] = [System.Collections.Generic.HashSet[string]]::new()
+                }
+                $null = $repoAdminRoles[$repoId].Add($roleId)
+            }
+            'GH_HasBranch' {
+                $repoId = $edge.start.value
+                $branchId = $edge.end.value
+                if (-not $repoBranches.ContainsKey($repoId)) {
+                    $repoBranches[$repoId] = [System.Collections.Generic.HashSet[string]]::new()
+                }
+                $null = $repoBranches[$repoId].Add($branchId)
+            }
+            'GH_ProtectedBy' {
+                $null = $protectedBranchIds.Add($edge.end.value)
+            }
+        }
+    }
+
+    $computedCount = 0
+    foreach ($repoId in $repoEditRoles.Keys) {
+        if (-not $repoBranches.ContainsKey($repoId)) { continue }
+        $adminSet = if ($repoAdminRoles.ContainsKey($repoId)) { $repoAdminRoles[$repoId] } else { $null }
+        foreach ($branchId in $repoBranches[$repoId]) {
+            if (-not $protectedBranchIds.Contains($branchId)) { continue }
+            foreach ($roleId in $repoEditRoles[$repoId]) {
+                $reason = if ($adminSet -and $adminSet.Contains($roleId)) { 'admin' } else { 'edit_repo_protections' }
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanEditProtection' -StartId $roleId -EndId $branchId -Properties @{
+                    traversable = $true
+                    reason = $reason
+                    query_composition = "MATCH p=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[:GH_EditRepoProtections]->(:GH_Repository)-[:GH_HasBranch]->(:GH_Branch {objectid:'$($branchId.ToUpper())'})<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule) RETURN p"
+                }))
+                $computedCount++
+            }
+        }
+    }
+
+    Write-Host "[+] Computed $computedCount GH_CanEditProtection edges"
 
     # ── Step 7: Workflows (requires -CollectAll) ────────────────────────────
     if ($CollectAll) {
