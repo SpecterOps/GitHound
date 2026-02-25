@@ -2364,7 +2364,7 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
                 }
 
                 $null = $nodes.Add((New-GitHoundNode -Id $branchId -Kind GH_Branch -Properties $props))
-                $null = $edges.Add((New-GitHoundEdge -Kind GH_HasBranch -StartId $repo.id -EndId $branchId -Properties @{ traversable = $true }))
+                $null = $edges.Add((New-GitHoundEdge -Kind GH_HasBranch -StartId $repo.id -EndId $branchId -Properties @{ traversable = $false }))
             }
 
             # Track repos with >100 branches for Phase 2
@@ -2467,7 +2467,7 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
                 }
 
                 $null = $nodes.Add((New-GitHoundNode -Id $branchId -Kind GH_Branch -Properties $props))
-                $null = $edges.Add((New-GitHoundEdge -Kind GH_HasBranch -StartId $overflowRepo.nodeId -EndId $branchId -Properties @{ traversable = $true }))
+                $null = $edges.Add((New-GitHoundEdge -Kind GH_HasBranch -StartId $overflowRepo.nodeId -EndId $branchId -Properties @{ traversable = $false }))
             }
 
             # Check GraphQL rate limit between overflow pages
@@ -3184,19 +3184,7 @@ function Compute-GitHoundBranchAccess
                 $null = $roleAccessibleBranches[$roleId].Add($bid)
             }
 
-            if ($branches.Count -gt 0 -and $accessibleBranches.Count -eq $branches.Count) {
-                $reason = if ($bprs.Count -eq 0) { 'no_protection' }
-                          elseif ($hasAdmin) { 'admin' }
-                          elseif ($hasPushProtected -and $hasBypassBranch) { 'push_protected_branch' }
-                          elseif ($hasPushProtected) { 'push_protected_branch' }
-                          elseif ($hasBypassBranch) { 'bypass_branch_protection' }
-                          else { 'no_protection' }
-
-                Add-ComputedEdge -Kind 'GH_CanWriteBranch' -StartId $roleId -EndId $repoId `
-                    -Properties @{ traversable = $true; reason = $reason;
-                        query_composition = "MATCH p1=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[]->(r:GH_Repository {objectid:'$($repoId.ToUpper())'}) OPTIONAL MATCH p2=(r)-[:GH_HasBranch]->(:GH_Branch)<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule) RETURN p1, p2" }
-            }
-            elseif ($accessibleBranches.Count -gt 0) {
+            if ($accessibleBranches.Count -gt 0) {
                 foreach ($branchId in $accessibleBranches) {
                     $reason = $branchReasons[$branchId]
                     Add-ComputedEdge -Kind 'GH_CanWriteBranch' -StartId $roleId -EndId $branchId `

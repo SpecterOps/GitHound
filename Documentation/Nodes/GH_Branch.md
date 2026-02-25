@@ -29,7 +29,7 @@ Created by: `Git-HoundBranch`
 
 | Edge Kind        | Source Node             | Traversable | Description                                                                               |
 | ---------------- | ----------------------- | ----------- | ----------------------------------------------------------------------------------------- |
-| GH_HasBranch     | GH_Repository           | Yes         | Repository has this branch.                                                               |
+| GH_HasBranch     | GH_Repository           | No          | Repository has this branch.                                                               |
 | GH_ProtectedBy   | GH_BranchProtectionRule | Yes         | Branch protection rule protects this branch.                                              |
 | GH_HasEnvironment| GH_Branch               | No          | Branch has a deployment environment via custom branch policy (from Git-HoundEnvironment). |
 

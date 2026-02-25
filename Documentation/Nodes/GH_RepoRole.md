@@ -43,7 +43,7 @@ Created by: `Git-HoundRepository`
 | GH_EditRepoCustomPropertiesValue | GH_Repository | No          | Admin role can edit custom property values.                             |
 | GH_HasBaseRole                   | GH_RepoRole   | Yes         | Role inherits from a base role (e.g., Triage → Read, Maintain → Write). |
 | GH_CanCreateBranch               | GH_Repository | Yes         | Role can create new branches (computed from permissions + BPR state).    |
-| GH_CanWriteBranch                | GH_Branch or GH_Repository | Yes | Role can push to this branch or all branches (computed from permissions + BPR state). |
+| GH_CanWriteBranch                | GH_Branch              | Yes | Role can push to this branch (computed from permissions + BPR state). |
 | GH_CanEditProtection             | GH_BranchProtectionRule | No  | Role can modify/remove this branch protection rule (computed from edit_repo_protections or admin). |
 
 ### Inbound Edges

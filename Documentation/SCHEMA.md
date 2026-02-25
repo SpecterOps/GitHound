@@ -133,11 +133,8 @@ These edges are computed post-collection by `Compute-GitHoundBranchAccess`. They
 | `GH_CanCreateBranch`   | `GH_User`               | `GH_Repository`           | Yes         | User can create new branches via per-rule allowance (delta only — when role alone doesn't grant access). |
 | `GH_CanCreateBranch`   | `GH_Team`               | `GH_Repository`           | Yes         | Team can create new branches via per-rule allowance (delta only — when role alone doesn't grant access). |
 | `GH_CanWriteBranch`    | `GH_RepoRole`           | `GH_Branch`               | Yes         | Role can push to this specific branch.                                                          |
-| `GH_CanWriteBranch`    | `GH_RepoRole`           | `GH_Repository`           | Yes         | Role can push to ALL branches in this repository.                                               |
 | `GH_CanWriteBranch`    | `GH_User`               | `GH_Branch`               | Yes         | User can push to this branch via per-rule allowance (delta only — when role alone doesn't grant access). |
-| `GH_CanWriteBranch`    | `GH_User`               | `GH_Repository`           | Yes         | User can push to ALL branches via per-rule allowance (delta only).                              |
 | `GH_CanWriteBranch`    | `GH_Team`               | `GH_Branch`               | Yes         | Team can push to this branch via per-rule allowance (delta only — when role alone doesn't grant access). |
-| `GH_CanWriteBranch`    | `GH_Team`               | `GH_Repository`           | Yes         | Team can push to ALL branches via per-rule allowance (delta only).                              |
 | `GH_CanEditProtection` | `GH_RepoRole`           | `GH_BranchProtectionRule` | No          | Role can modify/remove this branch protection rule (indirect bypass — separate from push access).|
 
 Each computed edge includes a `reason` property indicating why access was granted, and a `query_composition` property containing a Cypher query that reveals the underlying graph elements (permission edges, BPRs, allowances) that caused the edge to be created:
@@ -160,7 +157,7 @@ These edges connect repositories to their resources.
 
 | Edge Type                  | Source          | Target                   | Traversable | Description                                    |
 |----------------------------|-----------------|--------------------------|-------------|------------------------------------------------|
-| `GH_HasBranch`             | `GH_Repository` | `GH_Branch`              | Yes         | Repository has this branch.                    |
+| `GH_HasBranch`             | `GH_Repository` | `GH_Branch`              | No          | Repository has this branch.                    |
 | `GH_HasWorkflow`           | `GH_Repository` | `GH_Workflow`            | No          | Repository has this workflow.                  |
 | `GH_HasEnvironment`        | `GH_Repository` | `GH_Environment`         | Yes         | Repository has this environment.               |
 | `GH_HasEnvironment`        | `GH_Branch`     | `GH_Environment`         | No          | Branch can deploy to this environment.         |
@@ -258,7 +255,6 @@ The following edges are marked as "traversable" and form the primary attack path
 | `GH_AddMember`        | Team role can add members (maintainer privilege)   |
 | `GH_HasBaseRole`      | Role inherits from another role                    |
 | `GH_Owns`             | Organization owns repository                       |
-| `GH_HasBranch`        | Repository has this branch                         |
 | `GH_ProtectedBy`      | Branch protection rule protects this branch        |
 | `SyncedToGHUser`      | Identity provider user synced to GitHub user       |
 | `SCIMProvisioned`     | SCIM user provisioned and mapped to GitHub user    |

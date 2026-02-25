@@ -43,7 +43,7 @@ Created by: `Git-HoundRepository`
 
 | Edge Kind                | Target Node                   | Traversable | Description                                                               |
 | ------------------------ | ----------------------------- | ----------- | ------------------------------------------------------------------------- |
-| GH_HasBranch              | GH_Branch                      | Yes         | Repository has a branch.                                                  |
+| GH_HasBranch              | GH_Branch                      | No          | Repository has a branch.                                                  |
 | GH_HasWorkflow            | GH_Workflow                    | No          | Repository has a workflow.                                                |
 | GH_HasEnvironment         | GH_Environment                 | Yes         | Repository has a deployment environment (when no custom branch policies). |
 | GH_HasSecret              | GH_OrgSecret                   | Yes         | Repository has access to an organization-level secret. Traversable because write access to the repo enables secret access via workflow creation. |
@@ -61,8 +61,6 @@ Created by: `Git-HoundRepository`
 | GH_AdminTo            | GH_RepoRole      | Yes         | Repo role has admin access. Traversable because admin confers full control of the repository.        |
 | GH_CanCreateBranch    | GH_RepoRole         | Yes       | Repo role can create new branches (computed from permissions + branch protection rules).              |
 | GH_CanCreateBranch    | GH_User or GH_Team  | Yes       | User or team can create new branches via per-rule allowance (computed — delta only).                 |
-| GH_CanWriteBranch     | GH_RepoRole         | Yes       | Repo role can push to ALL branches in this repo (computed from permissions + branch protection rules). |
-| GH_CanWriteBranch     | GH_User or GH_Team  | Yes       | User or team can push to ALL branches via per-rule allowance (computed — delta only).                |
 
 ## Diagram
 
