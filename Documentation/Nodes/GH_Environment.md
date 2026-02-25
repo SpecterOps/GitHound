@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHEnvironment.png" width="50"/> GH_Environment
+# <img src="../images/GH_Environment.png" width="50"/> GH_Environment
 
 Represents a GitHub Actions deployment environment configured on a repository. Environments can have protection rules including required reviewers, wait timers, and deployment branch policies. When custom branch policies are configured, the environment is connected to specific branches; otherwise, it is connected directly to the repository.
 
@@ -26,7 +26,6 @@ Created by: `Git-HoundEnvironment`
 | Edge Kind         | Target Node                   | Traversable | Description                                                                          |
 | ----------------- | ----------------------------- | ----------- | ------------------------------------------------------------------------------------ |
 | GH_Contains        | GH_EnvironmentSecret           | No          | Environment contains an environment-level secret.                                    |
-| GH_HasSecret       | GH_EnvironmentSecret           | No          | Environment has an environment-level secret.                                         |
 | CanAssumeIdentity | AZFederatedIdentityCredential | Yes         | Environment can assume an Azure federated identity via OIDC (subject: environment:{envName}). |
 
 ### Inbound Edges
@@ -44,20 +43,17 @@ flowchart TD
     GH_Repository[fa:fa-box-archive GH_Repository]
     GH_Branch[fa:fa-code-branch GH_Branch]
     GH_EnvironmentSecret[fa:fa-lock GH_EnvironmentSecret]
-    AWSRole[fa:fa-user-tag AWSRole]
     AZFederatedIdentityCredential[fa:fa-id-card AZFederatedIdentityCredential]
 
     style GH_Environment fill:#D5F2C2
     style GH_Repository fill:#9EECFF
     style GH_Branch fill:#FF80D2
     style GH_EnvironmentSecret fill:#6FB94A
-    style AWSRole fill:#FF8E40
     style AZFederatedIdentityCredential fill:#FF80D2
 
-    GH_Repository -.->|GH_HasEnvironment| GH_Environment
+    GH_Repository -->|GH_HasEnvironment| GH_Environment
     GH_Branch -.->|GH_HasEnvironment| GH_Environment
     GH_Environment -.->|GH_Contains| GH_EnvironmentSecret
     GH_Environment -.->|GH_HasSecret| GH_EnvironmentSecret
-    GH_Environment -.->|GH_CanAssumeAWSRole| AWSRole
     GH_Environment -->|CanAssumeIdentity| AZFederatedIdentityCredential
 ```

@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHEnvironmentSecret.png" width="50"/> GH_EnvironmentSecret
+# <img src="../images/GH_EnvironmentSecret.png" width="50"/> GH_EnvironmentSecret
 
 Represents an environment-level GitHub Actions secret. These secrets are scoped to a specific deployment environment and are only available to workflow jobs that reference that environment.
 
@@ -29,7 +29,6 @@ None
 | Edge Kind   | Source Node   | Traversable | Description                       |
 | ----------- | ------------- | ----------- | --------------------------------- |
 | GH_Contains  | GH_Environment | No          | Environment contains this secret. |
-| GH_HasSecret | GH_Environment | No          | Environment has this secret.      |
 
 ## Diagram
 
@@ -42,5 +41,4 @@ flowchart TD
     style GH_EnvironmentSecret fill:#6FB94A
 
     GH_Environment -.->|GH_Contains| GH_EnvironmentSecret
-    GH_Environment -.->|GH_HasSecret| GH_EnvironmentSecret
 ```

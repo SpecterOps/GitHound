@@ -34,20 +34,22 @@ If you prefer to host your own GitHub App:
 
 4. Set the required permissions:
 
-   | Permission Category | Permission                | Access Level |
-   |---------------------|---------------------------|--------------|
-   | Repository          | Actions                   | Read-only    |
-   | Repository          | Administration            | Read-only    |
-   | Repository          | Contents                  | Read-only    |
-   | Repository          | Environments              | Read-only    |
-   | Repository          | Metadata                  | Read-only    |
-   | Repository          | Secret scanning alerts    | Read-only    |
-   | Repository          | Secrets                   | Read-only    |
-   | Organization        | Administration            | Read-only    |
-   | Organization        | Custom organization roles | Read-only    |
-   | Organization        | Custom repository roles   | Read-only    |
-   | Organization        | Members                   | Read-only    |
-   | Organization        | Secrets                   | Read-only    |
+   | Permission Category | Permission                     | Access Level |
+   |---------------------|--------------------------------|--------------|
+   | Repository          | Actions                        | Read-only    |
+   | Repository          | Administration                 | Read-only    |
+   | Repository          | Contents                       | Read-only    |
+   | Repository          | Environments                   | Read-only    |
+   | Repository          | Metadata                       | Read-only    |
+   | Repository          | Secret scanning alerts         | Read-only    |
+   | Repository          | Secrets                        | Read-only    |
+   | Organization        | Administration                 | Read-only    |
+   | Organization        | Custom organization roles      | Read-only    |
+   | Organization        | Custom repository roles        | Read-only    |
+   | Organization        | Members                        | Read-only    |
+   | Organization        | Personal access tokens         | Read-only    |
+   | Organization        | Personal access token requests | Read-only    |
+   | Organization        | Secrets                        | Read-only    |
 
 5. Under "Where can this GitHub App be installed?", select **Only on this account**
 6. Click **Create GitHub App**

@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHRepository.png" width="50"/> GH_Repository
+# <img src="../images/GH_Repository.png" width="50"/> GH_Repository
 
 Represents a GitHub repository within the organization. Repository nodes capture metadata about the repo including visibility, Actions enablement status, and security configuration. Repository role nodes (GH_RepoRole) are created alongside each repository to represent the permission levels available.
 
@@ -43,20 +43,24 @@ Created by: `Git-HoundRepository`
 
 | Edge Kind                | Target Node                   | Traversable | Description                                                               |
 | ------------------------ | ----------------------------- | ----------- | ------------------------------------------------------------------------- |
-| GH_HasBranch              | GH_Branch                      | Yes         | Repository has a branch.                                                  |
+| GH_HasBranch              | GH_Branch                      | No          | Repository has a branch.                                                  |
 | GH_HasWorkflow            | GH_Workflow                    | No          | Repository has a workflow.                                                |
 | GH_HasEnvironment         | GH_Environment                 | Yes         | Repository has a deployment environment (when no custom branch policies). |
-| GH_HasSecret              | GH_OrgSecret                   | No          | Repository has access to an organization-level secret.                    |
-| GH_HasSecret              | GH_RepoSecret                  | No          | Repository has a repository-level secret.                                 |
+| GH_HasSecret              | GH_OrgSecret                   | Yes         | Repository has access to an organization-level secret. Traversable because write access to the repo enables secret access via workflow creation. |
+| GH_HasSecret              | GH_RepoSecret                  | Yes         | Repository has a repository-level secret. Traversable because write access to the repo enables secret access via workflow creation. |
 | GH_Contains               | GH_RepoSecret                  | No          | Repository contains a repository-level secret.                            |
 | GH_HasSecretScanningAlert | GH_SecretScanningAlert         | No          | Repository has a secret scanning alert.                                   |
 | CanAssumeIdentity        | AZFederatedIdentityCredential | Yes         | Repository can assume an Azure federated identity via OIDC (subject: *).  |
 
 ### Inbound Edges
 
-| Edge Kind | Source Node    | Traversable | Description                        |
-| --------- | -------------- | ----------- | ---------------------------------- |
-| GH_Owns    | GH_Organization | Yes         | Organization owns this repository. |
+| Edge Kind             | Source Node      | Traversable | Description                                                                                         |
+| --------------------- | ---------------- | ----------- | --------------------------------------------------------------------------------------------------- |
+| GH_Owns               | GH_Organization  | Yes         | Organization owns this repository.                                                                  |
+| GH_WriteRepoContents  | GH_RepoRole      | No          | Repo role can write repository contents. Non-traversable because write access alone is necessary but not sufficient for push access — branch protection rules may block it. |
+| GH_AdminTo            | GH_RepoRole      | Yes         | Repo role has admin access. Traversable because admin confers full control of the repository.        |
+| GH_CanCreateBranch    | GH_RepoRole         | Yes       | Repo role can create new branches (computed from permissions + branch protection rules).              |
+| GH_CanCreateBranch    | GH_User or GH_Team  | Yes       | User or team can create new branches via per-rule allowance (computed — delta only).                 |
 
 ## Diagram
 
@@ -76,6 +80,8 @@ flowchart TD
 
     style GH_Repository fill:#9EECFF
     style GH_Organization fill:#5FED83
+    style GH_User fill:#FF8E40
+    style GH_Team fill:#C06EFF
     style GH_Branch fill:#FF80D2
     style GH_Workflow fill:#FFE4A1
     style GH_Environment fill:#D5F2C2
@@ -83,8 +89,11 @@ flowchart TD
     style GH_RepoSecret fill:#32BEE6
     style GH_SecretScanningAlert fill:#3C7A6E
     style GH_RepoRole fill:#DEFEFA
-    style AWSRole fill:#FF8E40
     style AZFederatedIdentityCredential fill:#FF80D2
+
+    GH_PersonalAccessToken[fa:fa-key GH_PersonalAccessToken]
+
+    style GH_PersonalAccessToken fill:#F5A623
 
     GH_Organization -.->|GH_Owns| GH_Repository
     GH_Repository -.->|GH_HasBranch| GH_Branch
@@ -92,13 +101,13 @@ flowchart TD
     GH_Repository -.->|GH_HasEnvironment| GH_Environment
     GH_Repository -.->|GH_HasSecret| GH_OrgSecret
     GH_Repository -.->|GH_Contains| GH_RepoSecret
-    GH_Repository -.->|GH_HasSecret| GH_RepoSecret
+    GH_Repository -->|GH_HasSecret| GH_RepoSecret
     GH_Repository -.->|GH_HasSecretScanningAlert| GH_SecretScanningAlert
-    GH_RepoRole -.->|GH_CanPull| GH_Repository
     GH_RepoRole -.->|GH_ReadRepoContents| GH_Repository
-    GH_RepoRole -.->|GH_CanPush| GH_Repository
     GH_RepoRole -.->|GH_WriteRepoContents| GH_Repository
-    GH_RepoRole -->|GH_AdminTo| GH_Repository
+    GH_RepoRole -.->|GH_AdminTo| GH_Repository
+    GH_RepoRole -.->|GH_BypassBranchProtection| GH_Repository
+    GH_RepoRole -.->|GH_EditRepoProtections| GH_Repository
     GH_RepoRole -.->|GH_ViewSecretScanningAlerts| GH_Repository
     GH_RepoRole -.->|GH_BypassProtections| GH_Repository
     GH_RepoRole -.->|GH_EditProtections| GH_Repository

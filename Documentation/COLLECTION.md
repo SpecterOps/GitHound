@@ -50,8 +50,10 @@ The following permissions are required:
 | Organization | Administration            | Read-only | Git-HoundOrganization, Git-HoundRepository, Git-HoundRepositoryRole, Git-HoundAppInstallation |
 | Organization | Custom organization roles | Read-only | Git-HoundOrganization                                                                         |
 | Organization | Custom repository roles   | Read-only | Git-HoundRepository                                                                           |
-| Organization | Members                   | Read-only | Git-HoundTeam, Git-HoundUser, Git-HoundOrganization                                           |
-| Organization | Secrets                   | Read-only | Git-HoundOrganizationSecret, Git-HoundSecret                                                  |
+| Organization | Members                        | Read-only | Git-HoundTeam, Git-HoundUser, Git-HoundOrganization                                           |
+| Organization | Personal access tokens         | Read-only | Git-HoundPersonalAccessToken                                                                   |
+| Organization | Personal access token requests | Read-only | Git-HoundPersonalAccessTokenRequest                                                            |
+| Organization | Secrets                        | Read-only | Git-HoundOrganizationSecret, Git-HoundSecret                                                  |
 
 #### Save Personal Access Token
 
@@ -106,11 +108,11 @@ The `-Resume` flag tells GitHound to check for existing per-step output files in
 | `-CheckpointPath`       | String           | `"."`      | Directory for output files and intermediate checkpoints                      |
 | `-Resume`               | Switch           | `$false`   | Load completed steps from disk instead of re-collecting                      |
 | `-CleanupIntermediates` | Switch           | `$false`   | Delete per-step files after final consolidation                              |
-| `-CollectAll`           | Switch           | `$false`   | Include optional steps (Workflows, Environments, Repo Secrets, App Installs) |
+| `-CollectAll`           | Switch           | `$false`   | Include optional steps (Workflows, Environments, Repo Secrets, App Installs, PATs) |
 
 #### How it works
 
-1. Each collection step writes its output to a file immediately after completing (e.g. `githound_Repository_<orgId>.json`). By default 8 steps run; with `-CollectAll`, all 12 steps run
+1. Each collection step writes its output to a file immediately after completing (e.g. `githound_Repository_<orgId>.json`). By default 8 steps run; with `-CollectAll`, all 14 steps run
 2. On `-Resume`, if a step's file exists, it's loaded from disk. If not, the step is collected fresh
 3. Functions with internal checkpointing (RepositoryRole, Branch, Workflow, Secret) can also auto-resume from their intermediate chunk files if the function itself was interrupted mid-execution
 4. After all steps complete, everything is consolidated into a single `githound_<orgId>.json`
@@ -145,8 +147,10 @@ For organizations with thousands of repositories, collection can exceed the hour
 | Git-HoundOrganizationSecret  | REST    | Selected Secrets (S)     | 1 + S                                     | No               | No            |
 | Git-HoundSecret              | REST    | Repository Count (R)     | R (chunked)                               | Yes              | Yes           |
 | Git-HoundSecretScanningAlert | REST    | Alert Count              | ceil(Count / 100)                         | No               | No            |
-| Git-HoundAppInstallation     | REST    | None                     | 1                                         | No               | No            |
-| Git-HoundGraphQlSamlProvider | GraphQL | SAML Identities (I)      | ceil(I / 100)                             | No               | No            |
+| Git-HoundAppInstallation              | REST    | Installation Count (I)   | 1 + unique app slugs                      | No               | No            |
+| Git-HoundPersonalAccessToken          | REST    | PAT Count (P)            | ceil(P / 100)                             | No               | No            |
+| Git-HoundPersonalAccessTokenRequest   | REST    | Request Count            | ceil(Count / 100)                         | No               | No            |
+| Git-HoundGraphQlSamlProvider          | GraphQL | SAML Identities (I)      | ceil(I / 100)                             | No               | No            |
 
 **Understanding the Table:**
 
@@ -421,7 +425,7 @@ For maximum control and reliability in large environments, run each collection f
 
     ```powershell
     Write-Host "[*] Enumerating App Installations"
-    $appInstallations = $org.nodes[0] | Git-HoundAppInstallation -Session $Session
+    $appInstallations = $repos | Git-HoundAppInstallation -Session $Session -Organization $org.nodes[0]
     if($appInstallations.nodes) { $nodes.AddRange(@($appInstallations.nodes)) }
     if($appInstallations.edges) { $edges.AddRange(@($appInstallations.edges)) }
 
@@ -436,7 +440,45 @@ For maximum control and reliability in large environments, run each collection f
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_AppInstallation_$($org.nodes[0].id).json"
     ```
 
-17. Run the `Git-HoundGraphQlSamlProvider` function:
+17. Run the `Git-HoundPersonalAccessToken` function:
+
+    ```powershell
+    Write-Host "[*] Enumerating Personal Access Tokens"
+    $pats = $repos | Git-HoundPersonalAccessToken -Session $Session -Organization $org.nodes[0]
+    if($pats.nodes) { $nodes.AddRange(@($pats.nodes)) }
+    if($pats.edges) { $edges.AddRange(@($pats.edges)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $pats.Nodes.ToArray()
+            edges = $pats.Edges.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_PersonalAccessToken_$($org.nodes[0].id).json"
+    ```
+
+18. Run the `Git-HoundPersonalAccessTokenRequest` function:
+
+    ```powershell
+    Write-Host "[*] Enumerating Personal Access Token Requests"
+    $patRequests = $org.nodes[0] | Git-HoundPersonalAccessTokenRequest -Session $Session
+    if($patRequests.nodes) { $nodes.AddRange(@($patRequests.nodes)) }
+    if($patRequests.edges) { $edges.AddRange(@($patRequests.edges)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $patRequests.Nodes.ToArray()
+            edges = $patRequests.Edges.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_PersonalAccessTokenRequest_$($org.nodes[0].id).json"
+    ```
+
+19. Run the `Git-HoundGraphQlSamlProvider` function:
 
     ```powershell
     Write-Host "[*] Enumerating SAML Identity Provider"

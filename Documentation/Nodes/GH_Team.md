@@ -1,4 +1,4 @@
-# <img src="../../images/black_GHTeam.png" width="50"/> GH_Team
+# <img src="../images/GH_Team.png" width="50"/> GH_Team
 
 Represents a GitHub team within the organization. Teams can have parent-child relationships, contain members with different roles (Member, Maintainer), and be assigned to repository roles.
 
@@ -23,11 +23,13 @@ Created by: `Git-HoundTeam`
 
 ### Outbound Edges
 
-| Edge Kind  | Target Node | Traversable | Description                                                           |
-| ---------- | ----------- | ----------- | --------------------------------------------------------------------- |
-| GH_MemberOf | GH_Team      | Yes         | Team is a child of a parent team.                                     |
-| GH_HasRole  | GH_OrgRole   | Yes         | Team is assigned to a custom organization role.                       |
-| GH_HasRole  | GH_RepoRole  | Yes         | Team is assigned to a repository role (from Git-HoundRepositoryRole). |
+| Edge Kind                      | Target Node             | Traversable | Description                                                           |
+| ------------------------------ | ----------------------- | ----------- | --------------------------------------------------------------------- |
+| GH_MemberOf                     | GH_Team                  | Yes         | Team is a child of a parent team.                                     |
+| GH_HasRole                      | GH_OrgRole               | Yes         | Team is assigned to a custom organization role.                       |
+| GH_HasRole                      | GH_RepoRole              | Yes         | Team is assigned to a repository role (from Git-HoundRepositoryRole). |
+| GH_BypassPullRequestAllowances | GH_BranchProtectionRule | No          | Team can bypass PR requirements on this protection rule.              |
+| GH_RestrictionsCanPush          | GH_BranchProtectionRule | No          | Team is allowed to push to branches protected by this rule.           |
 
 ### Inbound Edges
 
