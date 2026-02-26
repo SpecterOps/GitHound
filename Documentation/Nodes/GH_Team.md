@@ -30,6 +30,8 @@ Created by: `Git-HoundTeam`
 | GH_HasRole                      | GH_RepoRole              | Yes         | Team is assigned to a repository role (from Git-HoundRepositoryRole). |
 | GH_BypassPullRequestAllowances | GH_BranchProtectionRule | No          | Team can bypass PR requirements on this protection rule.              |
 | GH_RestrictionsCanPush          | GH_BranchProtectionRule | No          | Team is allowed to push to branches protected by this rule.           |
+| GH_CanWriteBranch               | GH_Branch               | Yes         | Team can push to this branch (computed — per-actor allowance delta).  |
+| GH_CanCreateBranch              | GH_Repository            | Yes         | Team can create new branches (computed — per-actor allowance delta).  |
 
 ### Inbound Edges
 
@@ -47,18 +49,24 @@ flowchart TD
     GH_RepoRole[fa:fa-user-tie GH_RepoRole]
     GH_TeamRole[fa:fa-user-tie GH_TeamRole]
     GH_Branch[fa:fa-code-branch GH_Branch]
+    GH_BranchProtectionRule[fa:fa-shield GH_BranchProtectionRule]
+    GH_Repository[fa:fa-box-archive GH_Repository]
 
     style GH_Team fill:#C06EFF
     style GH_OrgRole fill:#BFFFD1
     style GH_RepoRole fill:#DEFEFA
     style GH_TeamRole fill:#D0B0FF
     style GH_Branch fill:#FF80D2
+    style GH_BranchProtectionRule fill:#FFB347
+    style GH_Repository fill:#9EECFF
 
     GH_Team -->|GH_MemberOf| GH_Team
     GH_Team -->|GH_HasRole| GH_OrgRole
     GH_Team -->|GH_HasRole| GH_RepoRole
-    GH_Team -.->|GH_BypassPullRequestAllowances| GH_Branch
-    GH_Team -.->|GH_RestrictionsCanPush| GH_Branch
+    GH_Team -.->|GH_BypassPullRequestAllowances| GH_BranchProtectionRule
+    GH_Team -.->|GH_RestrictionsCanPush| GH_BranchProtectionRule
+    GH_Team -->|GH_CanWriteBranch| GH_Branch
+    GH_Team -->|GH_CanCreateBranch| GH_Repository
     GH_TeamRole -->|GH_MemberOf| GH_Team
     GH_TeamRole -->|GH_AddMember| GH_Team
 ```

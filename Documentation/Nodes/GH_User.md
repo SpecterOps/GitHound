@@ -25,9 +25,13 @@ Created by: `Git-HoundUser`
 
 | Edge Kind | Target Node | Traversable | Description                                                                    |
 | --------- | ----------- | ----------- | ------------------------------------------------------------------------------ |
-| GH_HasRole | GH_OrgRole   | Yes         | User is assigned to an organization role (Owner or Member).                    |
-| GH_HasRole | GH_RepoRole  | Yes         | User is directly assigned to a repository role (from Git-HoundRepositoryRole). |
-| GH_HasRole | GH_TeamRole  | Yes         | User has a team role (Member or Maintainer).                                   |
+| GH_HasRole                      | GH_OrgRole               | Yes         | User is assigned to an organization role (Owner or Member).                    |
+| GH_HasRole                      | GH_RepoRole              | Yes         | User is directly assigned to a repository role (from Git-HoundRepositoryRole). |
+| GH_HasRole                      | GH_TeamRole              | Yes         | User has a team role (Member or Maintainer).                                   |
+| GH_BypassPullRequestAllowances  | GH_BranchProtectionRule  | No          | User can bypass PR requirements on this protection rule.                       |
+| GH_RestrictionsCanPush           | GH_BranchProtectionRule  | No          | User is allowed to push to branches protected by this rule.                    |
+| GH_CanWriteBranch                | GH_Branch                | Yes         | User can push to this branch (computed — per-actor allowance delta).           |
+| GH_CanCreateBranch               | GH_Repository            | Yes         | User can create new branches (computed — per-actor allowance delta).           |
 
 ### Inbound Edges
 
@@ -72,11 +76,19 @@ flowchart TD
     style GH_PersonalAccessToken fill:#F5A623
     style GH_PersonalAccessTokenRequest fill:#D4A017
 
+    GH_BranchProtectionRule[fa:fa-shield GH_BranchProtectionRule]
+    GH_Repository[fa:fa-box-archive GH_Repository]
+
+    style GH_BranchProtectionRule fill:#FFB347
+    style GH_Repository fill:#9EECFF
+
     GH_User -->|GH_HasRole| GH_OrgRole
     GH_User -->|GH_HasRole| GH_TeamRole
     GH_User -->|GH_HasRole| GH_RepoRole
-    GH_User -.->|GH_BypassPullRequestAllowances| GH_Branch
-    GH_User -.->|GH_RestrictionsCanPush| GH_Branch
+    GH_User -.->|GH_BypassPullRequestAllowances| GH_BranchProtectionRule
+    GH_User -.->|GH_RestrictionsCanPush| GH_BranchProtectionRule
+    GH_User -->|GH_CanWriteBranch| GH_Branch
+    GH_User -->|GH_CanCreateBranch| GH_Repository
     GH_ExternalIdentity -.->|GH_MapsToUser| GH_User
     AZUser -->|SyncedToGHUser| GH_User
     OktaUser -->|SyncedToGHUser| GH_User

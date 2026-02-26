@@ -99,7 +99,7 @@ flowchart TD
     GH_OrgRole -->|GH_HasBaseRole| GH_RepoRole
     GH_RepoRole -.->|GH_WriteRepoContents| GH_Repository
     %%GH_RepoRole -.->|GH_WriteRepoPullRequests| GH_Repository
-    GH_RepoRole -.->|GH_AdminTo| GH_Repository
+    GH_RepoRole -->|GH_AdminTo| GH_Repository
     %%GH_RepoRole -.->|GH_ManageWebhooks| GH_Repository
     %%GH_RepoRole -.->|GH_ManageDeployKeys| GH_Repository
     %%GH_RepoRole -.->|GH_PushProtectedBranch| GH_Repository
@@ -114,8 +114,15 @@ flowchart TD
     %%GH_RepoRole -.->|GH_CreateSoloMergeQueueEntry| GH_Repository
     %%GH_RepoRole -.->|GH_EditRepoCustomPropertiesValue| GH_Repository
     GH_RepoRole -->|GH_HasBaseRole| GH_RepoRole
+    GH_RepoRole -->|GH_CanEditProtection| GH_Branch
+    GH_RepoRole -->|GH_CanWriteBranch| GH_Branch
+    GH_RepoRole -->|GH_CanCreateBranch| GH_Repository
     GH_User -->|GH_HasRole| GH_RepoRole
     GH_Team -->|GH_HasRole| GH_RepoRole
+    GH_User -->|GH_CanWriteBranch| GH_Branch
+    GH_Team -->|GH_CanWriteBranch| GH_Branch
+    GH_User -->|GH_CanCreateBranch| GH_Repository
+    GH_Team -->|GH_CanCreateBranch| GH_Repository
     GH_Repository -->|GH_HasSecret| GH_OrgSecret
     GH_Repository -.->|GH_Contains| GH_RepoSecret
     GH_Repository -->|GH_HasSecret| GH_RepoSecret

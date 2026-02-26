@@ -75,13 +75,10 @@ flowchart TD
     GH_RepoSecret[fa:fa-lock GH_RepoSecret]
     GH_SecretScanningAlert[fa:fa-key GH_SecretScanningAlert]
     GH_RepoRole[fa:fa-user-tie GH_RepoRole]
-    AWSRole[fa:fa-user-tag AWSRole]
     AZFederatedIdentityCredential[fa:fa-id-card AZFederatedIdentityCredential]
 
     style GH_Repository fill:#9EECFF
     style GH_Organization fill:#5FED83
-    style GH_User fill:#FF8E40
-    style GH_Team fill:#C06EFF
     style GH_Branch fill:#FF80D2
     style GH_Workflow fill:#FFE4A1
     style GH_Environment fill:#D5F2C2
@@ -95,22 +92,20 @@ flowchart TD
 
     style GH_PersonalAccessToken fill:#F5A623
 
-    GH_Organization -.->|GH_Owns| GH_Repository
+    GH_Organization -->|GH_Owns| GH_Repository
     GH_Repository -.->|GH_HasBranch| GH_Branch
     GH_Repository -.->|GH_HasWorkflow| GH_Workflow
-    GH_Repository -.->|GH_HasEnvironment| GH_Environment
-    GH_Repository -.->|GH_HasSecret| GH_OrgSecret
+    GH_Repository -->|GH_HasEnvironment| GH_Environment
+    GH_Repository -->|GH_HasSecret| GH_OrgSecret
     GH_Repository -.->|GH_Contains| GH_RepoSecret
     GH_Repository -->|GH_HasSecret| GH_RepoSecret
     GH_Repository -.->|GH_HasSecretScanningAlert| GH_SecretScanningAlert
     GH_RepoRole -.->|GH_ReadRepoContents| GH_Repository
     GH_RepoRole -.->|GH_WriteRepoContents| GH_Repository
-    GH_RepoRole -.->|GH_AdminTo| GH_Repository
+    GH_RepoRole -->|GH_AdminTo| GH_Repository
     GH_RepoRole -.->|GH_BypassBranchProtection| GH_Repository
     GH_RepoRole -.->|GH_EditRepoProtections| GH_Repository
     GH_RepoRole -.->|GH_ViewSecretScanningAlerts| GH_Repository
-    GH_RepoRole -.->|GH_BypassProtections| GH_Repository
-    GH_RepoRole -.->|GH_EditProtections| GH_Repository
-    GH_Repository -.->|GH_CanAssumeAWSRole| AWSRole
+    GH_RepoRole -->|GH_CanCreateBranch| GH_Repository
     GH_Repository -->|CanAssumeIdentity| AZFederatedIdentityCredential
 ```
