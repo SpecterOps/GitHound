@@ -29,9 +29,12 @@ Created by: `Git-HoundBranch`
 
 | Edge Kind        | Source Node             | Traversable | Description                                                                               |
 | ---------------- | ----------------------- | ----------- | ----------------------------------------------------------------------------------------- |
-| GH_HasBranch     | GH_Repository           | Yes         | Repository has this branch.                                                               |
-| GH_ProtectedBy   | GH_BranchProtectionRule | Yes         | Branch protection rule protects this branch.                                              |
-| GH_HasEnvironment| GH_Branch               | No          | Branch has a deployment environment via custom branch policy (from Git-HoundEnvironment). |
+| GH_HasBranch          | GH_Repository           | Yes         | Repository has this branch.                                                               |
+| GH_ProtectedBy        | GH_BranchProtectionRule | Yes         | Branch protection rule protects this branch.                                              |
+| GH_HasEnvironment     | GH_Branch               | No          | Branch has a deployment environment via custom branch policy (from Git-HoundEnvironment). |
+| GH_CanEditProtection  | GH_RepoRole             | Yes         | Repo role can modify/remove the protection rules governing this branch (computed).        |
+| GH_CanWriteBranch     | GH_RepoRole             | Yes         | Repo role can push to this branch (computed from permissions + BPR state).                |
+| GH_CanWriteBranch     | GH_User or GH_Team      | Yes         | User or team can push to this branch (computed — per-actor allowance delta).              |
 
 ## Diagram
 
@@ -42,7 +45,8 @@ flowchart TD
     GH_RepoRole[fa:fa-user-tie GH_RepoRole]
     GH_BranchProtectionRule[fa:fa-shield GH_BranchProtectionRule]
     GH_Environment[fa:fa-leaf GH_Environment]
-    AWSRole[fa:fa-user-tag AWSRole]
+    GH_User[fa:fa-user GH_User]
+    GH_Team[fa:fa-user-group GH_Team]
     AZFederatedIdentityCredential[fa:fa-id-card AZFederatedIdentityCredential]
 
     style GH_Branch fill:#FF80D2
@@ -50,7 +54,8 @@ flowchart TD
     style GH_RepoRole fill:#DEFEFA
     style GH_BranchProtectionRule fill:#FFB347
     style GH_Environment fill:#D5F2C2
-    style AWSRole fill:#FF8E40
+    style GH_User fill:#FF8E40
+    style GH_Team fill:#C06EFF
     style AZFederatedIdentityCredential fill:#FF80D2
 
     GH_Repository -.->|GH_HasBranch| GH_Branch
@@ -58,4 +63,7 @@ flowchart TD
     GH_Branch -.->|GH_HasEnvironment| GH_Environment
     GH_Branch -->|CanAssumeIdentity| AZFederatedIdentityCredential
     GH_RepoRole -->|GH_CanWriteBranch| GH_Branch
+    GH_RepoRole -->|GH_CanEditProtection| GH_Branch
+    GH_User -->|GH_CanWriteBranch| GH_Branch
+    GH_Team -->|GH_CanWriteBranch| GH_Branch
 ```

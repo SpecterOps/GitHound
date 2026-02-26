@@ -3190,9 +3190,16 @@ function Compute-GitHoundBranchAccess
             if ($accessibleBranches.Count -gt 0) {
                 foreach ($branchId in $accessibleBranches) {
                     $reason = $branchReasons[$branchId]
+                    $edgeTypes = switch ($reason) {
+                        'no_protection'            { 'GH_HasBaseRole|GH_WriteRepoContents' }
+                        'admin'                    { 'GH_HasBaseRole|GH_AdminTo' }
+                        'bypass_branch_protection' { 'GH_HasBaseRole|GH_WriteRepoContents|GH_BypassBranchProtection' }
+                        'push_protected_branch'    { 'GH_HasBaseRole|GH_WriteRepoContents|GH_PushProtectedBranch' }
+                        default                    { 'GH_HasBaseRole|GH_WriteRepoContents|GH_BypassBranchProtection|GH_PushProtectedBranch' }
+                    }
                     Add-ComputedEdge -Kind 'GH_CanWriteBranch' -StartId $roleId -EndId $branchId `
                         -Properties @{ traversable = $true; reason = $reason;
-                            query_composition = "MATCH p1=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[]->(:GH_Repository)-[:GH_HasBranch]->(b:GH_Branch {objectid:'$($branchId.ToUpper())'}) OPTIONAL MATCH p2=(b)<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule) RETURN p1, p2" }
+                            query_composition = "MATCH p1=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[:$($edgeTypes)*1..]->(:GH_Repository)-[:GH_HasBranch]->(b:GH_Branch {objectid:'$($branchId.ToUpper())'}) OPTIONAL MATCH p2=(b)<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule) RETURN p1, p2" }
                 }
             }
         }
@@ -3274,7 +3281,7 @@ function Compute-GitHoundBranchAccess
                 if ($inPushAllowances) {
                     Add-ComputedEdge -Kind 'GH_CanCreateBranch' -StartId $actorId -EndId $repoId `
                         -Properties @{ traversable = $true; reason = 'push_allowance';
-                            query_composition = "MATCH p1=(a {objectid:'$($actorId.ToUpper())'})-[:GH_RestrictionsCanPush]->(:GH_BranchProtectionRule {pattern:'*'})-[:GH_ProtectedBy]->(:GH_Branch)<-[:GH_HasBranch]-(r:GH_Repository {objectid:'$($repoId.ToUpper())'}) OPTIONAL MATCH p2=(a)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[]->(r) RETURN p1, p2" }
+                            query_composition = "MATCH p1=(a:GitHub {objectid:'$($actorId.ToUpper())'})-[:GH_RestrictionsCanPush]->(:GH_BranchProtectionRule {pattern:'*'})-[:GH_ProtectedBy]->(:GH_Branch)<-[:GH_HasBranch]-(r:GH_Repository {objectid:'$($repoId.ToUpper())'}) MATCH p2=(a)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_WriteRepoContents]->(r) RETURN p1, p2" }
                 }
             }
 
@@ -3340,9 +3347,16 @@ function Compute-GitHoundBranchAccess
             # Emit per-actor edges for the delta branches
             foreach ($branchId in $deltaAccessible) {
                 $reason = $deltaReasons[$branchId]
+                $qc = switch ($reason) {
+                    'push_allowance' {
+                        "MATCH p1=(a:GitHub {objectid:'$($actorId.ToUpper())'})-[:GH_RestrictionsCanPush]->(:GH_BranchProtectionRule)-[:GH_ProtectedBy]->(b:GH_Branch {objectid:'$($branchId.ToUpper())'}) MATCH p2=(:GitHub {objectid:'$($actorId.ToUpper())'})-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_WriteRepoContents]->(:GH_Repository)-[:GH_HasBranch]->(:GH_Branch {objectid:'$($branchId.ToUpper())'}) RETURN p1, p2"
+                    }
+                    default {
+                        "MATCH p1=(a:GitHub {objectid:'$($actorId.ToUpper())'})-[:GH_RestrictionsCanPush|GH_BypassPullRequestAllowances]->(:GH_BranchProtectionRule)-[:GH_ProtectedBy]->(b:GH_Branch {objectid:'$($branchId.ToUpper())'}) MATCH p2=(:GitHub {objectid:'$($actorId.ToUpper())'})-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_WriteRepoContents]->(:GH_Repository)-[:GH_HasBranch]->(:GH_Branch {objectid:'$($branchId.ToUpper())'}) RETURN p1, p2"
+                    }
+                }
                 Add-ComputedEdge -Kind 'GH_CanWriteBranch' -StartId $actorId -EndId $branchId `
-                    -Properties @{ traversable = $true; reason = $reason;
-                        query_composition = "MATCH p1=(a {objectid:'$($actorId.ToUpper())'})-[:GH_RestrictionsCanPush|GH_BypassPullRequestAllowances]->(:GH_BranchProtectionRule)-[:GH_ProtectedBy]->(b:GH_Branch {objectid:'$($branchId.ToUpper())'}) OPTIONAL MATCH p2=(a)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[]->(:GH_Repository)-[:GH_HasBranch]->(b) RETURN p1, p2" }
+                    -Properties @{ traversable = $true; reason = $reason; query_composition = $qc }
             }
         }
     }
@@ -4323,6 +4337,7 @@ function Git-HoundAppInstallation
 
         # Track unique app slugs to avoid duplicate GH_App lookups
         $seenAppSlugs = @{}
+        $appSlugInstallation = @{}   # Representative installation per slug (fallback for private apps)
         $allCount = 0
         $selectedCount = 0
 
@@ -4375,6 +4390,7 @@ function Git-HoundAppInstallation
             # Collect unique app slugs for GH_App node creation
             if ($app.app_slug -and -not $seenAppSlugs.ContainsKey($app.app_slug)) {
                 $seenAppSlugs[$app.app_slug] = New-Object System.Collections.ArrayList
+                $appSlugInstallation[$app.app_slug] = $app
             }
             if ($app.app_slug) {
                 $null = $seenAppSlugs[$app.app_slug].Add($installationId)
@@ -4385,7 +4401,7 @@ function Git-HoundAppInstallation
         foreach ($slug in $seenAppSlugs.Keys) {
             try {
                 Write-Host "[*]   Looking up app definition: $slug"
-                $appDef = Invoke-GithubRestMethod -Session $Session -Path "apps/$slug"
+                $appDef = Invoke-GithubRestMethod -Session $Session -Path "apps/$slug" -ErrorAction Stop
 
                 $appNodeId = "GH_App_$($appDef.id)"
 
@@ -4420,7 +4436,38 @@ function Git-HoundAppInstallation
                 }
             }
             catch {
-                Write-Warning "Failed to look up app definition for '$slug': $_"
+                Write-Warning "Failed to look up app definition for '$slug' (likely private app). Creating node from installation data."
+                $inst = $appSlugInstallation[$slug]
+                $appNodeId = "GH_App_$($inst.app_id)"
+
+                $appProperties = @{
+                    # Common Properties
+                    name                 = Normalize-Null $inst.app_slug
+                    id                   = Normalize-Null $inst.app_id
+                    # Node Specific Properties
+                    slug                 = Normalize-Null $inst.app_slug
+                    client_id            = $null
+                    node_id              = $null
+                    description          = Normalize-Null $inst.description
+                    external_url         = $null
+                    html_url             = Normalize-Null $inst.html_url
+                    owner_login          = $null
+                    owner_node_id        = $null
+                    owner_type           = $null
+                    created_at           = $null
+                    updated_at           = $null
+                    permissions          = Normalize-Null ($inst.permissions | ConvertTo-Json -Depth 10)
+                    events               = Normalize-Null ($inst.events | ConvertTo-Json -Depth 10)
+                    installations_count  = $null
+                    # Accordion Panel Queries
+                    query_installations  = "MATCH p=(:GH_App {slug: '$slug'})-[:GH_InstalledAs]->(:GH_AppInstallation) RETURN p"
+                }
+
+                $null = $nodes.Add((New-GitHoundNode -Id $appNodeId -Kind 'GH_App' -Properties $appProperties))
+
+                foreach ($instId in $seenAppSlugs[$slug]) {
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_InstalledAs' -StartId $appNodeId -EndId $instId -Properties @{ traversable = $true }))
+                }
             }
         }
 
@@ -5453,7 +5500,7 @@ function Invoke-GitHound
     $payload = [PSCustomObject]@{
         '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
         metadata = [PSCustomObject]@{
-            source_kind = "GitHub"
+            source_kind = "GitHubTest"
         }
         graph = [PSCustomObject]@{
             nodes = $filteredNodes

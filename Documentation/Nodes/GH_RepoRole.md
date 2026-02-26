@@ -28,7 +28,7 @@ Created by: `Git-HoundRepository`
 | GH_ReadRepoContents              | GH_Repository | No          | Read role can read repository contents.                                 |
 | GH_WriteRepoContents             | GH_Repository | No          | Write/Admin role can push to the repository.                            |
 | GH_WriteRepoPullRequests         | GH_Repository | No          | Write/Admin role can create and merge pull requests.                    |
-| GH_AdminTo                       | GH_Repository | No          | Admin role has full administrative access.                              |
+| GH_AdminTo                       | GH_Repository | Yes         | Admin role has full administrative access.                              |
 | GH_ManageWebhooks                | GH_Repository | No          | Admin role can manage webhooks.                                         |
 | GH_ManageDeployKeys              | GH_Repository | No          | Admin role can manage deploy keys.                                      |
 | GH_PushProtectedBranch           | GH_Repository | No          | Admin/Maintain role can push to protected branches.                     |
@@ -44,8 +44,7 @@ Created by: `Git-HoundRepository`
 | GH_EditRepoCustomPropertiesValue | GH_Repository | No          | Admin role can edit custom property values.                             |
 | GH_HasBaseRole                   | GH_RepoRole   | Yes         | Role inherits from a base role (e.g., Triage → Read, Maintain → Write). |
 | GH_CanCreateBranch               | GH_Repository | Yes         | Role can create new branches (computed from permissions + BPR state).    |
-| GH_CanWriteBranch                | GH_Branch              | Yes | Role can push to this branch (computed from permissions + BPR state). |
-| GH_CanEditProtection             | GH_BranchProtectionRule | No  | Role can modify/remove this branch protection rule (computed from edit_repo_protections or admin). |
+| GH_CanWriteBranch                | GH_Branch     | Yes         | Role can push to this branch (computed from permissions + BPR state). |
 
 ### Inbound Edges
 
@@ -74,14 +73,16 @@ flowchart TD
     style GH_Team fill:#C06EFF
     style GH_OrgRole fill:#BFFFD1
 
-    GH_RepoRole -.->|GH_CanPull| GH_Repository
     GH_RepoRole -.->|GH_ReadRepoContents| GH_Repository
     GH_RepoRole -.->|GH_WriteRepoContents| GH_Repository
-    GH_RepoRole -.->|GH_AdminTo| GH_Repository
+    GH_RepoRole -->|GH_AdminTo| GH_Repository
     GH_RepoRole -.->|GH_ViewSecretScanningAlerts| GH_Repository
-    GH_RepoRole -.->|GH_BypassProtections| GH_Repository
-    GH_RepoRole -.->|GH_EditProtections| GH_Repository
+    GH_RepoRole -.->|GH_BypassBranchProtection| GH_Repository
+    GH_RepoRole -.->|GH_EditRepoProtections| GH_Repository
     GH_RepoRole -->|GH_HasBaseRole| GH_RepoRole
+    GH_RepoRole -->|GH_CanEditProtection| GH_Branch
+    GH_RepoRole -->|GH_CanWriteBranch| GH_Branch
+    GH_RepoRole -->|GH_CanCreateBranch| GH_Repository
     GH_User -->|GH_HasRole| GH_RepoRole
     GH_Team -->|GH_HasRole| GH_RepoRole
     GH_OrgRole -->|GH_HasBaseRole| GH_RepoRole

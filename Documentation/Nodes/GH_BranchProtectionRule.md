@@ -44,7 +44,6 @@ Created by: `Git-HoundBranch`
 | ------------------------------ | ------------------ | ----------- | ------------------------------------------------------------------- |
 | GH_BypassPullRequestAllowances | GH_User or GH_Team | No          | User or team can bypass pull request requirements on this rule.     |
 | GH_RestrictionsCanPush         | GH_User or GH_Team | No          | User or team is allowed to push to branches protected by this rule. |
-| GH_CanEditProtection           | GH_RepoRole        | No          | Repo role can modify or remove this branch protection rule (computed from `edit_repo_protections` or admin permission). |
 
 ## Diagram
 
@@ -54,19 +53,16 @@ flowchart TD
     GH_Branch[fa:fa-code-branch GH_Branch]
     GH_User[fa:fa-user GH_User]
     GH_Team[fa:fa-user-group GH_Team]
-    GH_RepoRole[fa:fa-user-tie GH_RepoRole]
 
     style GH_BranchProtectionRule fill:#FFB347
     style GH_Branch fill:#FF80D2
     style GH_User fill:#FF8E40
     style GH_Team fill:#C06EFF
-    style GH_RepoRole fill:#DEFEFA
 
     GH_User -.->|GH_BypassPullRequestAllowances| GH_BranchProtectionRule
     GH_Team -.->|GH_BypassPullRequestAllowances| GH_BranchProtectionRule
     GH_User -.->|GH_RestrictionsCanPush| GH_BranchProtectionRule
     GH_Team -.->|GH_RestrictionsCanPush| GH_BranchProtectionRule
-    GH_RepoRole -.->|GH_CanEditProtection| GH_BranchProtectionRule
     GH_BranchProtectionRule -->|GH_ProtectedBy| GH_Branch
 ```
 
