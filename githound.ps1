@@ -2687,7 +2687,7 @@ function Compute-GitHoundBranchAccess
 
         - GH_CanCreateBranch (User/Team -> Repository): Actor can create new branches
         - GH_CanWriteBranch  (User/Team -> Branch or Repository): Actor can push to branch(es)
-        - GH_CanEditProtection (User/Team -> BPR): Actor can modify/remove this BPR (non-traversable)
+        - GH_CanEditProtection (RepoRole -> Branch): Role can modify/remove protections governing this branch
 
         The computation evaluates two independent gates per branch:
 
@@ -3141,12 +3141,15 @@ function Compute-GitHoundBranchAccess
             $hasBypassBranch = $perms.Contains('GH_BypassBranchProtection')
             $hasEditProtections = $perms.Contains('GH_EditRepoProtections')
 
-            # ── GH_CanEditProtection (role -> each BPR on this repo) ──
+            # ── GH_CanEditProtection (role -> each protected branch) ──
             if ($hasEditProtections -or $hasAdmin) {
-                foreach ($bprId in $bprs) {
-                    Add-ComputedEdge -Kind 'GH_CanEditProtection' -StartId $roleId -EndId $bprId `
-                        -Properties @{ traversable = $false; reason = 'edit_repo_protections';
-                            query_composition = "MATCH p1=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[:GH_EditRepoProtections|GH_AdminTo]->(:GH_Repository) OPTIONAL MATCH p2=(:GH_BranchProtectionRule {objectid:'$($bprId.ToUpper())'})-[:GH_ProtectedBy]->(:GH_Branch) RETURN p1, p2" }
+                $reason = if ($hasAdmin) { 'admin' } else { 'edit_repo_protections' }
+                foreach ($branchId in $branches) {
+                    if ($branchToBPR.ContainsKey($branchId)) {
+                        Add-ComputedEdge -Kind 'GH_CanEditProtection' -StartId $roleId -EndId $branchId `
+                            -Properties @{ traversable = $true; reason = $reason;
+                                query_composition = "MATCH p=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[:GH_EditRepoProtections]->(:GH_Repository)-[:GH_HasBranch]->(:GH_Branch {objectid:'$($branchId.ToUpper())'})<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule) RETURN p" }
+                    }
                 }
             }
 
@@ -5282,6 +5285,11 @@ function Invoke-GitHound
     }
     if($branches.nodes) { $nodes.AddRange(@($branches.nodes)) }
     if($branches.edges) { $edges.AddRange(@($branches.edges)) }
+
+    # ── Computed Edges: Branch Access ────────────────────────────────────────
+    Write-Host "[*] Computing branch access edges (GH_CanWriteBranch, GH_CanCreateBranch, GH_CanEditProtection)"
+    $branchAccess = Compute-GitHoundBranchAccess -Nodes $nodes -Edges $edges
+    if($branchAccess.edges) { $edges.AddRange(@($branchAccess.edges)) }
 
     # ── Step 7: Workflows (requires -CollectAll) ────────────────────────────
     if ($CollectAll) {
