@@ -24,39 +24,35 @@ The following table summarizes the custom edge kinds used by `GitHound`:
 | [GH_ManageOrganizationWebhooks] | [GH_OrgRole] | [GH_Organization] | ❌ |
 | [GH_OrgBypassCodeScanningDismissalRequests] | [GH_OrgRole] | [GH_Organization] | ❌ |
 | [GH_OrgBypassSecretScanningClosureRequests] | [GH_OrgRole] | [GH_Organization] | ❌ |
-| [GHWriteOrganizationActionsSecrets] | [GH_OrgRole] | [GH_Organization] | ❌ |
-| [GHWriteOrganizationActionsSettings] | [GH_OrgRole] | [GH_Organization] | ❌ |
+| [GH_WriteOrganizationActionsSecrets] | [GH_OrgRole] | [GH_Organization] | ❌ |
+| [GH_WriteOrganizationActionsSettings] | [GH_OrgRole] | [GH_Organization] | ❌ |
 | [GH_ViewSecretScanningAlerts] | [GH_OrgRole] | [GH_Organization] | ❌ |
 |                               | [GH_RepoRole] | [GH_Repository] | ❌ |
-| [GHResolveSecretScanningAlerts] | [GH_OrgRole] | [GH_Organization] | ❌ |
-| [GHReadOrganizationActionsUsageMetrics] | [GH_OrgRole] | [GH_Organization] | ❌ |
-| [GHReadOrganizationCustomOrgRole] | [GH_OrgRole] | [GH_Organization] | ❌ |
-| [GHReadOrganizationCustomRepoRole] | [GH_OrgRole] | [GH_Organization] | ❌ |
-| [GHWriteOrganizationCustomOrgRole] | [GH_OrgRole] | [GH_Organization] | ❌ |
-| [GHWriteOrganizationCustomRepoRole] | [GH_OrgRole] | [GH_Organization] | ❌ |
-| [GHWriteOrganizationNetworkConfigurations] | [GH_OrgRole] | [GH_Organization] | ❌ |
-| [GHOrgReviewAndManageSecretScanningBypassRequests] | [GH_OrgRole] | [GH_Organization] | ❌ |
-| [GHOrgReviewAndManageSecretScanningClosureRequests] | [GH_OrgRole] | [GH_Organization] | ❌ |
-| [GH_CanPull] | [GH_RepoRole] | [GH_Repository] | ✅ |
+| [GH_ResolveSecretScanningAlerts] | [GH_OrgRole] | [GH_Organization] | ❌ |
+| [GH_ReadOrganizationActionsUsageMetrics] | [GH_OrgRole] | [GH_Organization] | ❌ |
+| [GH_ReadOrganizationCustomOrgRole] | [GH_OrgRole] | [GH_Organization] | ❌ |
+| [GH_ReadOrganizationCustomRepoRole] | [GH_OrgRole] | [GH_Organization] | ❌ |
+| [GH_WriteOrganizationCustomOrgRole] | [GH_OrgRole] | [GH_Organization] | ❌ |
+| [GH_WriteOrganizationCustomRepoRole] | [GH_OrgRole] | [GH_Organization] | ❌ |
+| [GH_WriteOrganizationNetworkConfigurations] | [GH_OrgRole] | [GH_Organization] | ❌ |
+| [GH_OrgReviewAndManageSecretScanningBypassRequests] | [GH_OrgRole] | [GH_Organization] | ❌ |
+| [GH_OrgReviewAndManageSecretScanningClosureRequests] | [GH_OrgRole] | [GH_Organization] | ❌ |
 | [GH_ReadRepoContents] | [GH_RepoRole] | [GH_Repository] | ✅ |
-| [GH_CanPush] | [GH_RepoRole] | [GH_Repository] | ❌ |
 | [GH_WriteRepoContents] | [GH_RepoRole] | [GH_Repository] | ❌ |
-| [GHWriteRepoPullRequests] | [GH_RepoRole] | [GH_Repository] | ❌ |
+| [GH_WriteRepoPullRequests] | [GH_RepoRole] | [GH_Repository] | ❌ |
 | [GH_AdminTo] | [GH_RepoRole] | [GH_Repository] | ❌ |
-| [GH_BypassProtections] | [GH_RepoRole] | [GH_Repository] | ❌ |
-| [GH_EditProtections] | [GH_RepoRole] | [GH_Repository] | ❌ |
-| [GHManageWebhooks] | [GH_RepoRole] | [GH_Repository] | ❌ |
-| [GHManageDeployKeys] | [GH_RepoRole] | [GH_Repository] | ❌ |
-| [GHPushProtectedBranch] | [GH_RepoRole] | [GH_Repository] | ❌ |
-| [GHDeleteAlertsCodeScanning] | [GH_RepoRole] | [GH_Repository] | ❌ |
-| [GHRunOrgMigration] | [GH_RepoRole] | [GH_Repository] | ❌ |
-| [GHBypassBranchProtection] | [GH_RepoRole] | [GH_Repository] | ❌ |
-| [GHManageSecurityProducts] | [GH_RepoRole] | [GH_Repository] | ❌ |
-| [GHManageRepoSecurityProducts] | [GH_RepoRole] | [GH_Repository] | ❌ |
-| [GHEditRepoProtections] | [GH_RepoRole] | [GH_Repository] | ❌ |
-| [GHJumpMergeQueue] | [GH_RepoRole] | [GH_Repository] | ❌ |
-| [GHCreateSoloMergeQueueEntry] | [GH_RepoRole] | [GH_Repository] | ❌ |
-| [GHEditRepoCustomPropertiesValue] | [GH_RepoRole] | [GH_Repository] | ❌ |
+| [GH_BypassBranchProtection] | [GH_RepoRole] | [GH_Repository] | ❌ |
+| [GH_EditRepoProtections] | [GH_RepoRole] | [GH_Repository] | ❌ |
+| [GH_ManageWebhooks] | [GH_RepoRole] | [GH_Repository] | ❌ |
+| [GH_ManageDeployKeys] | [GH_RepoRole] | [GH_Repository] | ❌ |
+| [GH_PushProtectedBranch] | [GH_RepoRole] | [GH_Repository] | ❌ |
+| [GH_DeleteAlertsCodeScanning] | [GH_RepoRole] | [GH_Repository] | ❌ |
+| [GH_RunOrgMigration] | [GH_RepoRole] | [GH_Repository] | ❌ |
+| [GH_ManageSecurityProducts] | [GH_RepoRole] | [GH_Repository] | ❌ |
+| [GH_ManageRepoSecurityProducts] | [GH_RepoRole] | [GH_Repository] | ❌ |
+| [GH_JumpMergeQueue] | [GH_RepoRole] | [GH_Repository] | ❌ |
+| [GH_CreateSoloMergeQueueEntry] | [GH_RepoRole] | [GH_Repository] | ❌ |
+| [GH_EditRepoCustomPropertiesValue] | [GH_RepoRole] | [GH_Repository] | ❌ |
 | [GH_ProtectedBy] | [GH_BranchProtectionRule] | [GH_Branch] | ✅ |
 | [GH_BypassPullRequestAllowances] | [GH_User], [GH_Team] | [GH_BranchProtectionRule] | ❌ |
 | [GH_RestrictionsCanPush] | [GH_User], [GH_Team] | [GH_BranchProtectionRule] | ❌ |
@@ -75,6 +71,11 @@ The following table summarizes the custom edge kinds used by `GitHound`:
 | [GH_InstalledAs] | [GH_App] | [GH_AppInstallation] | ✅ |
 | [GH_CanAccess] | [GH_PersonalAccessToken] | [GH_Repository] | ❌ |
 |                 | [GH_AppInstallation]     | [GH_Repository] | ❌ |
+| [GH_CanWriteBranch] | [GH_RepoRole] | [GH_Branch] | ✅ |
+|                     | [GH_User], [GH_Team] | [GH_Branch] | ✅ |
+| [GH_CanCreateBranch] | [GH_RepoRole] | [GH_Repository] | ✅ |
+|                      | [GH_User], [GH_Team] | [GH_Repository] | ✅ |
+| [GH_CanEditProtection] | [GH_RepoRole] | [GH_BranchProtectionRule] | ❌ |
 
 ## Hybrid Edges
 
@@ -112,70 +113,69 @@ Hybrid edges connect GitHub entities to entities from other supported BloodHound
 | [SyncedToGHUser] | [PingOneUser]         | [GH_User]         | ✅          |
 | [GH_MapsToUser]  | [GH_ExternalIdentity] | [PingOneUser]     | ❌          |
 
-[GH_Contains]: Nodes/GH_Organization.md#outbound-edges
-[GH_Owns]: Nodes/GH_Organization.md#outbound-edges
-[GH_HasRole]: Nodes/GH_User.md#outbound-edges
-[GH_MemberOf]: Nodes/GH_TeamRole.md#outbound-edges
-[GH_AddMember]: Nodes/GH_TeamRole.md#outbound-edges
-[GH_HasBaseRole]: Nodes/GH_OrgRole.md#outbound-edges
-[GH_CreateRepository]: Nodes/GH_OrgRole.md#outbound-edges
-[GH_InviteMember]: Nodes/GH_OrgRole.md#outbound-edges
-[GH_AddCollaborator]: Nodes/GH_OrgRole.md#outbound-edges
-[GH_CreateTeam]: Nodes/GH_OrgRole.md#outbound-edges
-[GH_TransferRepository]: Nodes/GH_OrgRole.md#outbound-edges
-[GH_ManageOrganizationWebhooks]: Nodes/GH_OrgRole.md#outbound-edges
-[GH_OrgBypassCodeScanningDismissalRequests]: Nodes/GH_OrgRole.md#outbound-edges
-[GH_OrgBypassSecretScanningClosureRequests]: Nodes/GH_OrgRole.md#outbound-edges
-[GHWriteOrganizationActionsSecrets]: Nodes/GH_OrgRole.md#outbound-edges
-[GHWriteOrganizationActionsSettings]: Nodes/GH_OrgRole.md#outbound-edges
-[GH_ViewSecretScanningAlerts]: Nodes/GH_OrgRole.md#outbound-edges
-[GHResolveSecretScanningAlerts]: Nodes/GH_OrgRole.md#outbound-edges
-[GHReadOrganizationActionsUsageMetrics]: Nodes/GH_OrgRole.md#outbound-edges
-[GHReadOrganizationCustomOrgRole]: Nodes/GH_OrgRole.md#outbound-edges
-[GHReadOrganizationCustomRepoRole]: Nodes/GH_OrgRole.md#outbound-edges
-[GHWriteOrganizationCustomOrgRole]: Nodes/GH_OrgRole.md#outbound-edges
-[GHWriteOrganizationCustomRepoRole]: Nodes/GH_OrgRole.md#outbound-edges
-[GHWriteOrganizationNetworkConfigurations]: Nodes/GH_OrgRole.md#outbound-edges
-[GHOrgReviewAndManageSecretScanningBypassRequests]: Nodes/GH_OrgRole.md#outbound-edges
-[GHOrgReviewAndManageSecretScanningClosureRequests]: Nodes/GH_OrgRole.md#outbound-edges
-[GH_CanPull]: Nodes/GH_RepoRole.md#outbound-edges
-[GH_ReadRepoContents]: Nodes/GH_RepoRole.md#outbound-edges
-[GH_CanPush]: Nodes/GH_RepoRole.md#outbound-edges
-[GH_WriteRepoContents]: Nodes/GH_RepoRole.md#outbound-edges
-[GHWriteRepoPullRequests]: Nodes/GH_RepoRole.md#outbound-edges
-[GH_AdminTo]: Nodes/GH_RepoRole.md#outbound-edges
-[GH_BypassProtections]: Nodes/GH_RepoRole.md#outbound-edges
-[GH_EditProtections]: Nodes/GH_RepoRole.md#outbound-edges
-[GHManageWebhooks]: Nodes/GH_RepoRole.md#outbound-edges
-[GHManageDeployKeys]: Nodes/GH_RepoRole.md#outbound-edges
-[GHPushProtectedBranch]: Nodes/GH_RepoRole.md#outbound-edges
-[GHDeleteAlertsCodeScanning]: Nodes/GH_RepoRole.md#outbound-edges
-[GHRunOrgMigration]: Nodes/GH_RepoRole.md#outbound-edges
-[GHBypassBranchProtection]: Nodes/GH_RepoRole.md#outbound-edges
-[GHManageSecurityProducts]: Nodes/GH_RepoRole.md#outbound-edges
-[GHManageRepoSecurityProducts]: Nodes/GH_RepoRole.md#outbound-edges
-[GHEditRepoProtections]: Nodes/GH_RepoRole.md#outbound-edges
-[GHJumpMergeQueue]: Nodes/GH_RepoRole.md#outbound-edges
-[GHCreateSoloMergeQueueEntry]: Nodes/GH_RepoRole.md#outbound-edges
-[GHEditRepoCustomPropertiesValue]: Nodes/GH_RepoRole.md#outbound-edges
-[GH_ProtectedBy]: Nodes/GH_BranchProtectionRule.md#outbound-edges
-[GH_BypassPullRequestAllowances]: Nodes/GH_User.md#outbound-edges
-[GH_RestrictionsCanPush]: Nodes/GH_User.md#outbound-edges
-[GH_HasBranch]: Nodes/GH_Repository.md#outbound-edges
-[GH_HasWorkflow]: Nodes/GH_Repository.md#outbound-edges
-[GH_HasEnvironment]: Nodes/GH_Repository.md#outbound-edges
-[GH_HasSecret]: Nodes/GH_Repository.md#outbound-edges
-[GH_HasSecretScanningAlert]: Nodes/GH_Repository.md#outbound-edges
-[GH_HasSamlIdentityProvider]: Nodes/GH_Organization.md#outbound-edges
-[GH_HasExternalIdentity]: Nodes/GH_SamlIdentityProvider.md#outbound-edges
-[GH_MapsToUser]: Nodes/GH_ExternalIdentity.md#outbound-edges
-[GH_HasPersonalAccessToken]: Nodes/GH_User.md#outbound-edges
-[GH_HasPersonalAccessTokenRequest]: Nodes/GH_User.md#outbound-edges
-[GH_InstalledAs]: Nodes/GH_App.md#outbound-edges
-[GH_CanAccess]: Nodes/GH_PersonalAccessToken.md#outbound-edges
-[SyncedToGHUser]: Nodes/GH_User.md#inbound-edges
-[GH_CanAssumeAWSRole]: Nodes/GH_Repository.md#outbound-edges
-[CanAssumeIdentity]: Nodes/GH_Branch.md#outbound-edges
+[GH_Contains]: EdgeDescriptions/GH_Contains.md
+[GH_Owns]: EdgeDescriptions/GH_Owns.md
+[GH_HasRole]: EdgeDescriptions/GH_HasRole.md
+[GH_MemberOf]: EdgeDescriptions/GH_MemberOf.md
+[GH_AddMember]: EdgeDescriptions/GH_AddMember.md
+[GH_HasBaseRole]: EdgeDescriptions/GH_HasBaseRole.md
+[GH_CreateRepository]: EdgeDescriptions/GH_CreateRepository.md
+[GH_InviteMember]: EdgeDescriptions/GH_InviteMember.md
+[GH_AddCollaborator]: EdgeDescriptions/GH_AddCollaborator.md
+[GH_CreateTeam]: EdgeDescriptions/GH_CreateTeam.md
+[GH_TransferRepository]: EdgeDescriptions/GH_TransferRepository.md
+[GH_ManageOrganizationWebhooks]: EdgeDescriptions/GH_ManageOrganizationWebhooks.md
+[GH_OrgBypassCodeScanningDismissalRequests]: EdgeDescriptions/GH_OrgBypassCodeScanningDismissalRequests.md
+[GH_OrgBypassSecretScanningClosureRequests]: EdgeDescriptions/GH_OrgBypassSecretScanningClosureRequests.md
+[GH_WriteOrganizationActionsSecrets]: EdgeDescriptions/GH_WriteOrganizationActionsSecrets.md
+[GH_WriteOrganizationActionsSettings]: EdgeDescriptions/GH_WriteOrganizationActionsSettings.md
+[GH_ViewSecretScanningAlerts]: EdgeDescriptions/GH_ViewSecretScanningAlerts.md
+[GH_ResolveSecretScanningAlerts]: EdgeDescriptions/GH_ResolveSecretScanningAlerts.md
+[GH_ReadOrganizationActionsUsageMetrics]: EdgeDescriptions/GH_ReadOrganizationActionsUsageMetrics.md
+[GH_ReadOrganizationCustomOrgRole]: EdgeDescriptions/GH_ReadOrganizationCustomOrgRole.md
+[GH_ReadOrganizationCustomRepoRole]: EdgeDescriptions/GH_ReadOrganizationCustomRepoRole.md
+[GH_WriteOrganizationCustomOrgRole]: EdgeDescriptions/GH_WriteOrganizationCustomOrgRole.md
+[GH_WriteOrganizationCustomRepoRole]: EdgeDescriptions/GH_WriteOrganizationCustomRepoRole.md
+[GH_WriteOrganizationNetworkConfigurations]: EdgeDescriptions/GH_WriteOrganizationNetworkConfigurations.md
+[GH_OrgReviewAndManageSecretScanningBypassRequests]: EdgeDescriptions/GH_OrgReviewAndManageSecretScanningBypassRequests.md
+[GH_OrgReviewAndManageSecretScanningClosureRequests]: EdgeDescriptions/GH_OrgReviewAndManageSecretScanningClosureRequests.md
+[GH_ReadRepoContents]: EdgeDescriptions/GH_ReadRepoContents.md
+[GH_WriteRepoContents]: EdgeDescriptions/GH_WriteRepoContents.md
+[GH_WriteRepoPullRequests]: EdgeDescriptions/GH_WriteRepoPullRequests.md
+[GH_AdminTo]: EdgeDescriptions/GH_AdminTo.md
+[GH_BypassBranchProtection]: EdgeDescriptions/GH_BypassBranchProtection.md
+[GH_EditRepoProtections]: EdgeDescriptions/GH_EditRepoProtections.md
+[GH_ManageWebhooks]: EdgeDescriptions/GH_ManageWebhooks.md
+[GH_ManageDeployKeys]: EdgeDescriptions/GH_ManageDeployKeys.md
+[GH_PushProtectedBranch]: EdgeDescriptions/GH_PushProtectedBranch.md
+[GH_DeleteAlertsCodeScanning]: EdgeDescriptions/GH_DeleteAlertsCodeScanning.md
+[GH_RunOrgMigration]: EdgeDescriptions/GH_RunOrgMigration.md
+[GH_ManageSecurityProducts]: EdgeDescriptions/GH_ManageSecurityProducts.md
+[GH_ManageRepoSecurityProducts]: EdgeDescriptions/GH_ManageRepoSecurityProducts.md
+[GH_JumpMergeQueue]: EdgeDescriptions/GH_JumpMergeQueue.md
+[GH_CreateSoloMergeQueueEntry]: EdgeDescriptions/GH_CreateSoloMergeQueueEntry.md
+[GH_EditRepoCustomPropertiesValue]: EdgeDescriptions/GH_EditRepoCustomPropertiesValue.md
+[GH_ProtectedBy]: EdgeDescriptions/GH_ProtectedBy.md
+[GH_BypassPullRequestAllowances]: EdgeDescriptions/GH_BypassPullRequestAllowances.md
+[GH_RestrictionsCanPush]: EdgeDescriptions/GH_RestrictionsCanPush.md
+[GH_HasBranch]: EdgeDescriptions/GH_HasBranch.md
+[GH_HasWorkflow]: EdgeDescriptions/GH_HasWorkflow.md
+[GH_HasEnvironment]: EdgeDescriptions/GH_HasEnvironment.md
+[GH_HasSecret]: EdgeDescriptions/GH_HasSecret.md
+[GH_HasSecretScanningAlert]: EdgeDescriptions/GH_HasSecretScanningAlert.md
+[GH_HasSamlIdentityProvider]: EdgeDescriptions/GH_HasSamlIdentityProvider.md
+[GH_HasExternalIdentity]: EdgeDescriptions/GH_HasExternalIdentity.md
+[GH_MapsToUser]: EdgeDescriptions/GH_MapsToUser.md
+[GH_HasPersonalAccessToken]: EdgeDescriptions/GH_HasPersonalAccessToken.md
+[GH_HasPersonalAccessTokenRequest]: EdgeDescriptions/GH_HasPersonalAccessTokenRequest.md
+[GH_InstalledAs]: EdgeDescriptions/GH_InstalledAs.md
+[GH_CanAccess]: EdgeDescriptions/GH_CanAccess.md
+[GH_CanWriteBranch]: EdgeDescriptions/GH_CanWriteBranch.md
+[GH_CanCreateBranch]: EdgeDescriptions/GH_CanCreateBranch.md
+[GH_CanEditProtection]: EdgeDescriptions/GH_CanEditProtection.md
+[SyncedToGHUser]: EdgeDescriptions/SyncedToGHUser.md
+[GH_CanAssumeAWSRole]: EdgeDescriptions/GH_CanAssumeAWSRole.md
+[CanAssumeIdentity]: EdgeDescriptions/CanAssumeIdentity.md
 [GH_Organization]: Nodes/GH_Organization.md
 [GH_User]: Nodes/GH_User.md
 [GH_Team]: Nodes/GH_Team.md
