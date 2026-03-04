@@ -10,19 +10,19 @@ This walkthrough is for administrators to create the Fine-grained Personal Acces
 
 To generate a personal access token browse to your user settings as shown in the image below:
 
-![Profile Settings](./images/1_proile_settings.png)
+![Profile Settings](./Images/1_proile_settings.png)
 
 In the settings menu, scroll to the bottom where you will see the "Developer settings" menu option. Click it.
 
-![Developer Settings](./images/2_developer_settings.png)
+![Developer Settings](./Images/2_developer_settings.png)
 
 GitHub offers many options for programmatic access. GitHound, our collector, is built to work with Fine-grained Personal Access Tokens, so click on that menu item.
 
-![Fine Grained Access Token](./images/3_fine-grained_tokens.png)
+![Fine Grained Access Token](./Images/3_fine-grained_tokens.png)
 
 After reaching the Fine-grained Personal Access Token page, you can click on the "Generate new token" button in the top right corner.
 
-![Generate Personal Access Token](./images/4_generate_token.png)
+![Generate Personal Access Token](./Images/4_generate_token.png)
 
 #### Token Settings
 
@@ -30,11 +30,11 @@ Fine-grained Personal Access Tokens offer administrators the ability to specific
 
 It is possible to limit the set of repositories that a Fine-grained PAT can interact with. GitHound requires access to all repositories, so we will select the "All repositories" radio button.
 
-![Setting All Repositories](./images/5_all_repositories.png)
+![Setting All Repositories](./Images/5_all_repositories.png)
 
 Next, we will define the specific repository and organization permissions that GitHound requires. GitHound is a read-only tool, so we will make sure to specify read-only access for each option as shown in the image below:
 
-![Permissions](./images/6_permissions.png)
+![Permissions](./Images/6_permissions.png)
 
 The following permissions are required:
 
@@ -59,7 +59,7 @@ The following permissions are required:
 
 Once the PAT is created, GitHub will present it to you as shown below. You must save this value (preferably in a password manager) at this point as you will not be able to recover it in the future.
 
-![Save the PAT](./images/7_save_pat.png)
+![Save the PAT](./Images/7_save_pat.png)
 
 ### Running the Collection
 

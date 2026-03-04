@@ -49,7 +49,7 @@ if _missing:
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
 MODEL_JSON = REPO_ROOT / "model.json"
-OUTPUT_DIR = REPO_ROOT / "Documentation" / "images"
+OUTPUT_DIR = REPO_ROOT / "Documentation" / "Images"
 
 FA_SVG_URL = (
     "https://raw.githubusercontent.com/FortAwesome/Font-Awesome"

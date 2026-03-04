@@ -1,4 +1,4 @@
-# <img src="../images/GH_User.png" width="50"/> GH_User
+# <img src="../Images/GH_User.png" width="50"/> GH_User
 
 Represents a GitHub user who is a member of the organization. Users are associated with organization roles (Owner or Member) and can be assigned to repository roles and team roles.
 

@@ -1,6 +1,6 @@
 # GitHound
 
-![GitHound](./Documentation/images/github_bloodhound.png)
+![GitHound](./Documentation/Images/github_bloodhound.png)
 
 ## Overview
 
@@ -49,7 +49,7 @@ For detailed setup instructions, see:
 
 ## Schema
 
-![Mermaid Schema](./Documentation/images/GitHound-Mermaid.png)
+![Mermaid Schema](./Documentation/Images/GitHound-Mermaid.png)
 
 ### Nodes
 
@@ -57,26 +57,26 @@ Nodes correspond to each object type. For detailed property information and edge
 
 | Node                                                                                      | Icon              | Color   | Description                                                                                                                |
 |-------------------------------------------------------------------------------------------|-------------------|---------|----------------------------------------------------------------------------------------------------------------------------|
-| <img src="./Documentation/images/GH_AppInstallation.png" width="30"/> GH_AppInstallation            | plug              | #A8D8EA | A GitHub App installed on the organization with specific permissions and repository access scope.                          |
-| <img src="./Documentation/images/GH_Branch.png" width="30"/> GH_Branch                              | code-branch       | #FF80D2 | A named reference in a repository (e.g. `main`, `develop`) representing a line of development.                             |
-| <img src="./Documentation/images/GH_BranchProtectionRule.png" width="30"/> GH_BranchProtectionRule    | shield            | #FFB347 | A branch protection rule that applies to one or more branches via pattern matching.                                        |
-| <img src="./Documentation/images/GH_Environment.png" width="30"/> GH_Environment                    | leaf              | #D5F2C2 | A GitHub Actions deployment environment with protection rules, required reviewers, and deployment branch policies.         |
-| <img src="./Documentation/images/GH_EnvironmentSecret.png" width="30"/> GH_EnvironmentSecret        | lock              | #6FB94A | An environment-level GitHub Actions secret scoped to a specific deployment environment.                                    |
-| <img src="./Documentation/images/GH_ExternalIdentity.png" width="30"/> GH_ExternalIdentity          | arrows-left-right | #8A8F98 | An external identity from a SAML/SCIM provider (Okta, Azure AD, etc.) linked to a GitHub user for SSO authentication.      |
-| <img src="./Documentation/images/GH_Organization.png" width="30"/> GH_Organization                  | building          | #5FED83 | A GitHub Organization—top‑level container for repositories, teams, & settings.                                             |
-| <img src="./Documentation/images/GH_OrgRole.png" width="30"/> GH_OrgRole                            | user-tie          | #BFFFD1 | The role a user has at the organization level (e.g. `admin`, `member`).                                                    |
-| <img src="./Documentation/images/GH_OrgSecret.png" width="30"/> GH_OrgSecret                        | lock              | #1FB65A | An organization-level GitHub Actions secret that can be scoped to all, private, or selected repositories.                  |
-| <img src="./Documentation/images/GH_PersonalAccessToken.png" width="30"/> GH_PersonalAccessToken      | key               | #F5A623 | A fine-grained personal access token granted access to organization resources.                                             |
-| <img src="./Documentation/images/GH_PersonalAccessTokenRequest.png" width="30"/> GH_PersonalAccessTokenRequest | key        | #D4A017 | A pending request from an organization member to access organization resources with a fine-grained personal access token.  |
-| <img src="./Documentation/images/GH_Repository.png" width="30"/> GH_Repository                      | box-archive       | #9EECFF | A code repository in an organization (or user account), containing files, issues, etc.                                     |
-| <img src="./Documentation/images/GH_RepoRole.png" width="30"/> GH_RepoRole                          | user-tie          | #DEFEFA | The permission granted to a user or team on a repository (e.g. `admin`, `write`, `read`).                                  |
-| <img src="./Documentation/images/GH_RepoSecret.png" width="30"/> GH_RepoSecret                      | lock              | #32BEE6 | A repository-level GitHub Actions secret accessible only to workflows in that specific repository.                         |
-| <img src="./Documentation/images/GH_SamlIdentityProvider.png" width="30"/> GH_SamlIdentityProvider  | id-badge          | #5A6C8F | A SAML identity provider configured for the organization, enabling SSO and linking external identities to GitHub users.    |
-| <img src="./Documentation/images/GH_SecretScanningAlert.png" width="30"/> GH_SecretScanningAlert    | key               | #3C7A6E | A GitHub Advanced Security alert indicating a secret was accidentally committed to a repository.                           |
-| <img src="./Documentation/images/GH_Team.png" width="30"/> GH_Team                                  | user-group        | #C06EFF | A team within an organization, grouping users for shared access and collaboration.                                         |
-| <img src="./Documentation/images/GH_TeamRole.png" width="30"/> GH_TeamRole                          | user-tie          | #D0B0FF | The role a user has within a team (e.g. `maintainer`, `member`).                                                           |
-| <img src="./Documentation/images/GH_User.png" width="30"/> GH_User                                  | user              | #FF8E40 | An individual GitHub user account.                                                                                         |
-| <img src="./Documentation/images/GH_Workflow.png" width="30"/> GH_Workflow                          | cogs              | #FFE4A1 | A GitHub Actions workflow defined in a repository, capturing workflow metadata and state.                                  |
+| <img src="./Documentation/Images/GH_AppInstallation.png" width="30"/> GH_AppInstallation            | plug              | #A8D8EA | A GitHub App installed on the organization with specific permissions and repository access scope.                          |
+| <img src="./Documentation/Images/GH_Branch.png" width="30"/> GH_Branch                              | code-branch       | #FF80D2 | A named reference in a repository (e.g. `main`, `develop`) representing a line of development.                             |
+| <img src="./Documentation/Images/GH_BranchProtectionRule.png" width="30"/> GH_BranchProtectionRule    | shield            | #FFB347 | A branch protection rule that applies to one or more branches via pattern matching.                                        |
+| <img src="./Documentation/Images/GH_Environment.png" width="30"/> GH_Environment                    | leaf              | #D5F2C2 | A GitHub Actions deployment environment with protection rules, required reviewers, and deployment branch policies.         |
+| <img src="./Documentation/Images/GH_EnvironmentSecret.png" width="30"/> GH_EnvironmentSecret        | lock              | #6FB94A | An environment-level GitHub Actions secret scoped to a specific deployment environment.                                    |
+| <img src="./Documentation/Images/GH_ExternalIdentity.png" width="30"/> GH_ExternalIdentity          | arrows-left-right | #8A8F98 | An external identity from a SAML/SCIM provider (Okta, Azure AD, etc.) linked to a GitHub user for SSO authentication.      |
+| <img src="./Documentation/Images/GH_Organization.png" width="30"/> GH_Organization                  | building          | #5FED83 | A GitHub Organization—top‑level container for repositories, teams, & settings.                                             |
+| <img src="./Documentation/Images/GH_OrgRole.png" width="30"/> GH_OrgRole                            | user-tie          | #BFFFD1 | The role a user has at the organization level (e.g. `admin`, `member`).                                                    |
+| <img src="./Documentation/Images/GH_OrgSecret.png" width="30"/> GH_OrgSecret                        | lock              | #1FB65A | An organization-level GitHub Actions secret that can be scoped to all, private, or selected repositories.                  |
+| <img src="./Documentation/Images/GH_PersonalAccessToken.png" width="30"/> GH_PersonalAccessToken      | key               | #F5A623 | A fine-grained personal access token granted access to organization resources.                                             |
+| <img src="./Documentation/Images/GH_PersonalAccessTokenRequest.png" width="30"/> GH_PersonalAccessTokenRequest | key        | #D4A017 | A pending request from an organization member to access organization resources with a fine-grained personal access token.  |
+| <img src="./Documentation/Images/GH_Repository.png" width="30"/> GH_Repository                      | box-archive       | #9EECFF | A code repository in an organization (or user account), containing files, issues, etc.                                     |
+| <img src="./Documentation/Images/GH_RepoRole.png" width="30"/> GH_RepoRole                          | user-tie          | #DEFEFA | The permission granted to a user or team on a repository (e.g. `admin`, `write`, `read`).                                  |
+| <img src="./Documentation/Images/GH_RepoSecret.png" width="30"/> GH_RepoSecret                      | lock              | #32BEE6 | A repository-level GitHub Actions secret accessible only to workflows in that specific repository.                         |
+| <img src="./Documentation/Images/GH_SamlIdentityProvider.png" width="30"/> GH_SamlIdentityProvider  | id-badge          | #5A6C8F | A SAML identity provider configured for the organization, enabling SSO and linking external identities to GitHub users.    |
+| <img src="./Documentation/Images/GH_SecretScanningAlert.png" width="30"/> GH_SecretScanningAlert    | key               | #3C7A6E | A GitHub Advanced Security alert indicating a secret was accidentally committed to a repository.                           |
+| <img src="./Documentation/Images/GH_Team.png" width="30"/> GH_Team                                  | user-group        | #C06EFF | A team within an organization, grouping users for shared access and collaboration.                                         |
+| <img src="./Documentation/Images/GH_TeamRole.png" width="30"/> GH_TeamRole                          | user-tie          | #D0B0FF | The role a user has within a team (e.g. `maintainer`, `member`).                                                           |
+| <img src="./Documentation/Images/GH_User.png" width="30"/> GH_User                                  | user              | #FF8E40 | An individual GitHub user account.                                                                                         |
+| <img src="./Documentation/Images/GH_Workflow.png" width="30"/> GH_Workflow                          | cogs              | #FFE4A1 | A GitHub Actions workflow defined in a repository, capturing workflow metadata and state.                                  |
 
 ### Edges
 
@@ -121,7 +121,7 @@ MATCH p = (:GH_User {objectid:"<object_id>"})-[:GH_MemberOf|GH_AddMember|GH_HasR
 RETURN p
 ```
 
-![User to Repos](./Documentation/images/user-repo.png)
+![User to Repos](./Documentation/Images/user-repo.png)
 
 ### Who has Write Access to a Repo?
 
@@ -139,7 +139,7 @@ MATCH p = (:GH_User)-[:GH_MemberOf|GH_HasRole|GH_HasBaseRole|GH_Owns|GH_AddMembe
 RETURN p
 ```
 
-![Repo to Users](./Documentation/images/who-repo.png)
+![Repo to Users](./Documentation/Images/who-repo.png)
 
 ### Members of the Organization Admins (Domain Admin equivalent)?
 
@@ -148,7 +148,7 @@ MATCH p = (:GH_User)-[:GH_HasRole|GH_HasBaseRole]->(:GH_OrgRole {short_name: "ow
 RETURN p
 ```
 
-![Org Admins](./Documentation/images/org-admins.png)
+![Org Admins](./Documentation/Images/org-admins.png)
 
 ### Users that are managed via SSO (Entra-only)
 
@@ -157,7 +157,7 @@ MATCH p = (:AZUser)-[:SyncedToGHUser]->(:GH_User)
 RETURN p
 ```
 
-![SSO Users](./Documentation/images/sso-users.png)
+![SSO Users](./Documentation/Images/sso-users.png)
 
 ### Cross-Cloud Attack Paths: GitHub to Azure
 

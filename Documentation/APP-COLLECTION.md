@@ -68,11 +68,11 @@ Locate the `GitHound - SpecterOps` App and select Configure.
 
 This will take you to the following page. Notice the numeric value in the URL (`107643946` in the screenshot below). This is the Application Id that you will need in a subsequent step.
 
-![App Installation Page](./images/app-installation-page.png)
+![App Installation Page](./Images/app-installation-page.png)
 
 Next, click on the `App settings` menu to get detailed information about the App as shown below:
 
-![App Installation Details](./images/app-installation-details.png)
+![App Installation Details](./Images/app-installation-details.png)
 
 Keep track of the App Installation's `Client ID` value (`Iv23liPgjiu18oXLM2q7` in the screenshot above).
 
