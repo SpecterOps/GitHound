@@ -49,7 +49,7 @@ if _missing:
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
 MODEL_JSON = REPO_ROOT / "model.json"
-OUTPUT_DIR = REPO_ROOT / "Documentation" / "Images"
+OUTPUT_DIR = REPO_ROOT / "Documentation" / "Icons"
 
 FA_SVG_URL = (
     "https://raw.githubusercontent.com/FortAwesome/Font-Awesome"
@@ -261,7 +261,7 @@ def main() -> None:
                 image_size=args.size,
                 icon_scale=args.scale,
             )
-            out_path = OUTPUT_DIR / f"{node_name}.png"
+            out_path = OUTPUT_DIR / f"{node_name.lower()}.png"
             img.save(out_path, "PNG")
             print(f"  [+] {out_path.name}")
         except Exception as e:

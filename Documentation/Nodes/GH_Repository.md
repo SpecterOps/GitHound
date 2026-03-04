@@ -1,4 +1,4 @@
-# <img src="../Images/GH_Repository.png" width="50"/> GH_Repository
+# <img src="../Icons/gh_repository.png" width="50"/> GH_Repository
 
 Represents a GitHub repository within the organization. Repository nodes capture metadata about the repo including visibility, Actions enablement status, and security configuration. Repository role nodes (GH_RepoRole) are created alongside each repository to represent the permission levels available.
 

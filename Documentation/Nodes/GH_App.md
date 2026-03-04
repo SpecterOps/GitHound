@@ -1,4 +1,4 @@
-# <img src="../Images/GH_App.png" width="50"/> GH_App
+# <img src="../Icons/gh_app.png" width="50"/> GH_App
 
 Represents a GitHub App definition — the registered application entity. The app owner holds the private key that can generate installation access tokens for **every** `GH_AppInstallation` of this app. If the private key is compromised, all installations across all organizations are affected.
 
