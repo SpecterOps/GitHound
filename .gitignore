@@ -13,3 +13,4 @@ Thumbs.db
 output/*
 samples/oidc/*
 samples/sso/*
+Documentation/Findings/*
