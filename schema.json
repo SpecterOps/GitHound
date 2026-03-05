@@ -1,7 +1,7 @@
 {
   "schema": {
     "name": "GitHound",
-    "display_name": "GitHub (GitHound)",
+    "display_name": "GitHound (GitHub)",
     "version": "1.0.0",
     "namespace": "GH"
   },

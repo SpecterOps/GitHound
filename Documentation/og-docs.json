@@ -1,0 +1,12 @@
+{
+    "extensionPath": "schema.json",
+    "gitHubBaseUrl": "https://github.com/SpecterOps/GitHound",
+    "titlePrefix": "",
+    "queriesDir": "saved-queries",
+    "zoneRulesDir": "pz-rules",
+    "nodeDescriptionsDir": "Documentation/NodeDescriptions",
+    "edgeDescriptionsDir": "Documentation/EdgeDescriptions",
+    "imagesDir": "Documentation/Images",
+    "iconSize": 32,
+    "iconScale": 0.55
+}
