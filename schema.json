@@ -118,6 +118,30 @@
       "color": "0x6FB94A"
     },
     {
+      "name": "GH_OrgVariable",
+      "display_name": "GitHub Org Variable",
+      "description": "An organization-level GitHub Actions variable that can be scoped to all, private, or selected repositories. Unlike secrets, variable values are readable.",
+      "is_display_kind": true,
+      "icon": "lock-open",
+      "color": "0xE8B84D"
+    },
+    {
+      "name": "GH_RepoVariable",
+      "display_name": "GitHub Repo Variable",
+      "description": "A repository-level GitHub Actions variable accessible only to workflows in that repository. Unlike secrets, variable values are readable.",
+      "is_display_kind": true,
+      "icon": "lock-open",
+      "color": "0xE89B5C"
+    },
+    {
+      "name": "GH_EnvironmentVariable",
+      "display_name": "GitHub Environment Variable",
+      "description": "An environment-level GitHub Actions variable scoped to a specific deployment environment. Unlike secrets, variable values are readable.",
+      "is_display_kind": true,
+      "icon": "lock-open",
+      "color": "0xD4A84B"
+    },
+    {
       "name": "GH_SecretScanningAlert",
       "display_name": "GitHub Secret Scanning Alert",
       "description": "A GitHub Advanced Security alert indicating a secret was accidentally committed to a repository",
@@ -177,7 +201,7 @@
   "relationship_kinds": [
     {
       "name": "GH_Contains",
-      "description": "Container relationship for organizational hierarchy (org contains secrets, repo contains secrets, environment contains secrets)",
+      "description": "Container relationship for organizational hierarchy (org contains secrets/variables, repo contains secrets/variables, environment contains secrets/variables)",
       "is_traversable": false
     },
     {
@@ -376,6 +400,11 @@
       "is_traversable": false
     },
     {
+      "name": "GH_WriteOrganizationActionsVariables",
+      "description": "Org role can write Actions variables",
+      "is_traversable": false
+    },
+    {
       "name": "GH_WriteOrganizationActionsSettings",
       "description": "Org role can write Actions settings",
       "is_traversable": false
@@ -434,6 +463,11 @@
       "name": "GH_HasSecret",
       "description": "Repository or environment has access to this secret",
       "is_traversable": true
+    },
+    {
+      "name": "GH_HasVariable",
+      "description": "Repository has access to this variable (org-level or repo-level)",
+      "is_traversable": false
     },
     {
       "name": "GH_HasSecretScanningAlert",

@@ -6,9 +6,9 @@ The following table summarizes the custom edge kinds used by `GitHound`:
 
 | Edge Type | Source Node Kinds | Target Node Kinds | Traversable |
 |-----------|-------------------|-------------------|-------------|
-| [GH_Contains] | [GH_Organization] | [GH_User], [GH_Team], [GH_Repository], [GH_OrgRole], [GH_RepoRole], [GH_TeamRole], [GH_OrgSecret], [GH_AppInstallation], [GH_PersonalAccessToken], [GH_PersonalAccessTokenRequest] | ❌ |
-|               | [GH_Repository]   | [GH_RepoSecret] | ❌ |
-|               | [GH_Environment]  | [GH_EnvironmentSecret] | ❌ |
+| [GH_Contains] | [GH_Organization] | [GH_User], [GH_Team], [GH_Repository], [GH_OrgRole], [GH_RepoRole], [GH_TeamRole], [GH_OrgSecret], [GH_OrgVariable], [GH_AppInstallation], [GH_PersonalAccessToken], [GH_PersonalAccessTokenRequest] | ❌ |
+|               | [GH_Repository]   | [GH_RepoSecret], [GH_RepoVariable] | ❌ |
+|               | [GH_Environment]  | [GH_EnvironmentSecret], [GH_EnvironmentVariable] | ❌ |
 | [GH_Owns] | [GH_Organization] | [GH_Repository] | ✅ |
 | [GH_HasRole] | [GH_User], [GH_Team] | [GH_OrgRole], [GH_RepoRole], [GH_TeamRole] | ✅ |
 | [GH_MemberOf] | [GH_TeamRole] | [GH_Team] | ✅ |
@@ -25,6 +25,7 @@ The following table summarizes the custom edge kinds used by `GitHound`:
 | [GH_OrgBypassCodeScanningDismissalRequests] | [GH_OrgRole] | [GH_Organization] | ❌ |
 | [GH_OrgBypassSecretScanningClosureRequests] | [GH_OrgRole] | [GH_Organization] | ❌ |
 | [GH_WriteOrganizationActionsSecrets] | [GH_OrgRole] | [GH_Organization] | ❌ |
+| [GH_WriteOrganizationActionsVariables] | [GH_OrgRole] | [GH_Organization] | ❌ |
 | [GH_WriteOrganizationActionsSettings] | [GH_OrgRole] | [GH_Organization] | ❌ |
 | [GH_ViewSecretScanningAlerts] | [GH_OrgRole] | [GH_Organization] | ❌ |
 |                               | [GH_RepoRole] | [GH_Repository] | ❌ |
@@ -62,6 +63,7 @@ The following table summarizes the custom edge kinds used by `GitHound`:
 |                     | [GH_Branch]     | [GH_Environment] | ❌ |
 | [GH_HasSecret] | [GH_Repository] | [GH_OrgSecret], [GH_RepoSecret] | ❌ |
 |                | [GH_Environment] | [GH_EnvironmentSecret] | ❌ |
+| [GH_HasVariable] | [GH_Repository] | [GH_OrgVariable], [GH_RepoVariable] | ❌ |
 | [GH_HasSecretScanningAlert] | [GH_Repository] | [GH_SecretScanningAlert] | ❌ |
 | [GH_HasSamlIdentityProvider] | [GH_Organization] | [GH_SamlIdentityProvider] | ❌ |
 | [GH_HasExternalIdentity] | [GH_SamlIdentityProvider] | [GH_ExternalIdentity] | ❌ |
@@ -128,6 +130,7 @@ Hybrid edges connect GitHub entities to entities from other supported BloodHound
 [GH_OrgBypassCodeScanningDismissalRequests]: EdgeDescriptions/GH_OrgBypassCodeScanningDismissalRequests.md
 [GH_OrgBypassSecretScanningClosureRequests]: EdgeDescriptions/GH_OrgBypassSecretScanningClosureRequests.md
 [GH_WriteOrganizationActionsSecrets]: EdgeDescriptions/GH_WriteOrganizationActionsSecrets.md
+[GH_WriteOrganizationActionsVariables]: EdgeDescriptions/GH_WriteOrganizationActionsVariables.md
 [GH_WriteOrganizationActionsSettings]: EdgeDescriptions/GH_WriteOrganizationActionsSettings.md
 [GH_ViewSecretScanningAlerts]: EdgeDescriptions/GH_ViewSecretScanningAlerts.md
 [GH_ResolveSecretScanningAlerts]: EdgeDescriptions/GH_ResolveSecretScanningAlerts.md
@@ -162,6 +165,7 @@ Hybrid edges connect GitHub entities to entities from other supported BloodHound
 [GH_HasWorkflow]: EdgeDescriptions/GH_HasWorkflow.md
 [GH_HasEnvironment]: EdgeDescriptions/GH_HasEnvironment.md
 [GH_HasSecret]: EdgeDescriptions/GH_HasSecret.md
+[GH_HasVariable]: EdgeDescriptions/GH_HasVariable.md
 [GH_HasSecretScanningAlert]: EdgeDescriptions/GH_HasSecretScanningAlert.md
 [GH_HasSamlIdentityProvider]: EdgeDescriptions/GH_HasSamlIdentityProvider.md
 [GH_HasExternalIdentity]: EdgeDescriptions/GH_HasExternalIdentity.md
@@ -188,8 +192,11 @@ Hybrid edges connect GitHub entities to entities from other supported BloodHound
 [GH_Workflow]: Nodes/GH_Workflow.md
 [GH_Environment]: Nodes/GH_Environment.md
 [GH_OrgSecret]: Nodes/GH_OrgSecret.md
+[GH_OrgVariable]: Nodes/GH_OrgVariable.md
 [GH_RepoSecret]: Nodes/GH_RepoSecret.md
+[GH_RepoVariable]: Nodes/GH_RepoVariable.md
 [GH_EnvironmentSecret]: Nodes/GH_EnvironmentSecret.md
+[GH_EnvironmentVariable]: Nodes/GH_EnvironmentVariable.md
 [GH_SecretScanningAlert]: Nodes/GH_SecretScanningAlert.md
 [GH_SamlIdentityProvider]: Nodes/GH_SamlIdentityProvider.md
 [GH_ExternalIdentity]: Nodes/GH_ExternalIdentity.md

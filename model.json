@@ -35,6 +35,13 @@
         "color": "#6FB94A"
       }
     },
+    "GH_EnvironmentVariable": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "lock-open",
+        "color": "#D4A84B"
+      }
+    },
     "GH_ExternalIdentity": {
       "icon": {
         "type": "font-awesome",
@@ -63,6 +70,13 @@
         "color": "#1FB65A"
       }
     },
+    "GH_OrgVariable": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "lock-open",
+        "color": "#E8B84D"
+      }
+    },
     "GH_Repository": {
       "icon": {
         "type": "font-awesome",
@@ -82,6 +96,13 @@
         "type": "font-awesome",
         "name": "lock",
         "color": "#32BEE6"
+      }
+    },
+    "GH_RepoVariable": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "lock-open",
+        "color": "#E89B5C"
       }
     },
     "GH_SamlIdentityProvider": {

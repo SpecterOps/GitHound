@@ -816,7 +816,7 @@ function Git-HoundOrganization
         secret_scanning_enabled_for_new_repositories                 = Normalize-Null $org.secret_scanning_enabled_for_new_repositories
         secret_scanning_push_protection_enabled_for_new_repositories = Normalize-Null $org.secret_scanning_push_protection_enabled_for_new_repositories
         secret_scanning_push_protection_custom_link_enabled          = Normalize-Null $org.secret_scanning_push_protection_custom_link_enabled
-        secret_scanning_push_protection_custom_link                  = Normalize-Null $org.secret_scanning_push_protection_custom_link_enabled
+        secret_scanning_push_protection_custom_link                  = Normalize-Null $org.secret_scanning_push_protection_custom_link
         secret_scanning_validity_checks_enabled                      = Normalize-Null $org.secret_scanning_validity_checks_enabled
         actions_enabled_repositories                                 = Normalize-Null $actions.enabled_repositories
         actions_allowed_actions                                      = Normalize-Null $actions.allowed_actions
@@ -926,7 +926,7 @@ function Git-HoundOrganization
                 'view_secret_scanning_alerts' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ViewSecretScanningAlerts' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
                 'write_organization_actions_secrets' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteOrganizationActionsSecrets' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
                 'write_organization_actions_settings' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteOrganizationActionsSettings' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
-                #'write_organization_actions_variables' {$kind = 'GH_WriteOrganizationActionsVariables'}
+                'write_organization_actions_variables' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteOrganizationActionsVariables' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
                 #'write_code_quality' {$kind = 'GH_WriteCodeQuality'}
                 #'write_code_scanning' {$kind = 'GH_WriteCodeScanning'}
                 'write_organization_custom_org_role' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteOrganizationCustomOrgRole' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
@@ -1523,6 +1523,7 @@ function Git-HoundRepository
             query_workflows               = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_HasWorkflow]->(w:GH_Workflow) RETURN p"
             query_environments            = "MATCH p=(:GH_Repository {node_id: '$($repo.node_id)'})-[:GH_HasEnvironment]->(:GH_Environment) RETURN p"
             query_secrets                 = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_HasSecret]->(:GH_Secret) RETURN p"
+            query_variables               = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_HasVariable]->(:GH_Variable) RETURN p"
             query_secret_scanning_alerts  = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_HasSecretScanningAlert]->(:GH_SecretScanningAlert) RETURN p"
             query_explicit_readers        = "MATCH p=(role:GH_Role)-[:GH_HasBaseRole|GH_ReadRepoContents*1..]->(r:GH_Repository {node_id:'$($repo.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
             query_unrolled_readers        = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ReadRepoContents*1..]->(r:GH_Repository {node_id:'$($repo.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
@@ -3747,6 +3748,32 @@ function Git-HoundEnvironment
                     $null = $nodes.Add((New-GitHoundNode -Id $secretId -Kind 'GH_EnvironmentSecret', 'GH_Secret' -Properties $properties))
                     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $environment.node_id -EndId $secretId -Properties @{ traversable = $false }))
                 }
+
+                # List environment variables
+                # https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#list-environment-variables
+                foreach($variable in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/environments/$($environment.name)/variables").variables)
+                {
+                    $variableId = "GH_EnvironmentVariable_$($environment.node_id)_$($variable.name)"
+                    $varProperties = @{
+                        # Common Properties
+                        name                            = Normalize-Null $variable.name
+                        node_id                         = Normalize-Null $variableId
+                        # Relational Properties
+                        environment_name                = Normalize-Null $repo.properties.environment_name
+                        environment_id                  = Normalize-Null $repo.properties.environment_id
+                        repository_name                 = Normalize-Null $repo.name
+                        repository_id                   = Normalize-Null $repo.id
+                        deployment_environment_name     = Normalize-Null $environment.name
+                        deployment_environment_id       = Normalize-Null $environment.node_id
+                        # Node Specific Properties
+                        value                           = Normalize-Null $variable.value
+                        created_at                      = Normalize-Null $variable.created_at
+                        updated_at                      = Normalize-Null $variable.updated_at
+                    }
+
+                    $null = $nodes.Add((New-GitHoundNode -Id $variableId -Kind 'GH_EnvironmentVariable', 'GH_Variable' -Properties $varProperties))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $environment.node_id -EndId $variableId -Properties @{ traversable = $false }))
+                }
             }
         } -ThrottleLimit 25
     }
@@ -3898,7 +3925,75 @@ function Git-HoundOrganizationSecret
             }
         }
 
-        Write-Host "[+] Git-HoundOrganizationSecret complete. $($nodes.Count) nodes, $($edges.Count) edges."
+        Write-Host "[+] Git-HoundOrganizationSecret: $($nodes.Count) secret nodes, $($edges.Count) secret edges."
+
+        # ── Organization Variables ─────────────────────────────────────────
+        # https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#list-organization-variables
+        # Fine Grained Permissions: "Variables" organization permissions (read)
+        $orgVariables = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/variables").variables | Where-Object { $_ })
+
+        $varAllCount = 0
+        $varPrivateCount = 0
+        $varSelectedCount = 0
+
+        foreach ($variable in $orgVariables) {
+            switch ($variable.visibility) {
+                'all'      { $varAllCount++ }
+                'private'  { $varPrivateCount++ }
+                'selected' { $varSelectedCount++ }
+            }
+        }
+
+        Write-Host "[*] Git-HoundOrganizationVariable: Found $($orgVariables.Count) org variables (all: $varAllCount, private: $varPrivateCount, selected: $varSelectedCount) across $($repoNodes.Count) repos"
+
+        $varSelectedProcessed = 0
+
+        foreach ($variable in $orgVariables) {
+            $variableId = "GH_OrgVariable_$($orgNodeId)_$($variable.name)"
+            $properties = @{
+                # Common Properties
+                name                 = Normalize-Null $variable.name
+                node_id              = Normalize-Null $variableId
+                # Relational Properties
+                environment_name     = Normalize-Null $orgLogin
+                environment_id       = Normalize-Null $orgNodeId
+                # Node Specific Properties
+                value                = Normalize-Null $variable.value
+                created_at           = Normalize-Null $variable.created_at
+                updated_at           = Normalize-Null $variable.updated_at
+                visibility           = Normalize-Null $variable.visibility
+                # Accordion Panel Queries
+                query_visible_repositories = "MATCH p=(:GH_OrgVariable {node_id:'$variableId'})<-[:GH_HasVariable]-(:GH_Repository) RETURN p"
+            }
+
+            $null = $nodes.Add((New-GitHoundNode -Id $variableId -Kind 'GH_OrgVariable', 'GH_Variable' -Properties $properties))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $orgNodeId -EndId $variableId -Properties @{ traversable = $false }))
+
+            # Resolve repository access based on visibility
+            switch ($variable.visibility) {
+                'all' {
+                    foreach ($repoNodeId in $allRepoNodeIds) {
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasVariable' -StartId $repoNodeId -EndId $variableId -Properties @{ traversable = $false }))
+                    }
+                }
+                'private' {
+                    foreach ($repoNodeId in $privateRepoNodeIds) {
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasVariable' -StartId $repoNodeId -EndId $variableId -Properties @{ traversable = $false }))
+                    }
+                }
+                'selected' {
+                    $varSelectedProcessed++
+                    Write-Host "[*]   Fetching selected repos for variable '$($variable.name)' ($varSelectedProcessed/$varSelectedCount)"
+                    # https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#list-selected-repositories-for-an-organization-variable
+                    $selectedRepos = (Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/variables/$($variable.name)/repositories").repositories
+                    foreach ($selectedRepo in $selectedRepos) {
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasVariable' -StartId $selectedRepo.node_id -EndId $variableId -Properties @{ traversable = $false }))
+                    }
+                }
+            }
+        }
+
+        Write-Host "[+] Git-HoundOrganizationSecret complete. $($nodes.Count) nodes, $($edges.Count) edges (secrets + variables)."
 
         $output = [PSCustomObject]@{
             Nodes = $nodes
@@ -4139,6 +4234,247 @@ function Git-HoundSecret
         }
 
         Write-Host "[+] Git-HoundSecret complete. Processed $totalRepos repos, collected $($allNodes.Count) nodes, $($allEdges.Count) edges. Final output: $finalFile"
+    }
+
+    end
+    {
+        $output = [PSCustomObject]@{
+            Nodes = $allNodes
+            Edges = $allEdges
+        }
+
+        Write-Output $output
+    }
+}
+
+function Git-HoundVariable
+{
+    <#
+    .SYNOPSIS
+        Fetches and processes GitHub repository-level Actions variables.
+
+    .DESCRIPTION
+        This function retrieves repository-level Actions variables (not org variables — those are handled
+        by Git-HoundOrganizationSecret). Uses chunked parallel execution with rate limit awareness
+        and checkpoint files for crash recovery.
+
+        API Reference:
+        - List repository variables: https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#list-repository-variables
+
+        Fine Grained Permissions Reference:
+        - "Variables" repository permissions (read)
+
+    .PARAMETER Session
+        A GitHound.Session object used for authentication and API requests.
+
+    .PARAMETER Repository
+        An array of repository objects to process.
+
+    .PARAMETER StartIndex
+        Index to resume processing from (default 0). Use this to resume after an interruption.
+
+    .PARAMETER CheckpointPath
+        Directory to write checkpoint files to (default current directory).
+
+    .PARAMETER ChunkSize
+        Number of repos to process per chunk (default 50).
+
+    .OUTPUTS
+        A PSObject containing arrays of nodes and edges representing the repository variables and their relationships.
+
+    .EXAMPLE
+        $variables = $repos | Git-HoundVariable -Session $Session
+
+    #>
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session,
+
+        [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline)]
+        [psobject[]]
+        $Repository,
+
+        [Parameter()]
+        [int]
+        $StartIndex = 0,
+
+        [Parameter()]
+        [string]
+        $CheckpointPath = ".",
+
+        [Parameter()]
+        [int]
+        $ChunkSize = 50
+    )
+
+    begin
+    {
+        $allNodes = New-Object System.Collections.ArrayList
+        $allEdges = New-Object System.Collections.ArrayList
+    }
+
+    process
+    {
+        $repoNodes = @($Repository.nodes | Where-Object {$_.kinds -eq 'GH_Repository'})
+        $totalRepos = $repoNodes.Count
+        $callsPerRepo = 1
+        $rateLimitBuffer = 50
+
+        $currentIndex = $StartIndex
+
+        # Auto-detect resume from existing chunk files
+        if ($currentIndex -eq 0) {
+            $existingChunks = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Variable_chunk_*.json" -ErrorAction SilentlyContinue | Sort-Object { [int]($_.Name -replace '.*chunk_(\d+)\.json','$1') })
+            if ($existingChunks.Count -gt 0) {
+                foreach ($chunk in $existingChunks) {
+                    try {
+                        $chunkData = Get-Content $chunk.FullName -Raw | ConvertFrom-Json
+                        if ($chunkData.graph.nodes) { $null = $allNodes.AddRange(@($chunkData.graph.nodes)) }
+                        if ($chunkData.graph.edges) { $null = $allEdges.AddRange(@($chunkData.graph.edges)) }
+                        $currentIndex = $chunkData.metadata.next_index
+                    }
+                    catch {
+                        Write-Warning "Skipping corrupt chunk file: $($chunk.Name)"
+                    }
+                }
+                Write-Host "[*] Auto-resuming Git-HoundVariable from index $currentIndex ($($existingChunks.Count) chunks loaded, $($allNodes.Count) nodes, $($allEdges.Count) edges recovered)"
+            }
+        }
+
+        if ($currentIndex -gt 0 -and $existingChunks.Count -eq 0) {
+            Write-Host "[*] Resuming Git-HoundVariable from index $StartIndex of $totalRepos repos"
+        } elseif ($currentIndex -eq 0) {
+            Write-Host "[*] Git-HoundVariable: Enumerating repo-level variables for $totalRepos repos"
+        }
+
+        while ($currentIndex -lt $totalRepos) {
+
+            # Check rate limit and determine chunk size
+            $rateLimitInfo = (Get-RateLimitInformation -Session $Session).core
+            $remaining = $rateLimitInfo.remaining
+            $resetTime = $rateLimitInfo.reset
+
+            $availableBudget = [Math]::Max(0, $remaining - $rateLimitBuffer)
+            $maxReposForBudget = [Math]::Floor($availableBudget / $callsPerRepo)
+
+            if ($maxReposForBudget -eq 0) {
+                # Not enough budget — sleep until reset
+                $timeNow = [DateTimeOffset]::Now.ToUnixTimeSeconds()
+                $sleepSeconds = [Math]::Max(1, $resetTime - $timeNow + 5)
+                $resetLocal = ([DateTimeOffset]::FromUnixTimeSeconds($resetTime)).LocalDateTime.ToString("HH:mm:ss")
+                Write-Host "[!] Rate limit exhausted ($remaining remaining). Sleeping $sleepSeconds seconds until reset at $resetLocal..."
+                Start-Sleep -Seconds $sleepSeconds
+                continue
+            }
+
+            # Size the chunk: minimum of configured ChunkSize, budget, and remaining repos
+            $reposRemaining = $totalRepos - $currentIndex
+            $thisChunkSize = [Math]::Min($ChunkSize, [Math]::Min($maxReposForBudget, $reposRemaining))
+
+            $chunkEnd = $currentIndex + $thisChunkSize - 1
+            Write-Host "[*] Processing repos $currentIndex..$chunkEnd of $totalRepos ($thisChunkSize repos, ~$($thisChunkSize * $callsPerRepo) API calls, $remaining calls remaining)"
+
+            $chunkRepos = $repoNodes[$currentIndex..$chunkEnd]
+            # ConcurrentBag is thread-safe for parallel ForEach-Object blocks
+            $chunkNodes = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
+            $chunkEdges = [System.Collections.Concurrent.ConcurrentBag[PSObject]]::new()
+            $orgName = $Session.OrganizationName
+
+            $chunkRepos | ForEach-Object -Parallel {
+                $nodes = $using:chunkNodes
+                $edges = $using:chunkEdges
+                $Session = $using:Session
+                $orgName = $using:orgName
+                $functionBundle = $using:GitHoundFunctionBundle
+                foreach($funcName in $functionBundle.Keys) {
+                    Set-Item -Path "function:$funcName" -Value ([scriptblock]::Create($functionBundle[$funcName]))
+                }
+                $repo = $_
+
+                # List repository variables
+                # https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#list-repository-variables
+                foreach($variable in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/actions/variables").variables)
+                {
+                    $variableId = "GH_Variable_$($repo.properties.node_id)_$($variable.name)"
+                    $properties = @{
+                        # Common Properties
+                        name                 = Normalize-Null $variable.name
+                        node_id              = Normalize-Null $variableId
+                        # Relational Properties
+                        environment_name     = Normalize-Null $repo.properties.environment_name
+                        environment_id       = Normalize-Null $repo.properties.environment_id
+                        repository_name      = Normalize-Null $repo.name
+                        repository_id        = Normalize-Null $repo.id
+                        # Node Specific Properties
+                        value                = Normalize-Null $variable.value
+                        created_at           = Normalize-Null $variable.created_at
+                        updated_at           = Normalize-Null $variable.updated_at
+                        # Accordion Panel Queries
+                        query_visible_repositories = "MATCH p=(:GH_RepoVariable {node_id:'$variableId'})<-[:GH_HasVariable]-(:GH_Repository) RETURN p"
+                    }
+
+                    $null = $nodes.Add((New-GitHoundNode -Id $variableId -Kind 'GH_RepoVariable', 'GH_Variable' -Properties $properties))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $repo.properties.node_id -EndId $variableId -Properties @{ traversable = $false }))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasVariable' -StartId $repo.properties.node_id -EndId $variableId -Properties @{ traversable = $false }))
+                }
+            } -ThrottleLimit 25
+
+            # Accumulate chunk results
+            if ($chunkNodes.Count -gt 0) {
+                $null = $allNodes.AddRange(@($chunkNodes))
+            }
+            if ($chunkEdges.Count -gt 0) {
+                $null = $allEdges.AddRange(@($chunkEdges))
+            }
+
+            # Checkpoint to disk
+            $chunkPayload = [PSCustomObject]@{
+                metadata = [PSCustomObject]@{
+                    source_kind  = "GitHub"
+                    chunk_start  = $currentIndex
+                    chunk_end    = $chunkEnd
+                    total_repos  = $totalRepos
+                    next_index   = $currentIndex + $thisChunkSize
+                    timestamp    = (Get-Date -Format "o")
+                }
+                graph = [PSCustomObject]@{
+                    nodes = @($chunkNodes)
+                    edges = @($chunkEdges)
+                }
+            }
+            $chunkFile = Join-Path $CheckpointPath "githound_Variable_chunk_$($currentIndex).json"
+            $chunkPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath $chunkFile
+            Write-Host "[+] Checkpoint saved: $chunkFile ($($chunkNodes.Count) nodes, $($chunkEdges.Count) edges, next index: $($currentIndex + $thisChunkSize))"
+
+            $currentIndex += $thisChunkSize
+        }
+
+        # Write final consolidated output and clean up chunk files
+        $finalPayload = [PSCustomObject]@{
+            metadata = [PSCustomObject]@{
+                source_kind  = "GitHub"
+                total_repos  = $totalRepos
+                total_nodes  = $allNodes.Count
+                total_edges  = $allEdges.Count
+                timestamp    = (Get-Date -Format "o")
+            }
+            graph = [PSCustomObject]@{
+                nodes = @($allNodes)
+                edges = @($allEdges)
+            }
+        }
+        $finalFile = Join-Path $CheckpointPath "githound_Variable_complete.json"
+        $finalPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath $finalFile
+
+        # Clean up intermediate chunk files
+        $intermediateFiles = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Variable_chunk_*.json" -ErrorAction SilentlyContinue)
+        if ($intermediateFiles.Count -gt 0) {
+            $intermediateFiles | Remove-Item -Force
+            Write-Host "[+] Cleaned up $($intermediateFiles.Count) intermediate checkpoint files."
+        }
+
+        Write-Host "[+] Git-HoundVariable complete. Processed $totalRepos repos, collected $($allNodes.Count) nodes, $($allEdges.Count) edges. Final output: $finalFile"
     }
 
     end
@@ -5421,6 +5757,30 @@ function Invoke-GitHound
         if($secrets.edges) { $edges.AddRange(@($secrets.edges)) }
     } else {
         Write-Host "[*] Skipping Repository Secrets (use -CollectAll to include)"
+    }
+
+    # ── Step 10.5: Repository Variables (requires -CollectAll) ──────────
+    if ($CollectAll) {
+        $stepFile = Join-Path $CheckpointPath "githound_Variable_$orgId.json"
+        $completeFile = Join-Path $CheckpointPath "githound_Variable_complete.json"
+        if ($Resume -and (Test-Path $stepFile)) {
+            Write-Host "[*] Resuming: Loaded Repository Variables from githound_Variable_$orgId.json"
+            $variables = Import-GitHoundStepOutput -FilePath $stepFile
+        } elseif ($Resume -and (Test-Path $completeFile)) {
+            Write-Host "[*] Resuming: Found Variable complete file, converting to per-step output"
+            $variables = Import-GitHoundStepOutput -FilePath $completeFile
+            Export-GitHoundStepOutput -StepResult $variables -FilePath $stepFile
+            Write-Host "[+] Saved: githound_Variable_$orgId.json"
+        } else {
+            Write-Host "[*] Enumerating Repository Variables"
+            $variables = $repos | Git-HoundVariable -Session $Session -CheckpointPath $CheckpointPath
+            Export-GitHoundStepOutput -StepResult $variables -FilePath $stepFile
+            Write-Host "[+] Saved: githound_Variable_$orgId.json"
+        }
+        if($variables.nodes) { $nodes.AddRange(@($variables.nodes)) }
+        if($variables.edges) { $edges.AddRange(@($variables.edges)) }
+    } else {
+        Write-Host "[*] Skipping Repository Variables (use -CollectAll to include)"
     }
 
     # ── Step 11: Secret Scanning Alerts ─────────────────────────────────
