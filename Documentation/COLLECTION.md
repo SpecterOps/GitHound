@@ -47,6 +47,7 @@ The following permissions are required:
 | Repository   | Metadata                  | Read-only | Git-HoundRepository, Git-HoundRepositoryRole                                                  |
 | Repository   | Secret scanning alerts    | Read-only | Git-HoundSecretScanningAlert                                                                  |
 | Repository   | Secrets                   | Read-only | Git-HoundSecret                                                                               |
+| Repository   | Variables                 | Read-only | Git-HoundVariable                                                                             |
 | Organization | Administration            | Read-only | Git-HoundOrganization, Git-HoundRepository, Git-HoundRepositoryRole, Git-HoundAppInstallation |
 | Organization | Custom organization roles | Read-only | Git-HoundOrganization                                                                         |
 | Organization | Custom repository roles   | Read-only | Git-HoundRepository                                                                           |
@@ -54,6 +55,7 @@ The following permissions are required:
 | Organization | Personal access tokens         | Read-only | Git-HoundPersonalAccessToken                                                                   |
 | Organization | Personal access token requests | Read-only | Git-HoundPersonalAccessTokenRequest                                                            |
 | Organization | Secrets                        | Read-only | Git-HoundOrganizationSecret, Git-HoundSecret                                                  |
+| Organization | Variables                      | Read-only | Git-HoundOrganizationSecret                                                                    |
 
 #### Save Personal Access Token
 
@@ -108,13 +110,13 @@ The `-Resume` flag tells GitHound to check for existing per-step output files in
 | `-CheckpointPath`       | String           | `"."`      | Directory for output files and intermediate checkpoints                      |
 | `-Resume`               | Switch           | `$false`   | Load completed steps from disk instead of re-collecting                      |
 | `-CleanupIntermediates` | Switch           | `$false`   | Delete per-step files after final consolidation                              |
-| `-CollectAll`           | Switch           | `$false`   | Include optional steps (Workflows, Environments, Repo Secrets, App Installs, PATs) |
+| `-CollectAll`           | Switch           | `$false`   | Include optional steps (Workflows, Environments, Repo Secrets, Repo Variables, App Installs, PATs) |
 
 #### How it works
 
-1. Each collection step writes its output to a file immediately after completing (e.g. `githound_Repository_<orgId>.json`). By default 8 steps run; with `-CollectAll`, all 14 steps run
+1. Each collection step writes its output to a file immediately after completing (e.g. `githound_Repository_<orgId>.json`). By default 8 steps run; with `-CollectAll`, all 15 steps run
 2. On `-Resume`, if a step's file exists, it's loaded from disk. If not, the step is collected fresh
-3. Functions with internal checkpointing (RepositoryRole, Branch, Workflow, Secret) can also auto-resume from their intermediate chunk files if the function itself was interrupted mid-execution
+3. Functions with internal checkpointing (RepositoryRole, Branch, Workflow, Secret, Variable) can also auto-resume from their intermediate chunk files if the function itself was interrupted mid-execution
 4. After all steps complete, everything is consolidated into a single `githound_<orgId>.json`
 5. SAML and OIDC data remain in separate files (`githound_saml_<orgId>.json`, `githound_oidc_<orgId>.json`)
 
@@ -144,8 +146,9 @@ For organizations with thousands of repositories, collection can exceed the hour
 | Git-HoundBranch              | GraphQL | Repository Count (R)     | ceil(R / 10) + overflow + protected repos | Yes              | Yes           |
 | Git-HoundWorkflow            | REST    | Actions-Enabled Repos (A)| A (skips repos with Actions disabled)     | Yes              | Yes           |
 | Git-HoundEnvironment         | REST    | Repository Count (R)     | R + environments + branch policies        | Yes              | Yes           |
-| Git-HoundOrganizationSecret  | REST    | Selected Secrets (S)     | 1 + S                                     | No               | No            |
+| Git-HoundOrganizationSecret  | REST    | Selected Secrets/Variables (S) | 2 + S                                 | No               | No            |
 | Git-HoundSecret              | REST    | Repository Count (R)     | R (chunked)                               | Yes              | Yes           |
+| Git-HoundVariable            | REST    | Repository Count (R)     | R (chunked)                               | Yes              | Yes           |
 | Git-HoundSecretScanningAlert | REST    | Alert Count              | ceil(Count / 100)                         | No               | No            |
 | Git-HoundAppInstallation              | REST    | Installation Count (I)   | 1 + unique app slugs                      | No               | No            |
 | Git-HoundPersonalAccessToken          | REST    | PAT Count (P)            | ceil(P / 100)                             | No               | No            |
@@ -402,7 +405,26 @@ For maximum control and reliability in large environments, run each collection f
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Secret_$($org.nodes[0].id).json"
     ```
 
-15. Run the `Git-HoundSecretScanningAlert` function:
+15. Run the `Git-HoundVariable` function:
+
+    ```powershell
+    Write-Host "[*] Enumerating Repository Variables"
+    $variables = $repos | Git-HoundVariable -Session $Session
+    if($variables.nodes) { $nodes.AddRange(@($variables.nodes)) }
+    if($variables.edges) { $edges.AddRange(@($variables.edges)) }
+
+    $payload = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $variables.Nodes.ToArray()
+            edges = $variables.Edges.ToArray()
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_Variable_$($org.nodes[0].id).json"
+    ```
+
+16. Run the `Git-HoundSecretScanningAlert` function:
 
     ```powershell
     Write-Host "[*] Enumerating Secret Scanning Alerts"
@@ -421,7 +443,7 @@ For maximum control and reliability in large environments, run each collection f
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_SecretAlerts_$($org.nodes[0].id).json"
     ```
 
-16. Run the `Git-HoundAppInstallation` function:
+17. Run the `Git-HoundAppInstallation` function:
 
     ```powershell
     Write-Host "[*] Enumerating App Installations"
@@ -440,7 +462,7 @@ For maximum control and reliability in large environments, run each collection f
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_AppInstallation_$($org.nodes[0].id).json"
     ```
 
-17. Run the `Git-HoundPersonalAccessToken` function:
+18. Run the `Git-HoundPersonalAccessToken` function:
 
     ```powershell
     Write-Host "[*] Enumerating Personal Access Tokens"
@@ -459,7 +481,7 @@ For maximum control and reliability in large environments, run each collection f
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_PersonalAccessToken_$($org.nodes[0].id).json"
     ```
 
-18. Run the `Git-HoundPersonalAccessTokenRequest` function:
+19. Run the `Git-HoundPersonalAccessTokenRequest` function:
 
     ```powershell
     Write-Host "[*] Enumerating Personal Access Token Requests"
@@ -478,7 +500,7 @@ For maximum control and reliability in large environments, run each collection f
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath "./githound_PersonalAccessTokenRequest_$($org.nodes[0].id).json"
     ```
 
-19. Run the `Git-HoundGraphQlSamlProvider` function:
+20. Run the `Git-HoundGraphQlSamlProvider` function:
 
     ```powershell
     Write-Host "[*] Enumerating SAML Identity Provider"
