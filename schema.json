@@ -1,7 +1,8 @@
 {
   "schema": {
-    "name": "GitHub (GitHound)",
-    "version": "1.0.0",
+    "name": "GitHub",
+    "display_name": "GitHub (GitHound)",
+    "version": "1.0.1",
     "namespace": "GH"
   },
   "node_kinds": [
@@ -246,11 +247,6 @@
       "is_traversable": false
     },
     {
-      "name": "GH_PushProtectedBranch",
-      "description": "Repo role can push to protected branches",
-      "is_traversable": false
-    },
-    {
       "name": "GH_DeleteAlertsCodeScanning",
       "description": "Repo role can delete code scanning alerts",
       "is_traversable": false
@@ -263,11 +259,6 @@
     {
       "name": "GH_RunOrgMigration",
       "description": "Repo role can run organization migrations",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_BypassBranchProtection",
-      "description": "Repo role can bypass branch protection rules",
       "is_traversable": false
     },
     {
@@ -456,17 +447,17 @@
       "is_traversable": false
     },
     {
-      "name": "SyncedToGHUser",
+      "name": "GH_SyncedToGHUser",
       "description": "Identity provider user (Azure AD, Okta, PingOne) is synced to a GitHub user via SAML/SCIM",
       "is_traversable": true
     },
     {
-      "name": "SCIMProvisioned",
+      "name": "GH_SCIMProvisioned",
       "description": "SCIM user is provisioned and mapped to a GitHub user",
       "is_traversable": true
     },
     {
-      "name": "CanAssumeIdentity",
+      "name": "GH_CanAssumeIdentity",
       "description": "GitHub repository, branch, or environment can assume an Azure federated identity via OIDC",
       "is_traversable": true
     },
