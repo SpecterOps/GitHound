@@ -1,6 +1,6 @@
 function Get-GitHoundFunctionBundle {
     [OutputType([hashtable])]
-    param() 
+    param()
     $GitHoundFunctions = @{}
     $functionsToRegister = @(
         'Normalize-Null',
@@ -12,7 +12,7 @@ function Get-GitHoundFunctionBundle {
         'Get-RateLimitInformation',
         'ConvertTo-PascalCase'
     )
-    
+
     # Register each function
     foreach ($funcName in $functionsToRegister) {
         if (Get-Command $funcName -ErrorAction SilentlyContinue) {
@@ -26,7 +26,7 @@ function Get-GitHoundFunctionBundle {
 }
 
 function New-GithubSession {
-    [OutputType('GitHound.Session')] 
+    [OutputType('GitHound.Session')]
     [CmdletBinding()]
     Param(
         [Parameter(Position=0, Mandatory = $true)]
@@ -68,7 +68,7 @@ function New-GithubSession {
         } else {
             $Headers['User-Agent'] = $UserAgent
         }
-    } 
+    }
 
     if($Token) {
         if($Headers['Authorization']) {
@@ -94,7 +94,7 @@ function New-GitHubJwtSession
         [Parameter(Position=0, Mandatory = $true)]
         [string]
         $OrganizationName,
-        
+
         [Parameter(Position=1, Mandatory = $true)]
         [string]
         $ClientId,
@@ -123,15 +123,15 @@ function New-GitHubJwtSession
     $rsa.ImportFromPem((Get-Content $PrivateKeyPath -Raw))
 
     $signature = [Convert]::ToBase64String($rsa.SignData([System.Text.Encoding]::UTF8.GetBytes("$header.$payload"), [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
-    
+
     $jwt = "$header.$payload.$signature"
-    
+
     $jwtsession = New-GithubSession -OrganizationName $OrganizationName -Token $jwt
 
-    $result = Invoke-GithubrestMethod -Session $jwtsession -Path "app/installations/$($AppId)/access_tokens" -Method POST 
+    $result = Invoke-GithubrestMethod -Session $jwtsession -Path "app/installations/$($AppId)/access_tokens" -Method POST
 
     $session = New-GitHubSession -OrganizationName $OrganizationName -Token $result.token
-    
+
     Write-Output $session
 }
 
@@ -156,14 +156,14 @@ function Invoke-GithubRestMethod {
         do {
             $requestSuccessful = $false
             $retryCount = 0
-            
+
             while (-not $requestSuccessful -and $retryCount -lt 3) {
                 try {
                     if($LinkHeader) {
-                        $Response = Invoke-WebRequest -Uri "$LinkHeader" -Headers $Session.Headers -Method $Method -ErrorAction Stop
+                        $Response = Invoke-WebRequest -Uri "$LinkHeader" -Headers $Session.Headers -Method $Method -UseBasicParsing -ErrorAction Stop
                     } else {
                         Write-Verbose "https://api.github.com/$($Path)"
-                        $Response = Invoke-WebRequest -Uri "$($Session.Uri)$($Path)" -Headers $Session.Headers -Method $Method -ErrorAction Stop
+                        $Response = Invoke-WebRequest -Uri "$($Session.Uri)$($Path)" -Headers $Session.Headers -Method $Method -UseBasicParsing -ErrorAction Stop
                     }
                     $requestSuccessful = $true
                 }
@@ -180,12 +180,12 @@ function Invoke-GithubRestMethod {
                     }
                 }
             }
-            
+
             if (-not $requestSuccessful) {
                 throw "Failed after 3 retry attempts due to rate limiting"
             }
 
-            
+
 
             $Response.Content | ConvertFrom-Json | ForEach-Object { $_ }
 
@@ -204,7 +204,7 @@ function Invoke-GithubRestMethod {
     } catch {
         Write-Error $_
     }
-} 
+}
 
 function Invoke-GitHubGraphQL
 {
@@ -311,7 +311,7 @@ function Get-RateLimitInformation
     )
     $rateLimitInfo = Invoke-GithubRestMethod -Session $Session -Path "rate_limit"
     return $rateLimitInfo.resources
-    
+
 }
 
 function Wait-GithubRateLimitReached {
@@ -339,9 +339,9 @@ function Wait-GithubRestRateLimit {
         [PSTypeName('GitHound.Session')]
         $Session
     )
-    
+
     Wait-GithubRateLimitReached -githubRateLimitInfo (Get-RateLimitInformation -Session $Session).core
-    
+
 }
 
 function Wait-GithubGraphQlRateLimit {
@@ -350,7 +350,7 @@ function Wait-GithubGraphQlRateLimit {
         [PSTypeName('GitHound.Session')]
         $Session
     )
-    
+
      Wait-GithubRateLimitReached -githubRateLimitInfo (Get-RateLimitInformation -Session $Session).graphql
 
 }
@@ -414,7 +414,7 @@ function New-GitHoundNode
 
     .PARAMETER Id
         The unique identifier for the node.
-    
+
     .PARAMETER Kind
         The type(s) of the node.
 
@@ -505,7 +505,7 @@ function New-GitHoundEdge
         [Parameter(Mandatory = $false)]
         [String]
         $StartKind,
-        
+
         [Parameter(Mandatory = $false)]
         [ValidateSet('id', 'name')]
         [String]
@@ -536,11 +536,11 @@ function New-GitHoundEdge
         properties = $Properties
     }
 
-    if($PSBoundParameters.ContainsKey('StartKind')) 
+    if($PSBoundParameters.ContainsKey('StartKind'))
     {
         $edge.start.Add('kind', $StartKind)
     }
-    if($PSBoundParameters.ContainsKey('StartMatchBy')) 
+    if($PSBoundParameters.ContainsKey('StartMatchBy'))
     {
         $edge.start.Add('match_by', $StartMatchBy)
     }
@@ -548,7 +548,7 @@ function New-GitHoundEdge
     {
         $edge.end.Add('kind', $EndKind)
     }
-    if($PSBoundParameters.ContainsKey('EndMatchBy')) 
+    if($PSBoundParameters.ContainsKey('EndMatchBy'))
     {
         $edge.end.Add('match_by', $EndMatchBy)
     }
@@ -576,17 +576,17 @@ function Normalize-Null
     param(
         $Value
     )
-    
-    if ($null -eq $Value) 
+
+    if ($null -eq $Value)
     {
         return ""
     }
-    else 
+    else
     {
        return $Value
     }
-    
-    
+
+
 }
 
 function Import-GitHoundStepOutput
@@ -3635,7 +3635,7 @@ function Git-HoundEnvironment
     .DESCRIPTION
         This function retrieves environments for each repository provided in the pipeline. It creates nodes and edges representing the environments and their relationships to repositories. If a repository has custom branch policies for deployments, edges are created from the branch policies to the environment; otherwise, an edge is created directly from the repository to the environment.
 
-        API Reference: 
+        API Reference:
         - List environments: https://docs.github.com/en/rest/deployments/environments?apiVersion=2022-11-28#list-environments
         - List deployment branch policies: https://docs.github.com/en/rest/deployments/branch-policies?apiVersion=2022-11-28#list-deployment-branch-policies
         - List environment secrets: https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-environment-secrets
@@ -3665,7 +3665,7 @@ function Git-HoundEnvironment
         [psobject[]]
         $Repository
     )
-    
+
     begin
     {
         # ConcurrentBag is thread-safe for parallel ForEach-Object blocks
@@ -3717,7 +3717,7 @@ function Git-HoundEnvironment
                         $null = $edges.Add((New-GitHoundEdge -Kind GH_HasEnvironment -StartId $branchId -EndId $environment.node_id -Properties @{ traversable = $false }))
                     }
                 }
-                else 
+                else
                 {
                     $null = $edges.Add((New-GitHoundEdge -Kind GH_HasEnvironment -StartId $repo.Properties.node_id -EndId $environment.node_id -Properties @{ traversable = $true }))
                 }
@@ -3784,7 +3784,7 @@ function Git-HoundEnvironment
             Nodes = $nodes
             Edges = $edges
         }
-    
+
         Write-Output $output
     }
 }
@@ -4503,7 +4503,7 @@ function Git-HoundSecretScanningAlert
 
         Requires the GitHub API permission: GH_ReadSecretScanningAlerts on the organization and GH_ReadRepositoryContents on the repository.
 
-        API Reference: 
+        API Reference:
         - List secret scanning alerts for an organization: https://docs.github.com/en/rest/secret-scanning/secret-scanning?apiVersion=2022-11-28#list-secret-scanning-alerts-for-an-organization
 
         Fine Grained Permissions Reference:
@@ -4577,7 +4577,7 @@ function Git-HoundSecretScanningAlert
                 $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ValidToken' -StartId $alertId -EndId $user.node_id -Properties @{ traversable = $true }))
             }
             catch {
-            
+
             }
         }
     }
@@ -5124,14 +5124,14 @@ function Git-HoundScimUser
                 #schemas = Normalize-Null $scimIdentity.schemas
                 # Accordion Panel Queries
             }
-            
+
             $null = $nodes.Add((New-GitHoundNode -Kind SCIM_User -Id $scimIdentity.id -Properties $props))
             $null = $edges.Add((New-GitHoundEdge -Kind SCIM_Provisioned -StartId $scimIdentity.id -EndId $scimIdentity.id -EndKind GH_ExternalIdentity -EndMatchBy name -Properties @{ traversable = $true }))
         }
 
         $startIndex = $result.startIndex + $result.itemsPerPage
     } while($startIndex -lt $result.totalResults)
-    
+
     $output = [PSCustomObject]@{
         Nodes = $nodes
         Edges = $edges
@@ -5296,7 +5296,7 @@ function Parse-GitHoundOIDCSubject
 function Git-HoundGraphQlSamlProvider
 {
     <#
-    
+
     #>
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
@@ -5373,7 +5373,7 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
         count = 100
         after = $null
     }
-    
+
     $nodes = New-Object System.Collections.ArrayList
     $edges = New-Object System.Collections.ArrayList
 
@@ -5466,7 +5466,7 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
 
                 $null = $nodes.Add((New-GitHoundNode -Id $identity.id -Kind 'GH_ExternalIdentity' -Properties $EIprops))
                 $null = $edges.Add((New-GitHoundEdge -Kind GH_HasExternalIdentity -StartId $result.data.organization.samlIdentityProvider.id -EndId $identity.id -Properties @{traversable=$false}))
-                
+
                 if($identity.samlIdentity.username -ne $null)
                 {
                     $null = $edges.Add((New-GitHoundEdge -Kind GH_MapsToUser -StartId $identity.id -EndId $identity.samlIdentity.username -EndKind $ForeignUserNodeKind -EndMatchBy name -Properties @{traversable=$false}))
@@ -5479,7 +5479,7 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                 if($identity.user -ne $null -and $identity.user.id -ne $null)
                 {
                     $null = $edges.Add((New-GitHoundEdge -Kind GH_MapsToUser -StartId $identity.id -EndId $identity.user.id -Properties @{traversable=$false}))
-                    
+
                     # Create SyncedToGHUser Edge from Foreign Identity to GH_User
                     # This might need to be something that happens during post-processing since we do not control whether the foreign user node already exists in the graph
                     $null = $edges.Add((New-GitHoundEdge -Kind SyncedToGHUser -StartId $identity.samlIdentity.username -StartKind $ForeignUserNodeKind -StartMatchBy name -EndId $identity.user.id -Properties @{traversable=$true; composition="MATCH p=()<-[:GH_SyncedToEnvironment]-(:GH_SamlIdentityProvider)-[:GH_HasExternalIdentity]->(:GH_ExternalIdentity)-[:GH_MapsToUser]->(n) WHERE n.objectid = '$($identity.user.id.ToUpper())' OR n.name = '$($identity.samlIdentity.username.ToUpper())' RETURN p"}))
