@@ -23,17 +23,17 @@ Created by: `Git-HoundEnvironment`
 
 ### Outbound Edges
 
-| Edge Kind         | Target Node                   | Traversable | Description                                                                          |
-| ----------------- | ----------------------------- | ----------- | ------------------------------------------------------------------------------------ |
-| GH_Contains        | GH_EnvironmentSecret           | No          | Environment contains an environment-level secret.                                    |
-| CanAssumeIdentity | AZFederatedIdentityCredential | Yes         | Environment can assume an Azure federated identity via OIDC (subject: environment:{envName}). |
+| Edge Kind                                                     | Target Node                                       | Traversable | Description                                                                                   |
+| ------------------------------------------------------------- | ------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------- |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md)             | [GH_EnvironmentSecret](./GH_EnvironmentSecret.md) | No          | Environment contains an environment-level secret.                                             |
+| [CanAssumeIdentity](../EdgeDescriptions/CanAssumeIdentity.md) | AZFederatedIdentityCredential                     | Yes         | Environment can assume an Azure federated identity via OIDC (subject: environment:{envName}). |
 
 ### Inbound Edges
 
-| Edge Kind        | Source Node  | Traversable | Description                                                                 |
-| ---------------- | ------------ | ----------- | --------------------------------------------------------------------------- |
-| GH_HasEnvironment | GH_Repository | Yes         | Repository has this environment (when no custom branch policies).           |
-| GH_HasEnvironment | GH_Branch     | No          | Branch is allowed to deploy to this environment (via custom branch policy). |
+| Edge Kind                                                     | Source Node                         | Traversable | Description                                                                 |
+| ------------------------------------------------------------- | ----------------------------------- | ----------- | --------------------------------------------------------------------------- |
+| [GH_HasEnvironment](../EdgeDescriptions/GH_HasEnvironment.md) | [GH_Repository](./GH_Repository.md) | Yes         | Repository has this environment (when no custom branch policies).           |
+| [GH_HasEnvironment](../EdgeDescriptions/GH_HasEnvironment.md) | [GH_Branch](./GH_Branch.md)         | No          | Branch is allowed to deploy to this environment (via custom branch policy). |
 
 ## Diagram
 

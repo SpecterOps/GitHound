@@ -8,42 +8,42 @@ Created by: `Git-HoundBranch`
 
 ## Properties
 
-| Property Name                   | Data Type | Description                                                              |
-| ------------------------------- | --------- | ------------------------------------------------------------------------ |
-| objectid                        | string    | The GitHub node ID of the branch protection rule.                        |
-| name                            | string    | Display name (e.g., `repo\main`).                                        |
-| id                              | string    | Same as objectid.                                                        |
-| environment_name                | string    | The GitHub organization login name.                                      |
-| environment_id                  | string    | The GitHub organization node ID.                                         |
-| pattern                         | string    | The branch name pattern this rule applies to (e.g., `main`, `release/*`).|
-| enforce_admins                  | boolean   | Whether branch protection rules are enforced for administrators.         |
-| lock_branch                     | boolean   | Whether the branch is locked (read-only).                                |
+| Property Name                   | Data Type | Description                                                                                                                                                   |
+| ------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| objectid                        | string    | The GitHub node ID of the branch protection rule.                                                                                                             |
+| name                            | string    | Display name (e.g., `repo\main`).                                                                                                                             |
+| id                              | string    | Same as objectid.                                                                                                                                             |
+| environment_name                | string    | The GitHub organization login name.                                                                                                                           |
+| environment_id                  | string    | The GitHub organization node ID.                                                                                                                              |
+| pattern                         | string    | The branch name pattern this rule applies to (e.g., `main`, `release/*`).                                                                                     |
+| enforce_admins                  | boolean   | Whether branch protection rules are enforced for administrators.                                                                                              |
+| lock_branch                     | boolean   | Whether the branch is locked (read-only).                                                                                                                     |
 | blocks_creations                | boolean   | Whether creating branches matching this pattern is restricted. Only effective when `push_restrictions` is also `true`; silently reverts to `false` otherwise. |
-| required_pull_request_reviews   | boolean   | Whether pull request reviews are required before merging.                |
-| required_approving_review_count | integer   | The number of approving reviews required.                                |
-| require_code_owner_reviews      | boolean   | Whether reviews from code owners are required.                           |
-| require_last_push_approval      | boolean   | Whether the last push must be approved by someone other than the pusher. |
-| push_restrictions               | boolean   | Whether push access is restricted to specific users/teams.               |
-| requires_status_checks          | boolean   | Whether status checks must pass before merging.                          |
-| requires_strict_status_checks   | boolean   | Whether branches must be up to date with the base branch before merging. |
-| dismisses_stale_reviews         | boolean   | Whether new commits dismiss previously approved reviews.                 |
-| allows_force_pushes             | boolean   | Whether force pushes are allowed to matching branches.                   |
-| allows_deletions                | boolean   | Whether matching branches can be deleted.                                |
+| required_pull_request_reviews   | boolean   | Whether pull request reviews are required before merging.                                                                                                     |
+| required_approving_review_count | integer   | The number of approving reviews required.                                                                                                                     |
+| require_code_owner_reviews      | boolean   | Whether reviews from code owners are required.                                                                                                                |
+| require_last_push_approval      | boolean   | Whether the last push must be approved by someone other than the pusher.                                                                                      |
+| push_restrictions               | boolean   | Whether push access is restricted to specific users/teams.                                                                                                    |
+| requires_status_checks          | boolean   | Whether status checks must pass before merging.                                                                                                               |
+| requires_strict_status_checks   | boolean   | Whether branches must be up to date with the base branch before merging.                                                                                      |
+| dismisses_stale_reviews         | boolean   | Whether new commits dismiss previously approved reviews.                                                                                                      |
+| allows_force_pushes             | boolean   | Whether force pushes are allowed to matching branches.                                                                                                        |
+| allows_deletions                | boolean   | Whether matching branches can be deleted.                                                                                                                     |
 
 ## Edges
 
 ### Outbound Edges
 
-| Edge Kind      | Target Node | Traversable | Description                                |
-| -------------- | ----------- | ----------- | ------------------------------------------ |
-| GH_ProtectedBy | GH_Branch   | Yes         | Branch protection rule protects this branch. |
+| Edge Kind                                               | Target Node                 | Traversable | Description                                  |
+| ------------------------------------------------------- | --------------------------- | ----------- | -------------------------------------------- |
+| [GH_ProtectedBy](../EdgeDescriptions/GH_ProtectedBy.md) | [GH_Branch](./GH_Branch.md) | Yes         | Branch protection rule protects this branch. |
 
 ### Inbound Edges
 
-| Edge Kind                      | Source Node        | Traversable | Description                                                         |
-| ------------------------------ | ------------------ | ----------- | ------------------------------------------------------------------- |
-| GH_BypassPullRequestAllowances | GH_User or GH_Team | No          | User or team can bypass pull request requirements on this rule.     |
-| GH_RestrictionsCanPush         | GH_User or GH_Team | No          | User or team is allowed to push to branches protected by this rule. |
+| Edge Kind                                                                               | Source Node                                        | Traversable | Description                                                         |
+| --------------------------------------------------------------------------------------- | -------------------------------------------------- | ----------- | ------------------------------------------------------------------- |
+| [GH_BypassPullRequestAllowances](../EdgeDescriptions/GH_BypassPullRequestAllowances.md) | [GH_User](./GH_User.md) or [GH_Team](./GH_Team.md) | No          | User or team can bypass pull request requirements on this rule.     |
+| [GH_RestrictionsCanPush](../EdgeDescriptions/GH_RestrictionsCanPush.md)                 | [GH_User](./GH_User.md) or [GH_Team](./GH_Team.md) | No          | User or team is allowed to push to branches protected by this rule. |
 
 ## Diagram
 
@@ -71,25 +71,25 @@ flowchart TD
 Branch protection rules are critical security controls. Key settings to review:
 
 - **enforce_admins**: Enforces merge-gate controls (PR reviews, lock branch) for admins and users with `bypass_branch_protection`. Does **not** enforce push-gate controls (`push_restrictions`) for admins or users with `push_protected_branch`.
-- **required_pull_request_reviews**: Blocks direct pushes to existing protected branches. Bypassed by `GH_BypassBranchProtection` and `GH_BypassPullRequestAllowances` (both suppressed by `enforce_admins`).
-- **push_restrictions**: Restricts who can push. Bypassed by `GH_PushProtectedBranch`, `GH_AdminTo`, and `GH_RestrictionsCanPush` (none suppressed by `enforce_admins`).
+- **required_pull_request_reviews**: Blocks direct pushes to existing protected branches. Bypassed by [`GH_BypassBranchProtection`](../EdgeDescriptions/GH_BypassBranchProtection.md) and [`GH_BypassPullRequestAllowances`](../EdgeDescriptions/GH_BypassPullRequestAllowances.md) (both suppressed by `enforce_admins`).
+- **push_restrictions**: Restricts who can push. Bypassed by [`GH_PushProtectedBranch`](../EdgeDescriptions/GH_PushProtectedBranch.md), [`GH_AdminTo`](../EdgeDescriptions/GH_AdminTo.md), and [`GH_RestrictionsCanPush`](../EdgeDescriptions/GH_RestrictionsCanPush.md) (none suppressed by `enforce_admins`).
 - **blocks_creations**: Restricts new branch creation when `push_restrictions` is also `true`. Same bypass vectors as `push_restrictions`. Silently reverts to `false` if `push_restrictions` is disabled.
-- **lock_branch**: Makes branch read-only. Bypassed by `GH_BypassBranchProtection` (suppressed by `enforce_admins`).
+- **lock_branch**: Makes branch read-only. Bypassed by [`GH_BypassBranchProtection`](../EdgeDescriptions/GH_BypassBranchProtection.md) (suppressed by `enforce_admins`).
 - **require_code_owner_reviews**: If `false`, changes to critical paths may not require owner approval.
 - **allows_force_pushes**: Controls whether history rewrites are allowed. Does **not** grant push access — it is not a bypass mechanism.
 - **allows_deletions**: If `true`, branches can be deleted (potentially losing code).
 
 ### Secret Exfiltration Mitigation
 
-The only branch protection configuration that blocks the write-access → workflow → secrets exfiltration attack path is `push_restrictions` + `blocks_creations` on a `*` pattern rule. However, users with `GH_PushProtectedBranch`, `GH_AdminTo`, `GH_RestrictionsCanPush`, or `GH_EditRepoProtections` can bypass this control.
+The only branch protection configuration that blocks the write-access → workflow → secrets exfiltration attack path is `push_restrictions` + `blocks_creations` on a `*` pattern rule. However, users with [`GH_PushProtectedBranch`](../EdgeDescriptions/GH_PushProtectedBranch.md), [`GH_AdminTo`](../EdgeDescriptions/GH_AdminTo.md), [`GH_RestrictionsCanPush`](../EdgeDescriptions/GH_RestrictionsCanPush.md), or [`GH_EditRepoProtections`](../EdgeDescriptions/GH_EditRepoProtections.md) can bypass this control.
 
 For complete analysis, see [MITIGATING_CONTROLS.md](../MITIGATING_CONTROLS.md).
 
 ### Identifying Bypass Actors
 
 Use these edges to identify users and teams with elevated branch permissions:
-- `GH_BypassPullRequestAllowances` — can bypass PR requirements on a specific rule (PR reviews only)
-- `GH_RestrictionsCanPush` — can push despite push restrictions on a specific rule
-- `GH_BypassBranchProtection` — repo-wide bypass of merge-gate controls (PR reviews + lock branch)
-- `GH_PushProtectedBranch` — repo-wide bypass of push-gate controls (push restrictions + blocks creations)
-- `GH_EditRepoProtections` — can remove/modify protection rules entirely
+- [`GH_BypassPullRequestAllowances`](../EdgeDescriptions/GH_BypassPullRequestAllowances.md) — can bypass PR requirements on a specific rule (PR reviews only)
+- [`GH_RestrictionsCanPush`](../EdgeDescriptions/GH_RestrictionsCanPush.md) — can push despite push restrictions on a specific rule
+- [`GH_BypassBranchProtection`](../EdgeDescriptions/GH_BypassBranchProtection.md) — repo-wide bypass of merge-gate controls (PR reviews + lock branch)
+- [`GH_PushProtectedBranch`](../EdgeDescriptions/GH_PushProtectedBranch.md) — repo-wide bypass of push-gate controls (push restrictions + blocks creations)
+- [`GH_EditRepoProtections`](../EdgeDescriptions/GH_EditRepoProtections.md) — can remove/modify protection rules entirely

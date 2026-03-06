@@ -6,54 +6,54 @@ Created by: `Git-HoundRepository`
 
 ## Properties
 
-| Property Name     | Data Type | Description                                                                                      |
-| ----------------- | --------- | ------------------------------------------------------------------------------------------------ |
-| objectid          | string    | A deterministic ID derived from the repo node_id and role name.                                  |
-| name              | string    | The fully qualified role name (e.g., `repoName\read`).                                           |
-| id                | string    | Same as objectid.                                                                                |
-| short_name        | string    | The short role name (e.g., `read`, `write`, `admin`, `triage`, `maintain`, or custom role name). |
-| type              | string    | `default` for built-in roles or `custom` for custom repository roles.                            |
-| environment_name  | string    | The name of the environment (GitHub organization).                                               |
-| environment_id    | string    | The node_id of the environment (GitHub organization).                                            |
-| repository_name   | string    | The name of the repository this role belongs to.                                                 |
-| repository_id     | string    | The node_id of the repository this role belongs to.                                              |
+| Property Name    | Data Type | Description                                                                                      |
+| ---------------- | --------- | ------------------------------------------------------------------------------------------------ |
+| objectid         | string    | A deterministic ID derived from the repo node_id and role name.                                  |
+| name             | string    | The fully qualified role name (e.g., `repoName\read`).                                           |
+| id               | string    | Same as objectid.                                                                                |
+| short_name       | string    | The short role name (e.g., `read`, `write`, `admin`, `triage`, `maintain`, or custom role name). |
+| type             | string    | `default` for built-in roles or `custom` for custom repository roles.                            |
+| environment_name | string    | The name of the environment (GitHub organization).                                               |
+| environment_id   | string    | The node_id of the environment (GitHub organization).                                            |
+| repository_name  | string    | The name of the repository this role belongs to.                                                 |
+| repository_id    | string    | The node_id of the repository this role belongs to.                                              |
 
 ## Edges
 
 ### Outbound Edges
 
-| Edge Kind                       | Target Node  | Traversable | Description                                                             |
-| ------------------------------- | ------------ | ----------- | ----------------------------------------------------------------------- |
-| GH_CanEditProtection             | GH_Branch     | Yes         | Role can modify or remove the protection rules governing this branch (computed). |
-| GH_ReadRepoContents              | GH_Repository | No          | Read role can read repository contents.                                 |
-| GH_WriteRepoContents             | GH_Repository | No          | Write/Admin role can push to the repository.                            |
-| GH_WriteRepoPullRequests         | GH_Repository | No          | Write/Admin role can create and merge pull requests.                    |
-| GH_AdminTo                       | GH_Repository | Yes         | Admin role has full administrative access.                              |
-| GH_ManageWebhooks                | GH_Repository | No          | Admin role can manage webhooks.                                         |
-| GH_ManageDeployKeys              | GH_Repository | No          | Admin role can manage deploy keys.                                      |
-| GH_PushProtectedBranch           | GH_Repository | No          | Admin/Maintain role can push to protected branches.                     |
-| GH_DeleteAlertsCodeScanning      | GH_Repository | No          | Admin role can delete code scanning alerts.                             |
-| GH_ViewSecretScanningAlerts      | GH_Repository | No          | Admin role can view secret scanning alerts.                             |
-| GH_RunOrgMigration               | GH_Repository | No          | Admin role can run organization migrations.                             |
-| GH_BypassBranchProtection        | GH_Repository | No          | Admin role can bypass branch protection rules.                          |
-| GH_ManageSecurityProducts        | GH_Repository | No          | Admin role can manage security products.                                |
-| GH_ManageRepoSecurityProducts    | GH_Repository | No          | Admin role can manage repo security products.                           |
-| GH_EditRepoProtections           | GH_Repository | No          | Admin role can edit branch protection rules.                            |
-| GH_JumpMergeQueue                | GH_Repository | No          | Admin role can jump the merge queue.                                    |
-| GH_CreateSoloMergeQueueEntry     | GH_Repository | No          | Admin role can create solo merge queue entries.                         |
-| GH_EditRepoCustomPropertiesValue | GH_Repository | No          | Admin role can edit custom property values.                             |
-| GH_HasBaseRole                   | GH_RepoRole   | Yes         | Role inherits from a base role (e.g., Triage → Read, Maintain → Write). |
-| GH_CanCreateBranch               | GH_Repository | Yes         | Role can create new branches (computed from permissions + BPR state).    |
-| GH_CanWriteBranch                | GH_Branch     | Yes         | Role can push to this branch (computed from permissions + BPR state). |
+| Edge Kind                                                                                   | Target Node                         | Traversable | Description                                                                      |
+| ------------------------------------------------------------------------------------------- | ----------------------------------- | ----------- | -------------------------------------------------------------------------------- |
+| [GH_CanEditProtection](../EdgeDescriptions/GH_CanEditProtection.md)                         | [GH_Branch](./GH_Branch.md)         | Yes         | Role can modify or remove the protection rules governing this branch (computed). |
+| [GH_ReadRepoContents](../EdgeDescriptions/GH_ReadRepoContents.md)                           | [GH_Repository](./GH_Repository.md) | No          | Read role can read repository contents.                                          |
+| [GH_WriteRepoContents](../EdgeDescriptions/GH_WriteRepoContents.md)                         | [GH_Repository](./GH_Repository.md) | No          | Write/Admin role can push to the repository.                                     |
+| [GH_WriteRepoPullRequests](../EdgeDescriptions/GH_WriteRepoPullRequests.md)                 | [GH_Repository](./GH_Repository.md) | No          | Write/Admin role can create and merge pull requests.                             |
+| [GH_AdminTo](../EdgeDescriptions/GH_AdminTo.md)                                             | [GH_Repository](./GH_Repository.md) | Yes         | Admin role has full administrative access.                                       |
+| [GH_ManageWebhooks](../EdgeDescriptions/GH_ManageWebhooks.md)                               | [GH_Repository](./GH_Repository.md) | No          | Admin role can manage webhooks.                                                  |
+| [GH_ManageDeployKeys](../EdgeDescriptions/GH_ManageDeployKeys.md)                           | [GH_Repository](./GH_Repository.md) | No          | Admin role can manage deploy keys.                                               |
+| [GH_PushProtectedBranch](../EdgeDescriptions/GH_PushProtectedBranch.md)                     | [GH_Repository](./GH_Repository.md) | No          | Admin/Maintain role can push to protected branches.                              |
+| [GH_DeleteAlertsCodeScanning](../EdgeDescriptions/GH_DeleteAlertsCodeScanning.md)           | [GH_Repository](./GH_Repository.md) | No          | Admin role can delete code scanning alerts.                                      |
+| [GH_ViewSecretScanningAlerts](../EdgeDescriptions/GH_ViewSecretScanningAlerts.md)           | [GH_Repository](./GH_Repository.md) | No          | Admin role can view secret scanning alerts.                                      |
+| [GH_RunOrgMigration](../EdgeDescriptions/GH_RunOrgMigration.md)                             | [GH_Repository](./GH_Repository.md) | No          | Admin role can run organization migrations.                                      |
+| [GH_BypassBranchProtection](../EdgeDescriptions/GH_BypassBranchProtection.md)               | [GH_Repository](./GH_Repository.md) | No          | Admin role can bypass branch protection rules.                                   |
+| [GH_ManageSecurityProducts](../EdgeDescriptions/GH_ManageSecurityProducts.md)               | [GH_Repository](./GH_Repository.md) | No          | Admin role can manage security products.                                         |
+| [GH_ManageRepoSecurityProducts](../EdgeDescriptions/GH_ManageRepoSecurityProducts.md)       | [GH_Repository](./GH_Repository.md) | No          | Admin role can manage repo security products.                                    |
+| [GH_EditRepoProtections](../EdgeDescriptions/GH_EditRepoProtections.md)                     | [GH_Repository](./GH_Repository.md) | No          | Admin role can edit branch protection rules.                                     |
+| [GH_JumpMergeQueue](../EdgeDescriptions/GH_JumpMergeQueue.md)                               | [GH_Repository](./GH_Repository.md) | No          | Admin role can jump the merge queue.                                             |
+| [GH_CreateSoloMergeQueueEntry](../EdgeDescriptions/GH_CreateSoloMergeQueueEntry.md)         | [GH_Repository](./GH_Repository.md) | No          | Admin role can create solo merge queue entries.                                  |
+| [GH_EditRepoCustomPropertiesValue](../EdgeDescriptions/GH_EditRepoCustomPropertiesValue.md) | [GH_Repository](./GH_Repository.md) | No          | Admin role can edit custom property values.                                      |
+| [GH_HasBaseRole](../EdgeDescriptions/GH_HasBaseRole.md)                                     | GH_RepoRole                         | Yes         | Role inherits from a base role (e.g., Triage → Read, Maintain → Write).          |
+| [GH_CanCreateBranch](../EdgeDescriptions/GH_CanCreateBranch.md)                             | [GH_Repository](./GH_Repository.md) | Yes         | Role can create new branches (computed from permissions + BPR state).            |
+| [GH_CanWriteBranch](../EdgeDescriptions/GH_CanWriteBranch.md)                               | [GH_Branch](./GH_Branch.md)         | Yes         | Role can push to this branch (computed from permissions + BPR state).            |
 
 ### Inbound Edges
 
-| Edge Kind     | Source Node | Traversable | Description                                                                       |
-| ------------- | ----------- | ----------- | --------------------------------------------------------------------------------- |
-| GH_HasRole     | GH_User      | Yes         | A user is directly assigned to this repository role.                              |
-| GH_HasRole     | GH_Team      | Yes         | A team is assigned to this repository role.                                       |
-| GH_HasBaseRole | GH_OrgRole   | Yes         | An org-level `all_repo_*` role inherits to this repo role.                        |
-| GH_HasBaseRole | GH_RepoRole  | Yes         | A higher-level repo role inherits from this role (e.g., custom role → base role). |
+| Edge Kind                                               | Source Node                   | Traversable | Description                                                                       |
+| ------------------------------------------------------- | ----------------------------- | ----------- | --------------------------------------------------------------------------------- |
+| [GH_HasRole](../EdgeDescriptions/GH_HasRole.md)         | [GH_User](./GH_User.md)       | Yes         | A user is directly assigned to this repository role.                              |
+| [GH_HasRole](../EdgeDescriptions/GH_HasRole.md)         | [GH_Team](./GH_Team.md)       | Yes         | A team is assigned to this repository role.                                       |
+| [GH_HasBaseRole](../EdgeDescriptions/GH_HasBaseRole.md) | [GH_OrgRole](./GH_OrgRole.md) | Yes         | An org-level `all_repo_*` role inherits to this repo role.                        |
+| [GH_HasBaseRole](../EdgeDescriptions/GH_HasBaseRole.md) | GH_RepoRole                   | Yes         | A higher-level repo role inherits from this role (e.g., custom role → base role). |
 
 ## Diagram
 

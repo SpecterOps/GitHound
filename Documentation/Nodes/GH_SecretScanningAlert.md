@@ -30,9 +30,9 @@ None
 
 ### Inbound Edges
 
-| Edge Kind                | Source Node  | Traversable | Description                                |
-| ------------------------ | ------------ | ----------- | ------------------------------------------ |
-| GH_HasSecretScanningAlert | GH_Repository | No          | Repository has this secret scanning alert. |
+| Edge Kind                                                                     | Source Node                         | Traversable | Description                                |
+| ----------------------------------------------------------------------------- | ----------------------------------- | ----------- | ------------------------------------------ |
+| [GH_HasSecretScanningAlert](../EdgeDescriptions/GH_HasSecretScanningAlert.md) | [GH_Repository](./GH_Repository.md) | No          | Repository has this secret scanning alert. |
 
 ## Diagram
 

@@ -1,6 +1,6 @@
 # <img src="../Icons/gh_branch.png" width="50"/> GH_Branch
 
-Represents a Git branch within a repository. Branch nodes capture basic branch information and whether the branch is protected. Protection rule details are stored in separate `GH_BranchProtectionRule` nodes, linked via `GH_ProtectedBy` edges.
+Represents a Git branch within a repository. Branch nodes capture basic branch information and whether the branch is protected. Protection rule details are stored in separate [`GH_BranchProtectionRule`](./GH_BranchProtectionRule.md) nodes, linked via [`GH_ProtectedBy`](../EdgeDescriptions/GH_ProtectedBy.md) edges.
 
 Created by: `Git-HoundBranch`
 
@@ -20,21 +20,21 @@ Created by: `Git-HoundBranch`
 
 ### Outbound Edges
 
-| Edge Kind         | Target Node                   | Traversable | Description                                                                                   |
-| ----------------- | ----------------------------- | ----------- | --------------------------------------------------------------------------------------------- |
-| GH_HasEnvironment | GH_Environment                | No          | Branch has a deployment environment via custom branch policy (from Git-HoundEnvironment).     |
-| CanAssumeIdentity | AZFederatedIdentityCredential | Yes         | Branch can assume an Azure federated identity via OIDC (subject: `ref:refs/heads/{branch}`).  |
+| Edge Kind                                                     | Target Node                           | Traversable | Description                                                                                  |
+| ------------------------------------------------------------- | ------------------------------------- | ----------- | -------------------------------------------------------------------------------------------- |
+| [GH_HasEnvironment](../EdgeDescriptions/GH_HasEnvironment.md) | [GH_Environment](./GH_Environment.md) | No          | Branch has a deployment environment via custom branch policy (from Git-HoundEnvironment).    |
+| [CanAssumeIdentity](../EdgeDescriptions/CanAssumeIdentity.md) | AZFederatedIdentityCredential         | Yes         | Branch can assume an Azure federated identity via OIDC (subject: `ref:refs/heads/{branch}`). |
 
 ### Inbound Edges
 
-| Edge Kind        | Source Node             | Traversable | Description                                                                               |
-| ---------------- | ----------------------- | ----------- | ----------------------------------------------------------------------------------------- |
-| GH_HasBranch          | GH_Repository           | Yes         | Repository has this branch.                                                               |
-| GH_ProtectedBy        | GH_BranchProtectionRule | Yes         | Branch protection rule protects this branch.                                              |
-| GH_HasEnvironment     | GH_Branch               | No          | Branch has a deployment environment via custom branch policy (from Git-HoundEnvironment). |
-| GH_CanEditProtection  | GH_RepoRole             | Yes         | Repo role can modify/remove the protection rules governing this branch (computed).        |
-| GH_CanWriteBranch     | GH_RepoRole             | Yes         | Repo role can push to this branch (computed from permissions + BPR state).                |
-| GH_CanWriteBranch     | GH_User or GH_Team      | Yes         | User or team can push to this branch (computed — per-actor allowance delta).              |
+| Edge Kind                                                           | Source Node                                             | Traversable | Description                                                                               |
+| ------------------------------------------------------------------- | ------------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------- |
+| [GH_HasBranch](../EdgeDescriptions/GH_HasBranch.md)                 | [GH_Repository](./GH_Repository.md)                     | Yes         | Repository has this branch.                                                               |
+| [GH_ProtectedBy](../EdgeDescriptions/GH_ProtectedBy.md)             | [GH_BranchProtectionRule](./GH_BranchProtectionRule.md) | Yes         | Branch protection rule protects this branch.                                              |
+| [GH_HasEnvironment](../EdgeDescriptions/GH_HasEnvironment.md)       | GH_Branch                                               | No          | Branch has a deployment environment via custom branch policy (from Git-HoundEnvironment). |
+| [GH_CanEditProtection](../EdgeDescriptions/GH_CanEditProtection.md) | [GH_RepoRole](./GH_RepoRole.md)                         | Yes         | Repo role can modify/remove the protection rules governing this branch (computed).        |
+| [GH_CanWriteBranch](../EdgeDescriptions/GH_CanWriteBranch.md)       | [GH_RepoRole](./GH_RepoRole.md)                         | Yes         | Repo role can push to this branch (computed from permissions + BPR state).                |
+| [GH_CanWriteBranch](../EdgeDescriptions/GH_CanWriteBranch.md)       | [GH_User](./GH_User.md) or [GH_Team](./GH_Team.md)      | Yes         | User or team can push to this branch (computed — per-actor allowance delta).              |
 
 ## Diagram
 

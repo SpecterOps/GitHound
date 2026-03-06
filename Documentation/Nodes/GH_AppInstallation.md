@@ -2,7 +2,7 @@
 
 Represents a GitHub App installed on an organization. App installations have specific permissions and can be scoped to all repositories or a selection of repositories. The permissions granted to the app are captured as a JSON string in the properties.
 
-Each installation is linked to its parent `GH_App` via a `GH_InstalledAs` edge. For installations with `repository_selection` set to `all`, `GH_CanAccess` edges are created to every repository in the organization. For installations with `repository_selection` set to `selected`, repository-level edges cannot be enumerated with a PAT (requires app installation token authentication).
+Each installation is linked to its parent [`GH_App`](./GH_App.md) via a [`GH_InstalledAs`](../EdgeDescriptions/GH_InstalledAs.md) edge. For installations with `repository_selection` set to `all`, [`GH_CanAccess`](../EdgeDescriptions/GH_CanAccess.md) edges are created to every repository in the organization. For installations with `repository_selection` set to `selected`, repository-level edges cannot be enumerated with a PAT (requires app installation token authentication).
 
 Created by: `Git-HoundAppInstallation`
 
@@ -33,16 +33,16 @@ Created by: `Git-HoundAppInstallation`
 
 ### Outbound Edges
 
-| Edge Name     | Target Node    | Traversable | Description                                                                        |
-| ------------- | -------------- | ----------- | ---------------------------------------------------------------------------------- |
-| GH_CanAccess  | GH_Repository  | -.->        | App installation can access this repository (created when `repository_selection` is `all`). |
+| Edge Name                                           | Target Node                         | Traversable | Description                                                                                 |
+| --------------------------------------------------- | ----------------------------------- | ----------- | ------------------------------------------------------------------------------------------- |
+| [GH_CanAccess](../EdgeDescriptions/GH_CanAccess.md) | [GH_Repository](./GH_Repository.md) | -.->        | App installation can access this repository (created when `repository_selection` is `all`). |
 
 ### Inbound Edges
 
-| Edge Name      | Source Node      | Traversable | Description                                                    |
-| -------------- | ---------------- | ----------- | -------------------------------------------------------------- |
-| GH_InstalledAs | GH_App           | -->         | The parent app definition that this installation belongs to.   |
-| GH_Contains    | GH_Organization  | -.->        | The organization that contains this app installation.          |
+| Edge Name                                               | Source Node                             | Traversable | Description                                                  |
+| ------------------------------------------------------- | --------------------------------------- | ----------- | ------------------------------------------------------------ |
+| [GH_InstalledAs](../EdgeDescriptions/GH_InstalledAs.md) | [GH_App](./GH_App.md)                   | -->         | The parent app definition that this installation belongs to. |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md)       | [GH_Organization](./GH_Organization.md) | -.->        | The organization that contains this app installation.        |
 
 ## Diagram
 

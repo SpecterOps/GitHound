@@ -1,6 +1,6 @@
 # <img src="../Icons/gh_repository.png" width="50"/> GH_Repository
 
-Represents a GitHub repository within the organization. Repository nodes capture metadata about the repo including visibility, Actions enablement status, and security configuration. Repository role nodes (GH_RepoRole) are created alongside each repository to represent the permission levels available.
+Represents a GitHub repository within the organization. Repository nodes capture metadata about the repo including visibility, Actions enablement status, and security configuration. Repository role nodes ([GH_RepoRole](./GH_RepoRole.md)) are created alongside each repository to represent the permission levels available.
 
 Created by: `Git-HoundRepository`
 
@@ -41,26 +41,26 @@ Created by: `Git-HoundRepository`
 
 ### Outbound Edges
 
-| Edge Kind                | Target Node                   | Traversable | Description                                                               |
-| ------------------------ | ----------------------------- | ----------- | ------------------------------------------------------------------------- |
-| GH_HasBranch              | GH_Branch                      | No          | Repository has a branch.                                                  |
-| GH_HasWorkflow            | GH_Workflow                    | No          | Repository has a workflow.                                                |
-| GH_HasEnvironment         | GH_Environment                 | Yes         | Repository has a deployment environment (when no custom branch policies). |
-| GH_HasSecret              | GH_OrgSecret                   | Yes         | Repository has access to an organization-level secret. Traversable because write access to the repo enables secret access via workflow creation. |
-| GH_HasSecret              | GH_RepoSecret                  | Yes         | Repository has a repository-level secret. Traversable because write access to the repo enables secret access via workflow creation. |
-| GH_Contains               | GH_RepoSecret                  | No          | Repository contains a repository-level secret.                            |
-| GH_HasSecretScanningAlert | GH_SecretScanningAlert         | No          | Repository has a secret scanning alert.                                   |
-| CanAssumeIdentity        | AZFederatedIdentityCredential | Yes         | Repository can assume an Azure federated identity via OIDC (subject: *).  |
+| Edge Kind                                                                     | Target Node                                           | Traversable | Description                                                                                                                                      |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [GH_HasBranch](../EdgeDescriptions/GH_HasBranch.md)                           | [GH_Branch](./GH_Branch.md)                           | No          | Repository has a branch.                                                                                                                         |
+| [GH_HasWorkflow](../EdgeDescriptions/GH_HasWorkflow.md)                       | [GH_Workflow](./GH_Workflow.md)                       | No          | Repository has a workflow.                                                                                                                       |
+| [GH_HasEnvironment](../EdgeDescriptions/GH_HasEnvironment.md)                 | [GH_Environment](./GH_Environment.md)                 | Yes         | Repository has a deployment environment (when no custom branch policies).                                                                        |
+| [GH_HasSecret](../EdgeDescriptions/GH_HasSecret.md)                           | [GH_OrgSecret](./GH_OrgSecret.md)                     | Yes         | Repository has access to an organization-level secret. Traversable because write access to the repo enables secret access via workflow creation. |
+| [GH_HasSecret](../EdgeDescriptions/GH_HasSecret.md)                           | [GH_RepoSecret](./GH_RepoSecret.md)                   | Yes         | Repository has a repository-level secret. Traversable because write access to the repo enables secret access via workflow creation.              |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md)                             | [GH_RepoSecret](./GH_RepoSecret.md)                   | No          | Repository contains a repository-level secret.                                                                                                   |
+| [GH_HasSecretScanningAlert](../EdgeDescriptions/GH_HasSecretScanningAlert.md) | [GH_SecretScanningAlert](./GH_SecretScanningAlert.md) | No          | Repository has a secret scanning alert.                                                                                                          |
+| [CanAssumeIdentity](../EdgeDescriptions/CanAssumeIdentity.md)                 | AZFederatedIdentityCredential                         | Yes         | Repository can assume an Azure federated identity via OIDC (subject: *).                                                                         |
 
 ### Inbound Edges
 
-| Edge Kind             | Source Node      | Traversable | Description                                                                                         |
-| --------------------- | ---------------- | ----------- | --------------------------------------------------------------------------------------------------- |
-| GH_Owns               | GH_Organization  | Yes         | Organization owns this repository.                                                                  |
-| GH_WriteRepoContents  | GH_RepoRole      | No          | Repo role can write repository contents. Non-traversable because write access alone is necessary but not sufficient for push access — branch protection rules may block it. |
-| GH_AdminTo            | GH_RepoRole      | Yes         | Repo role has admin access. Traversable because admin confers full control of the repository.        |
-| GH_CanCreateBranch    | GH_RepoRole         | Yes       | Repo role can create new branches (computed from permissions + branch protection rules).              |
-| GH_CanCreateBranch    | GH_User or GH_Team  | Yes       | User or team can create new branches via per-rule allowance (computed — delta only).                 |
+| Edge Kind                                                           | Source Node                                        | Traversable | Description                                                                                                                                                                 |
+| ------------------------------------------------------------------- | -------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [GH_Owns](../EdgeDescriptions/GH_Owns.md)                           | [GH_Organization](./GH_Organization.md)            | Yes         | Organization owns this repository.                                                                                                                                          |
+| [GH_WriteRepoContents](../EdgeDescriptions/GH_WriteRepoContents.md) | [GH_RepoRole](./GH_RepoRole.md)                    | No          | Repo role can write repository contents. Non-traversable because write access alone is necessary but not sufficient for push access — branch protection rules may block it. |
+| [GH_AdminTo](../EdgeDescriptions/GH_AdminTo.md)                     | [GH_RepoRole](./GH_RepoRole.md)                    | Yes         | Repo role has admin access. Traversable because admin confers full control of the repository.                                                                               |
+| [GH_CanCreateBranch](../EdgeDescriptions/GH_CanCreateBranch.md)     | [GH_RepoRole](./GH_RepoRole.md)                    | Yes         | Repo role can create new branches (computed from permissions + branch protection rules).                                                                                    |
+| [GH_CanCreateBranch](../EdgeDescriptions/GH_CanCreateBranch.md)     | [GH_User](./GH_User.md) or [GH_Team](./GH_Team.md) | Yes         | User or team can create new branches via per-rule allowance (computed — delta only).                                                                                        |
 
 ## Diagram
 
