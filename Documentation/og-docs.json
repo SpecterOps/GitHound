@@ -4,7 +4,7 @@
     "titlePrefix": "",
     "queriesDir": "saved-queries",
     "zoneRulesDir": "pz-rules",
-    "nodeDescriptionsDir": "Documentation/NodeDescriptions",
+    "nodeDescriptionsDir": "Documentation/Nodes",
     "edgeDescriptionsDir": "Documentation/EdgeDescriptions",
     "imagesDir": "Documentation/Images",
     "iconSize": 32,
