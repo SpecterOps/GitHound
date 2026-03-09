@@ -963,6 +963,7 @@ function Git-HoundOrganization
     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddCollaborator' -StartId $orgOwnersId -EndId $orgNode.id -Properties @{traversable=$false}))
     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateTeam' -StartId $orgOwnersId -EndId $orgNode.id -Properties @{traversable=$false}))
     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_TransferRepository' -StartId $orgOwnersId -EndId $orgNode.id -Properties @{traversable=$false}))
+    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ViewSecretScanningAlerts' -StartId $orgOwnersId -EndId $orgNode.id -Properties @{traversable=$false}))
     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgOwnersId -EndId $orgAllRepoAdminId -Properties @{traversable=$true}))
 
     # Default Organization Role: Members
@@ -1594,38 +1595,38 @@ function Git-HoundRepository
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoMetadata' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoContents' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteRepoContents' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddLabel' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveLabel' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseIssue' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenIssue' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddLabel' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveLabel' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseIssue' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenIssue' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoPullRequests' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteRepoPullRequests' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ClosePullRequest' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenPullRequest' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddAssignee' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetIssueType' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveAssignee' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RequestPrReview' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_MarkAsDuplicate' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetMilestone' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadCodeScanning' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteCodeScanning' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ClosePullRequest' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenPullRequest' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddAssignee' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetIssueType' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveAssignee' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_RequestPrReview' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MarkAsDuplicate' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetMilestone' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadCodeScanning' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteCodeScanning' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionAnswer' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionCommentMinimize' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionAnswer' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionCommentMinimize' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageDiscussionSpotlights' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussionCategory' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionCategory' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ConvertIssuesToDiscussions' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditCategoryOnDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionComment' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussionComment' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ViewDependabotAlerts' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ResolveDependabotAlerts' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageDiscussionBadges' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussionCategory' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionCategory' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ConvertIssuesToDiscussions' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditCategoryOnDiscussion' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionComment' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussionComment' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ViewDependabotAlerts' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ResolveDependabotAlerts' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageDiscussionBadges' -StartId $repoWriteId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgAllRepoWriteId -EndId $repoWriteId -Properties @{traversable=$true}))
 
         # Admin Role
@@ -1653,67 +1654,67 @@ function Git-HoundRepository
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoMetadata' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoContents' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteRepoContents' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddLabel' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveLabel' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseIssue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenIssue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddLabel' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveLabel' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseIssue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenIssue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoPullRequests' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteRepoPullRequests' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ClosePullRequest' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenPullRequest' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddAssignee' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteIssue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveAssignee' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RequestPrReview' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_MarkAsDuplicate' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetMilestone' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetIssueType' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageTopics' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ClosePullRequest' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenPullRequest' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddAssignee' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteIssue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveAssignee' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_RequestPrReview' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MarkAsDuplicate' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetMilestone' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetIssueType' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageTopics' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsDiscussions' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsWiki' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsProjects' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsMergeTypes' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsPages' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsWiki' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsProjects' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsMergeTypes' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsPages' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageWebhooks' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageDeployKeys' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoMetadata' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetInteractionLimits' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetSocialPreview' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoMetadata' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetInteractionLimits' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetSocialPreview' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_PushProtectedBranch' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadCodeScanning' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteCodeScanning' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadCodeScanning' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteCodeScanning' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteAlertsCodeScanning' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ViewSecretScanningAlerts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ResolveSecretScanningAlerts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ResolveSecretScanningAlerts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_RunOrgMigration' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussionAnnouncement' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussionCategory' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionCategory' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussionCategory' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionCategory' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussionCategory' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageDiscussionSpotlights' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionAnswer' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionCommentMinimize' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ConvertIssuesToDiscussions' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateTag' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteTag' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ViewDependabotAlerts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ResolveDependabotAlerts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionAnswer' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionCommentMinimize' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ConvertIssuesToDiscussions' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateTag' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteTag' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ViewDependabotAlerts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ResolveDependabotAlerts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_BypassBranchProtection' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSecurityProducts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageRepoSecurityProducts' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoProtections' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoAnnouncementBanners' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditCategoryOnDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageDiscussionBadges' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionComment' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussionComment' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoAnnouncementBanners' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditCategoryOnDiscussion' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageDiscussionBadges' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionComment' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussionComment' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_JumpMergeQueue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateSoloMergeQueueEntry' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoCustomPropertiesValue' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoCustomPropertiesValues' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgAllRepoAdminId -EndId $repoAdminId -Properties @{traversable=$true}))
 
         # Triage Role
@@ -1737,30 +1738,30 @@ function Git-HoundRepository
             query_repository_permissions = "MATCH p=(:GH_RepoRole {node_id:'$($repoTriageId)'})-[*1..]->(:GH_Repository) RETURN p"
         }
         $null = $nodes.Add((New-GitHoundNode -Id $repoTriageId -Kind 'GH_RepoRole', 'GH_Role' -Properties $repoTriageProps))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddLabel' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveLabel' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseIssue' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenIssue' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ClosePullRequest' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenPullRequest' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddAssignee' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveAssignee' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_RequestPrReview' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_MarkAsDuplicate' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetMilestone' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetIssueType' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddLabel' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveLabel' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseIssue' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenIssue' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ClosePullRequest' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenPullRequest' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddAssignee' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveAssignee' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_RequestPrReview' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MarkAsDuplicate' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetMilestone' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetIssueType' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionAnswer' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionCommentMinimize' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionCategory' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussionCategory' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ConvertIssuesToDiscussions' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditCategoryOnDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionComment' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussionComment' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionAnswer' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionCommentMinimize' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionCategory' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussionCategory' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ConvertIssuesToDiscussions' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditCategoryOnDiscussion' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionComment' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussionComment' -StartId $repoTriageId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $repoTriageId -EndId $repoReadId -Properties @{traversable=$true}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgAllRepoTriageId -EndId $repoTriageId -Properties @{traversable=$true}))
 
@@ -1785,15 +1786,17 @@ function Git-HoundRepository
             query_repository_permissions = "MATCH p=(:GH_RepoRole {node_id:'$($repoMaintainId)'})-[*1..]->(:GH_Repository) RETURN p"
         }
         $null = $nodes.Add((New-GitHoundNode -Id $repoMaintainId -Kind 'GH_RepoRole', 'GH_Role' -Properties $repoMaintainProps))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageTopics' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsWiki' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsProjects' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsMergeTypes' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsPages' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoMetadata' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetInteractionLimits' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
-        #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetSocialPreview' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageTopics' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsWiki' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsProjects' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsMergeTypes' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsPages' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoMetadata' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetInteractionLimits' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetSocialPreview' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_PushProtectedBranch' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateTag' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoAnnouncementBanners' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussionAnnouncement' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussionCategory' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsDiscussion' -StartId $repoMaintainId -EndId $repo.node_id -Properties @{traversable=$false}))
@@ -1832,8 +1835,67 @@ function Git-HoundRepository
 
             foreach($permission in $customRepoRole.permissions)
             {
-                $edgeKind = "GH_$(ConvertTo-PascalCase -String $permission)"
-                $null = $edges.Add((New-GitHoundEdge -Kind $edgeKind -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false}))
+                switch($permission)
+                {
+                    # Issues & Pull Requests
+                    'add_label' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddLabel' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'remove_label' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveLabel' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'close_issue' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseIssue' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'reopen_issue' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenIssue' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'close_pull_request' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ClosePullRequest' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'reopen_pull_request' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenPullRequest' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'add_assignee' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddAssignee' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'delete_issue' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteIssue' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'remove_assignee' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_RemoveAssignee' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'request_pr_review' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_RequestPrReview' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'mark_as_duplicate' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MarkAsDuplicate' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'set_milestone' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetMilestone' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'set_issue_type' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetIssueType' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    # Repository Settings
+                    'manage_topics' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageTopics' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'manage_settings_wiki' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsWiki' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'manage_settings_projects' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsProjects' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'manage_settings_merge_types' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsMergeTypes' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'manage_settings_pages' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageSettingsPages' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'manage_webhooks' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageWebhooks' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'manage_deploy_keys' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageDeployKeys' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'edit_repo_metadata' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoMetadata' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'set_interaction_limits' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetInteractionLimits' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'set_social_preview' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetSocialPreview' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'edit_repo_announcement_banners' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoAnnouncementBanners' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    # Branch & Tag Operations
+                    'push_protected_branch' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_PushProtectedBranch' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'bypass_branch_protection' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_BypassBranchProtection' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'edit_repo_protections' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoProtections' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'create_tag' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateTag' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'delete_tag' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteTag' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    # Code Scanning & Security
+                    'read_code_scanning' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadCodeScanning' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'write_code_scanning' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteCodeScanning' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'delete_alerts_code_scanning' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteAlertsCodeScanning' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'view_secret_scanning_alerts' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ViewSecretScanningAlerts' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'resolve_secret_scanning_alerts' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ResolveSecretScanningAlerts' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    # Dependabot
+                    'view_dependabot_alerts' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ViewDependabotAlerts' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'resolve_dependabot_alerts' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ResolveDependabotAlerts' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    # Discussions
+                    'delete_discussion' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussion' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'toggle_discussion_answer' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionAnswer' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'toggle_discussion_comment_minimize' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ToggleDiscussionCommentMinimize' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'edit_discussion_category' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionCategory' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'create_discussion_category' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateDiscussionCategory' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'convert_issues_to_discussions' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ConvertIssuesToDiscussions' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'close_discussion' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CloseDiscussion' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'reopen_discussion' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReopenDiscussion' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'edit_category_on_discussion' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditCategoryOnDiscussion' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'manage_discussion_badges' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageDiscussionBadges' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'edit_discussion_comment' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditDiscussionComment' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'delete_discussion_comment' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeleteDiscussionComment' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    # Merge Queue & Custom Properties
+                    'jump_merge_queue' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_JumpMergeQueue' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'create_solo_merge_queue_entry' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateSoloMergeQueueEntry' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                    'edit_repo_custom_properties_values' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditRepoCustomPropertiesValues' -StartId $customRepoRoleId -EndId $repo.node_id -Properties @{traversable=$false})) }
+                }
             }
         }
 
@@ -3379,6 +3441,176 @@ function Compute-GitHoundBranchAccess
     Write-Output $output
 }
 
+function Compute-GitHoundSecretScanningAccess
+{
+    <#
+    .SYNOPSIS
+        Computes effective secret scanning alert access edges from accumulated collection data.
+
+    .DESCRIPTION
+        This function evaluates which roles can read secret scanning alerts by cross-referencing
+        GH_ViewSecretScanningAlerts permission edges with the structural edges that connect
+        organizations and repositories to their alerts. It produces traversable computed edges
+        that represent the ability to read alert details (including the leaked secret value):
+
+        - GH_CanReadSecretScanningAlert (GH_OrgRole -> GH_SecretScanningAlert): Org role can read all alerts in the org
+        - GH_CanReadSecretScanningAlert (GH_RepoRole -> GH_SecretScanningAlert): Repo role can read alerts in the repo
+
+        This function makes no API calls — it is a pure in-memory computation over
+        previously collected nodes and edges.
+
+    .PARAMETER Nodes
+        ArrayList of all accumulated nodes from prior collection steps.
+
+    .PARAMETER Edges
+        ArrayList of all accumulated edges from prior collection steps.
+
+    .OUTPUTS
+        PSCustomObject with Nodes (empty) and Edges (computed edges).
+
+    .EXAMPLE
+        $result = Compute-GitHoundSecretScanningAccess -Nodes $nodes -Edges $edges
+    #>
+    Param(
+        [Parameter(Mandatory = $true)]
+        [System.Collections.ArrayList]
+        $Nodes,
+
+        [Parameter(Mandatory = $true)]
+        [System.Collections.ArrayList]
+        $Edges
+    )
+
+    $computedEdges = New-Object System.Collections.ArrayList
+    $emittedEdges = @{} # Deduplication: "startId|endId|kind" -> $true
+
+    # Helper: Emit a computed edge with deduplication
+    function Add-ComputedEdge {
+        param(
+            [string]$Kind,
+            [string]$StartId,
+            [string]$EndId,
+            [hashtable]$Properties
+        )
+        $dedupKey = "$StartId|$EndId|$Kind"
+        if ($emittedEdges.ContainsKey($dedupKey)) { return }
+        $emittedEdges[$dedupKey] = $true
+        $null = $computedEdges.Add((New-GitHoundEdge -Kind $Kind -StartId $StartId -EndId $EndId -Properties $Properties))
+    }
+
+    # ── Phase 1: Build indexes ─────────────────────────────────────────────
+
+    Write-Host "[*]   Phase 1: Building indexes..."
+
+    # Node lookup by ID (need kind to distinguish org vs repo targets)
+    $nodeById = @{}
+    foreach ($node in $Nodes) {
+        if ($node.id) {
+            $nodeById[$node.id] = $node
+        }
+    }
+
+    # Collect alert node IDs for validation
+    $alertNodeIds = [System.Collections.Generic.HashSet[string]]::new()
+    foreach ($node in $Nodes) {
+        if ($node.kinds -contains 'GH_SecretScanningAlert') {
+            $null = $alertNodeIds.Add($node.id)
+        }
+    }
+
+    # Build org→alerts map from GH_Contains edges where target is a SecretScanningAlert
+    $orgAlerts = @{}
+    # Build repo→alerts map from GH_HasSecretScanningAlert edges
+    $repoAlerts = @{}
+
+    foreach ($edge in $Edges) {
+        if ($edge.kind -eq 'GH_Contains' -and $alertNodeIds.Contains($edge.end.value)) {
+            $orgId = $edge.start.value
+            if (-not $orgAlerts.ContainsKey($orgId)) {
+                $orgAlerts[$orgId] = New-Object System.Collections.ArrayList
+            }
+            $null = $orgAlerts[$orgId].Add($edge.end.value)
+        }
+        elseif ($edge.kind -eq 'GH_HasSecretScanningAlert') {
+            $repoId = $edge.start.value
+            if (-not $repoAlerts.ContainsKey($repoId)) {
+                $repoAlerts[$repoId] = New-Object System.Collections.ArrayList
+            }
+            $null = $repoAlerts[$repoId].Add($edge.end.value)
+        }
+    }
+
+    # Collect GH_ViewSecretScanningAlerts edges, partitioned by target kind
+    $orgViewEdges = New-Object System.Collections.ArrayList  # source=OrgRole, target=Organization
+    $repoViewEdges = New-Object System.Collections.ArrayList # source=RepoRole, target=Repository
+
+    foreach ($edge in $Edges) {
+        if ($edge.kind -eq 'GH_ViewSecretScanningAlerts') {
+            $targetNode = $nodeById[$edge.end.value]
+            if ($targetNode -and $targetNode.kinds -contains 'GH_Organization') {
+                $null = $orgViewEdges.Add($edge)
+            }
+            elseif ($targetNode -and $targetNode.kinds -contains 'GH_Repository') {
+                $null = $repoViewEdges.Add($edge)
+            }
+        }
+    }
+
+    Write-Host "[+]   Phase 1 complete. $($alertNodeIds.Count) alerts, $($orgViewEdges.Count) org-level and $($repoViewEdges.Count) repo-level view permission edges."
+
+    # ── Phase 2: Org-level emission ────────────────────────────────────────
+
+    Write-Host "[*]   Phase 2: Computing org-level GH_CanReadSecretScanningAlert edges..."
+
+    foreach ($viewEdge in $orgViewEdges) {
+        $roleId = $viewEdge.start.value
+        $orgId = $viewEdge.end.value
+        $alerts = $orgAlerts[$orgId]
+        if (-not $alerts) { continue }
+
+        foreach ($alertId in $alerts) {
+            Add-ComputedEdge -Kind 'GH_CanReadSecretScanningAlert' -StartId $roleId -EndId $alertId -Properties @{
+                traversable       = $true
+                reason            = 'org_role_permission'
+                query_composition = "MATCH p1=(:GH_OrgRole {objectid:'$roleId'})-[:GH_ViewSecretScanningAlerts]->(:GH_Organization)-[:GH_Contains]->(:GH_SecretScanningAlert {objectid:'$alertId'}) RETURN p1"
+            }
+        }
+    }
+
+    $orgEdgeCount = $computedEdges.Count
+    Write-Host "[+]   Phase 2 complete. $orgEdgeCount org-level edges."
+
+    # ── Phase 3: Repo-level emission ───────────────────────────────────────
+
+    Write-Host "[*]   Phase 3: Computing repo-level GH_CanReadSecretScanningAlert edges..."
+
+    foreach ($viewEdge in $repoViewEdges) {
+        $roleId = $viewEdge.start.value
+        $repoId = $viewEdge.end.value
+        $alerts = $repoAlerts[$repoId]
+        if (-not $alerts) { continue }
+
+        foreach ($alertId in $alerts) {
+            Add-ComputedEdge -Kind 'GH_CanReadSecretScanningAlert' -StartId $roleId -EndId $alertId -Properties @{
+                traversable       = $true
+                reason            = 'repo_role_permission'
+                query_composition = "MATCH p1=(:GH_RepoRole {objectid:'$roleId'})-[:GH_ViewSecretScanningAlerts]->(:GH_Repository)-[:GH_HasSecretScanningAlert]->(:GH_SecretScanningAlert {objectid:'$alertId'}) RETURN p1"
+            }
+        }
+    }
+
+    $repoEdgeCount = $computedEdges.Count - $orgEdgeCount
+    Write-Host "[+]   Phase 3 complete. $repoEdgeCount repo-level edges."
+    Write-Host "[+]   Total: $($computedEdges.Count) computed secret scanning access edges."
+
+    $output = [PSCustomObject]@{
+        Nodes = (New-Object System.Collections.ArrayList)
+        Edges = $computedEdges
+    }
+
+    Write-Output $output
+}
+
 function Git-HoundWorkflow
 {
     <#
@@ -3973,12 +4205,12 @@ function Git-HoundOrganizationSecret
             switch ($variable.visibility) {
                 'all' {
                     foreach ($repoNodeId in $allRepoNodeIds) {
-                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasVariable' -StartId $repoNodeId -EndId $variableId -Properties @{ traversable = $false }))
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasVariable' -StartId $repoNodeId -EndId $variableId -Properties @{ traversable = $true }))
                     }
                 }
                 'private' {
                     foreach ($repoNodeId in $privateRepoNodeIds) {
-                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasVariable' -StartId $repoNodeId -EndId $variableId -Properties @{ traversable = $false }))
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasVariable' -StartId $repoNodeId -EndId $variableId -Properties @{ traversable = $true }))
                     }
                 }
                 'selected' {
@@ -3987,7 +4219,7 @@ function Git-HoundOrganizationSecret
                     # https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#list-selected-repositories-for-an-organization-variable
                     $selectedRepos = (Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/variables/$($variable.name)/repositories").repositories
                     foreach ($selectedRepo in $selectedRepos) {
-                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasVariable' -StartId $selectedRepo.node_id -EndId $variableId -Properties @{ traversable = $false }))
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasVariable' -StartId $selectedRepo.node_id -EndId $variableId -Properties @{ traversable = $true }))
                     }
                 }
             }
@@ -4416,7 +4648,7 @@ function Git-HoundVariable
 
                     $null = $nodes.Add((New-GitHoundNode -Id $variableId -Kind 'GH_RepoVariable', 'GH_Variable' -Properties $properties))
                     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $repo.properties.node_id -EndId $variableId -Properties @{ traversable = $false }))
-                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasVariable' -StartId $repo.properties.node_id -EndId $variableId -Properties @{ traversable = $false }))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasVariable' -StartId $repo.properties.node_id -EndId $variableId -Properties @{ traversable = $true }))
                 }
             } -ThrottleLimit 25
 
@@ -4684,12 +4916,11 @@ function Git-HoundAppInstallation
 
         foreach ($app in $installations)
         {
-            $installationId = "GH_AppInstallation_$($orgNodeId)_$($app.id)"
-
             $properties = @{
                 # Common Properties
                 name                 = Normalize-Null $app.app_slug
                 id                   = Normalize-Null $app.id
+                node_id              = Normalize-Null $app.client_id
                 # Relational Properties
                 environment_name     = Normalize-Null $app.account.login
                 environment_id       = Normalize-Null $app.account.node_id
@@ -4697,6 +4928,7 @@ function Git-HoundAppInstallation
                 app_id               = Normalize-Null $app.app_id
                 app_slug             = Normalize-Null $app.app_slug
                 # Node Specific Properties
+                client_id            = Normalize-Null $app.client_id
                 repository_selection = Normalize-Null $app.repository_selection
                 access_tokens_url    = Normalize-Null $app.access_tokens_url
                 target_type          = Normalize-Null $app.target_type
@@ -4708,20 +4940,20 @@ function Git-HoundAppInstallation
                 permissions          = Normalize-Null ($app.permissions | ConvertTo-Json -Depth 10)
                 events               = Normalize-Null ($app.events | ConvertTo-Json -Depth 10)
                 # Accordion Panel Queries
-                query_repositories   = "MATCH p=(:GH_AppInstallation {id: $($app.id)})-[:GH_CanAccess]->(:GH_Repository) RETURN p LIMIT 1000"
-                query_app            = "MATCH p=(:GH_App)-[:GH_InstalledAs]->(:GH_AppInstallation {id: $($app.id)}) RETURN p"
+                query_repositories   = "MATCH p=(:GH_AppInstallation {node_id: $($app.client_id)})-[:GH_CanAccess]->(:GH_Repository) RETURN p LIMIT 1000"
+                query_app            = "MATCH p=(:GH_App)-[:GH_InstalledAs]->(:GH_AppInstallation {node_id: $($app.client_id)}) RETURN p"
             }
 
-            $null = $nodes.Add((New-GitHoundNode -Id $installationId -Kind 'GH_AppInstallation' -Properties $properties))
+            $null = $nodes.Add((New-GitHoundNode -Id $app.client_id -Kind 'GH_AppInstallation' -Properties $properties))
 
             # Edge: Organization contains the installation
-            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $orgNodeId -EndId $installationId -Properties @{ traversable = $false }))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $orgNodeId -EndId $app.client_id -Properties @{ traversable = $false }))
 
             # Repository access edges
             if ($app.repository_selection -eq 'all') {
                 $allCount++
                 foreach ($repoNodeId in $allRepoNodeIds) {
-                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanAccess' -StartId $installationId -EndId $repoNodeId -Properties @{ traversable = $false }))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanAccess' -StartId $app.client_id -EndId $repoNodeId -Properties @{ traversable = $false }))
                 }
             } else {
                 $selectedCount++
@@ -4744,16 +4976,14 @@ function Git-HoundAppInstallation
                 Write-Host "[*]   Looking up app definition: $slug"
                 $appDef = Invoke-GithubRestMethod -Session $Session -Path "apps/$slug" -ErrorAction Stop
 
-                $appNodeId = "GH_App_$($appDef.id)"
-
                 $appProperties = @{
                     # Common Properties
                     name                 = Normalize-Null $appDef.name
                     id                   = Normalize-Null $appDef.id
+                    node_id              = Normalize-Null $appDef.node_id
                     # Node Specific Properties
                     slug                 = Normalize-Null $appDef.slug
                     client_id            = Normalize-Null $appDef.client_id
-                    node_id              = Normalize-Null $appDef.node_id
                     description          = Normalize-Null $appDef.description
                     external_url         = Normalize-Null $appDef.external_url
                     html_url             = Normalize-Null $appDef.html_url
@@ -4769,46 +4999,16 @@ function Git-HoundAppInstallation
                     query_installations  = "MATCH p=(:GH_App {slug: '$slug'})-[:GH_InstalledAs]->(:GH_AppInstallation) RETURN p"
                 }
 
-                $null = $nodes.Add((New-GitHoundNode -Id $appNodeId -Kind 'GH_App' -Properties $appProperties))
+                $null = $nodes.Add((New-GitHoundNode -Id $appDef.node_id -Kind 'GH_App' -Properties $appProperties))
 
                 # Edges: App -> each installation of this app
                 foreach ($instId in $seenAppSlugs[$slug]) {
-                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_InstalledAs' -StartId $appNodeId -EndId $instId -Properties @{ traversable = $true }))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_InstalledAs' -StartId $appDef.node_id -EndId $instId -Properties @{ traversable = $true }))
                 }
             }
             catch {
                 Write-Warning "Failed to look up app definition for '$slug' (likely private app). Creating node from installation data."
                 $inst = $appSlugInstallation[$slug]
-                $appNodeId = "GH_App_$($inst.app_id)"
-
-                $appProperties = @{
-                    # Common Properties
-                    name                 = Normalize-Null $inst.app_slug
-                    id                   = Normalize-Null $inst.app_id
-                    # Node Specific Properties
-                    slug                 = Normalize-Null $inst.app_slug
-                    client_id            = ''
-                    node_id              = ''
-                    description          = Normalize-Null $inst.description
-                    external_url         = ''
-                    html_url             = Normalize-Null $inst.html_url
-                    owner_login          = ''
-                    owner_node_id        = ''
-                    owner_type           = ''
-                    created_at           = ''
-                    updated_at           = ''
-                    permissions          = Normalize-Null ($inst.permissions | ConvertTo-Json -Depth 10)
-                    events               = Normalize-Null ($inst.events | ConvertTo-Json -Depth 10)
-                    installations_count  = ''
-                    # Accordion Panel Queries
-                    query_installations  = "MATCH p=(:GH_App {slug: '$slug'})-[:GH_InstalledAs]->(:GH_AppInstallation) RETURN p"
-                }
-
-                $null = $nodes.Add((New-GitHoundNode -Id $appNodeId -Kind 'GH_App' -Properties $appProperties))
-
-                foreach ($instId in $seenAppSlugs[$slug]) {
-                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_InstalledAs' -StartId $appNodeId -EndId $instId -Properties @{ traversable = $true }))
-                }
             }
         }
 
@@ -5796,6 +5996,11 @@ function Invoke-GitHound
     }
     if($secretalerts.nodes) { $nodes.AddRange(@($secretalerts.nodes)) }
     if($secretalerts.edges) { $edges.AddRange(@($secretalerts.edges)) }
+
+    # ── Computed Edges: Secret Scanning Access ────────────────────────────
+    Write-Host "[*] Computing secret scanning access edges (GH_CanReadSecretScanningAlert)"
+    $secretScanningAccess = Compute-GitHoundSecretScanningAccess -Nodes $nodes -Edges $edges
+    if($secretScanningAccess.edges) { $edges.AddRange(@($secretScanningAccess.edges)) }
 
     # ── Step 12: App Installations (requires -CollectAll) ──────────────────
     if ($CollectAll) {
