@@ -1,6 +1,7 @@
 {
   "schema": {
-    "name": "GitHub (GitHound)",
+    "name": "GitHound",
+    "display_name": "GitHub (GitHound)",
     "version": "1.0.0",
     "namespace": "GH"
   },
@@ -231,67 +232,57 @@
     },
     {
       "name": "GH_ReadRepoContents",
-      "description": "Repo role can read repository contents",
+      "description": "[Repository] Repo role can read repository contents",
       "is_traversable": false
     },
     {
       "name": "GH_WriteRepoContents",
-      "description": "Repo role can write repository contents",
+      "description": "[Repository] Repo role can write repository contents",
       "is_traversable": false
     },
     {
       "name": "GH_WriteRepoPullRequests",
-      "description": "Repo role can create and merge pull requests",
+      "description": "[Repository] Repo role can create and merge pull requests",
       "is_traversable": false
     },
     {
       "name": "GH_AdminTo",
-      "description": "Repo role has admin access to the repository. Traversable because admin confers full control.",
+      "description": "[Repository] Repo role has admin access to the repository. Traversable because admin confers full control.",
       "is_traversable": true
     },
     {
       "name": "GH_BypassBranchProtection",
-      "description": "Repo role can bypass merge-gate branch protections (PR reviews, lock branch). Suppressed by enforce_admins.",
+      "description": "[Repository] Repo role can bypass merge-gate branch protections (PR reviews, lock branch). Suppressed by enforce_admins.",
       "is_traversable": false
     },
     {
       "name": "GH_PushProtectedBranch",
-      "description": "Repo role can push to branches with push restrictions. Not affected by enforce_admins.",
+      "description": "[Repository] Repo role can push to branches with push restrictions. Not affected by enforce_admins.",
       "is_traversable": false
     },
     {
       "name": "GH_ManageWebhooks",
-      "description": "Repo role can manage repository webhooks",
+      "description": "[Repository] Repo role can manage repository webhooks",
       "is_traversable": false
     },
     {
       "name": "GH_ManageDeployKeys",
-      "description": "Repo role can manage deploy keys",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_PushProtectedBranch",
-      "description": "Repo role can push to protected branches",
+      "description": "[Repository] Repo role can manage deploy keys",
       "is_traversable": false
     },
     {
       "name": "GH_DeleteAlertsCodeScanning",
-      "description": "Repo role can delete code scanning alerts",
+      "description": "[Repository] Repo role can delete code scanning alerts",
       "is_traversable": false
     },
     {
       "name": "GH_ViewSecretScanningAlerts",
-      "description": "Role can view secret scanning alerts",
+      "description": "[Repository] Role can view secret scanning alerts",
       "is_traversable": false
     },
     {
       "name": "GH_RunOrgMigration",
-      "description": "Repo role can run organization migrations",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_BypassBranchProtection",
-      "description": "Repo role can bypass branch protection rules",
+      "description": "[Repository] Repo role can run organization migrations",
       "is_traversable": false
     },
     {
@@ -320,108 +311,308 @@
       "is_traversable": false
     },
     {
-      "name": "GH_EditRepoCustomPropertiesValue",
-      "description": "Repo role can edit custom property values on the repository",
+      "name": "GH_EditRepoCustomPropertiesValues",
+      "description": "[Repository] Repo role can edit custom property values on the repository",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_AddLabel",
+      "description": "[Repository] Repo role can add labels to issues and pull requests",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_RemoveLabel",
+      "description": "[Repository] Repo role can remove labels from issues and pull requests",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_CloseIssue",
+      "description": "[Repository] Repo role can close issues",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ReopenIssue",
+      "description": "[Repository] Repo role can reopen closed issues",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ClosePullRequest",
+      "description": "[Repository] Repo role can close pull requests",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ReopenPullRequest",
+      "description": "[Repository] Repo role can reopen closed pull requests",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_AddAssignee",
+      "description": "[Repository] Repo role can assign users to issues and pull requests",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_DeleteIssue",
+      "description": "[Repository] Repo role can delete issues",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_RemoveAssignee",
+      "description": "[Repository] Repo role can remove assignees from issues and pull requests",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_RequestPrReview",
+      "description": "[Repository] Repo role can request pull request reviews",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_MarkAsDuplicate",
+      "description": "[Repository] Repo role can mark issues or pull requests as duplicates",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_SetMilestone",
+      "description": "[Repository] Repo role can set milestones on issues and pull requests",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_SetIssueType",
+      "description": "[Repository] Repo role can set issue types",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ManageTopics",
+      "description": "[Repository] Repo role can manage repository topics",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ManageSettingsWiki",
+      "description": "[Repository] Repo role can manage wiki settings",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ManageSettingsProjects",
+      "description": "[Repository] Repo role can manage project settings",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ManageSettingsMergeTypes",
+      "description": "[Repository] Repo role can manage allowed merge types",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ManageSettingsPages",
+      "description": "[Repository] Repo role can manage GitHub Pages settings",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_EditRepoMetadata",
+      "description": "[Repository] Repo role can edit repository metadata",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_SetInteractionLimits",
+      "description": "[Repository] Repo role can set interaction limits on the repository",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_SetSocialPreview",
+      "description": "[Repository] Repo role can set the repository social preview image",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_EditRepoAnnouncementBanners",
+      "description": "[Repository] Repo role can edit repository announcement banners",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ReadCodeScanning",
+      "description": "[Repository] Repo role can read code scanning results",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_WriteCodeScanning",
+      "description": "[Repository] Repo role can upload code scanning results",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ViewDependabotAlerts",
+      "description": "[Repository] Repo role can view Dependabot alerts",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ResolveDependabotAlerts",
+      "description": "[Repository] Repo role can resolve Dependabot alerts",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_DeleteDiscussion",
+      "description": "[Repository] Repo role can delete discussions",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ToggleDiscussionAnswer",
+      "description": "[Repository] Repo role can toggle discussion answers",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ToggleDiscussionCommentMinimize",
+      "description": "[Repository] Repo role can minimize discussion comments",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_EditDiscussionCategory",
+      "description": "[Repository] Repo role can edit discussion categories",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_CreateDiscussionCategory",
+      "description": "[Repository] Repo role can create discussion categories",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ConvertIssuesToDiscussions",
+      "description": "[Repository] Repo role can convert issues to discussions",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_CloseDiscussion",
+      "description": "[Repository] Repo role can close discussions",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ReopenDiscussion",
+      "description": "[Repository] Repo role can reopen discussions",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_EditCategoryOnDiscussion",
+      "description": "[Repository] Repo role can change the category of a discussion",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ManageDiscussionBadges",
+      "description": "[Repository] Repo role can manage discussion badges",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_EditDiscussionComment",
+      "description": "[Repository] Repo role can edit discussion comments",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_DeleteDiscussionComment",
+      "description": "[Repository] Repo role can delete discussion comments",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_CreateTag",
+      "description": "[Repository] Repo role can create tags and releases",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_DeleteTag",
+      "description": "[Repository] Repo role can delete tags and releases",
       "is_traversable": false
     },
     {
       "name": "GH_CreateRepository",
-      "description": "Org role can create repositories in the organization",
+      "description": "[Organization] Org role can create repositories in the organization",
       "is_traversable": false
     },
     {
       "name": "GH_InviteMember",
-      "description": "Org role can invite members to the organization",
+      "description": "[Organization] Org role can invite members to the organization",
       "is_traversable": false
     },
     {
       "name": "GH_AddCollaborator",
-      "description": "Org role can add outside collaborators",
+      "description": "[Organization] Org role can add outside collaborators",
       "is_traversable": false
     },
     {
       "name": "GH_CreateTeam",
-      "description": "Org role can create teams in the organization",
+      "description": "[Organization] Org role can create teams in the organization",
       "is_traversable": false
     },
     {
       "name": "GH_TransferRepository",
-      "description": "Org role can transfer repositories",
+      "description": "[Organization] Org role can transfer repositories",
       "is_traversable": false
     },
     {
       "name": "GH_ManageOrganizationWebhooks",
-      "description": "Org role can manage organization webhooks",
+      "description": "[Organization] Org role can manage organization webhooks",
       "is_traversable": false
     },
     {
       "name": "GH_OrgBypassCodeScanningDismissalRequests",
-      "description": "Org role can bypass code scanning dismissal requests",
+      "description": "[Organization] Org role can bypass code scanning dismissal requests",
       "is_traversable": false
     },
     {
       "name": "GH_OrgBypassSecretScanningClosureRequests",
-      "description": "Org role can bypass secret scanning closure requests",
+      "description": "[Organization] Org role can bypass secret scanning closure requests",
       "is_traversable": false
     },
     {
       "name": "GH_OrgReviewAndManageSecretScanningBypassRequests",
-      "description": "Org role can review and manage secret scanning bypass requests",
+      "description": "[Organization] Org role can review and manage secret scanning bypass requests",
       "is_traversable": false
     },
     {
       "name": "GH_OrgReviewAndManageSecretScanningClosureRequests",
-      "description": "Org role can review and manage secret scanning closure requests",
+      "description": "[Organization] Org role can review and manage secret scanning closure requests",
       "is_traversable": false
     },
     {
       "name": "GH_ReadOrganizationActionsUsageMetrics",
-      "description": "Org role can read Actions usage metrics",
+      "description": "[Organization] Org role can read Actions usage metrics",
       "is_traversable": false
     },
     {
       "name": "GH_ReadOrganizationCustomOrgRole",
-      "description": "Org role can read custom org role definitions",
+      "description": "[Organization] Org role can read custom org role definitions",
       "is_traversable": false
     },
     {
       "name": "GH_ReadOrganizationCustomRepoRole",
-      "description": "Org role can read custom repo role definitions",
+      "description": "[Organization] Org role can read custom repo role definitions",
       "is_traversable": false
     },
     {
       "name": "GH_ResolveSecretScanningAlerts",
-      "description": "Org role can resolve secret scanning alerts",
+      "description": "[Organization] Org role can resolve secret scanning alerts",
       "is_traversable": false
     },
     {
       "name": "GH_WriteOrganizationActionsSecrets",
-      "description": "Org role can write Actions secrets",
+      "description": "[Organization] Org role can write Actions secrets",
       "is_traversable": false
     },
     {
       "name": "GH_WriteOrganizationActionsVariables",
-      "description": "Org role can write Actions variables",
+      "description": "[Organization] Org role can write Actions variables",
       "is_traversable": false
     },
     {
       "name": "GH_WriteOrganizationActionsSettings",
-      "description": "Org role can write Actions settings",
+      "description": "[Organization] Org role can write Actions settings",
       "is_traversable": false
     },
     {
       "name": "GH_WriteOrganizationCustomOrgRole",
-      "description": "Org role can write custom org role definitions",
+      "description": "[Organization] Org role can write custom org role definitions",
       "is_traversable": false
     },
     {
       "name": "GH_WriteOrganizationCustomRepoRole",
-      "description": "Org role can write custom repo role definitions",
+      "description": "[Organization] Org role can write custom repo role definitions",
       "is_traversable": false
     },
     {
       "name": "GH_WriteOrganizationNetworkConfigurations",
-      "description": "Org role can write network configurations",
+      "description": "[Organization] Org role can write network configurations",
       "is_traversable": false
     },
     {
@@ -441,7 +632,12 @@
     },
     {
       "name": "GH_CanEditProtection",
-      "description": "Repo role can modify or remove the branch protection rules governing this branch (computed from GH_EditRepoProtections + GH_ProtectedBy)",
+      "description": "[Repository - Computed] Repo role can modify or remove the branch protection rules governing this branch (computed from GH_EditRepoProtections + GH_ProtectedBy)",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_CanReadSecretScanningAlert",
+      "description": "[Computed] Role can read secret scanning alerts (computed from GH_ViewSecretScanningAlerts permission + GH_Contains/GH_HasSecretScanningAlert)",
       "is_traversable": true
     },
     {
@@ -467,12 +663,17 @@
     {
       "name": "GH_HasVariable",
       "description": "Repository has access to this variable (org-level or repo-level)",
-      "is_traversable": false
+      "is_traversable": true
     },
     {
       "name": "GH_HasSecretScanningAlert",
       "description": "Repository has this secret scanning alert",
       "is_traversable": false
+    },
+    {
+      "name": "GH_ValidToken",
+      "description": "Secret scanning alert contains a valid, active token belonging to this user",
+      "is_traversable": true
     },
     {
       "name": "GH_HasSamlIdentityProvider",
@@ -488,21 +689,6 @@
       "name": "GH_MapsToUser",
       "description": "External identity maps to a GitHub user or identity provider user",
       "is_traversable": false
-    },
-    {
-      "name": "SyncedToGHUser",
-      "description": "Identity provider user (Azure AD, Okta, PingOne) is synced to a GitHub user via SAML/SCIM",
-      "is_traversable": true
-    },
-    {
-      "name": "SCIMProvisioned",
-      "description": "SCIM user is provisioned and mapped to a GitHub user",
-      "is_traversable": true
-    },
-    {
-      "name": "CanAssumeIdentity",
-      "description": "GitHub repository, branch, or environment can assume an Azure federated identity via OIDC",
-      "is_traversable": true
     },
     {
       "name": "GH_HasPersonalAccessToken",

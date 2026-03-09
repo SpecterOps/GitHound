@@ -6334,7 +6334,7 @@
         }
       },
       {
-        "kind": "GH_EditRepoCustomPropertiesValue",
+        "kind": "GH_EditRepoCustomPropertiesValues",
         "start": {
           "value": "Ul9rZ0RPUldRTDVnX2FkbWlu"
         },
@@ -6850,7 +6850,7 @@
         }
       },
       {
-        "kind": "GH_EditRepoCustomPropertiesValue",
+        "kind": "GH_EditRepoCustomPropertiesValues",
         "start": {
           "value": "Ul9rZ0RPUldRTEpnX2FkbWlu"
         },
@@ -7426,7 +7426,7 @@
         }
       },
       {
-        "kind": "GH_EditRepoCustomPropertiesValue",
+        "kind": "GH_EditRepoCustomPropertiesValues",
         "start": {
           "value": "Ul9rZ0RPUlZQYkFRX2FkbWlu"
         },
@@ -7942,7 +7942,7 @@
         }
       },
       {
-        "kind": "GH_EditRepoCustomPropertiesValue",
+        "kind": "GH_EditRepoCustomPropertiesValues",
         "start": {
           "value": "Ul9rZ0RPUVh0TXh3X2FkbWlu"
         },
@@ -8518,7 +8518,7 @@
         }
       },
       {
-        "kind": "GH_EditRepoCustomPropertiesValue",
+        "kind": "GH_EditRepoCustomPropertiesValues",
         "start": {
           "value": "Ul9rZ0RPUVBfUFNRX2FkbWlu"
         },
@@ -9094,7 +9094,7 @@
         }
       },
       {
-        "kind": "GH_EditRepoCustomPropertiesValue",
+        "kind": "GH_EditRepoCustomPropertiesValues",
         "start": {
           "value": "Ul9rZ0RPUVBfcHd3X2FkbWlu"
         },
@@ -9610,7 +9610,7 @@
         }
       },
       {
-        "kind": "GH_EditRepoCustomPropertiesValue",
+        "kind": "GH_EditRepoCustomPropertiesValues",
         "start": {
           "value": "Ul9rZ0RPUU1aNVBBX2FkbWlu"
         },
@@ -10186,7 +10186,7 @@
         }
       },
       {
-        "kind": "GH_EditRepoCustomPropertiesValue",
+        "kind": "GH_EditRepoCustomPropertiesValues",
         "start": {
           "value": "Ul9rZ0RPUUtWWkV3X2FkbWlu"
         },
@@ -10666,7 +10666,7 @@
         }
       },
       {
-        "kind": "GH_EditRepoCustomPropertiesValue",
+        "kind": "GH_EditRepoCustomPropertiesValues",
         "start": {
           "value": "Ul9rZ0RPUC0wVGxBX2FkbWlu"
         },
@@ -11134,7 +11134,7 @@
         }
       },
       {
-        "kind": "GH_EditRepoCustomPropertiesValue",
+        "kind": "GH_EditRepoCustomPropertiesValues",
         "start": {
           "value": "Ul9rZ0RPTTNMZEpnX2FkbWlu"
         },
@@ -11662,7 +11662,7 @@
         }
       },
       {
-        "kind": "GH_EditRepoCustomPropertiesValue",
+        "kind": "GH_EditRepoCustomPropertiesValues",
         "start": {
           "value": "Ul9rZ0RPTXVGblhBX2FkbWlu"
         },

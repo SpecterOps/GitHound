@@ -112,7 +112,7 @@ flowchart TD
     GH_RepoRole -.->|GH_EditRepoProtections| GH_Repository
     %%GH_RepoRole -.->|GH_JumpMergeQueue| GH_Repository
     %%GH_RepoRole -.->|GH_CreateSoloMergeQueueEntry| GH_Repository
-    %%GH_RepoRole -.->|GH_EditRepoCustomPropertiesValue| GH_Repository
+    %%GH_RepoRole -.->|GH_EditRepoCustomPropertiesValues| GH_Repository
     GH_RepoRole -->|GH_HasBaseRole| GH_RepoRole
     GH_RepoRole -->|GH_CanEditProtection| GH_Branch
     GH_RepoRole -->|GH_CanWriteBranch| GH_Branch

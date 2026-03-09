@@ -1,6 +1,10 @@
-# Computed Branch Access Edges
+# Computed Edges
 
-This document describes how the `Compute-GitHoundBranchAccess` function works and what it produces. For the empirical testing that validates the underlying security model, see [MITIGATING_CONTROLS.md](./MITIGATING_CONTROLS.md). For the complete schema reference, see [SCHEMA.md](./SCHEMA.md).
+This document describes the computed edge functions and what they produce. For the empirical testing that validates the underlying security model, see [MITIGATING_CONTROLS.md](./MITIGATING_CONTROLS.md). For the complete schema reference, see [SCHEMA.md](./SCHEMA.md).
+
+---
+
+# Computed Branch Access Edges
 
 ## Overview
 
@@ -88,7 +92,7 @@ Each computed edge follows the standard GitHound edge format (created by `New-Gi
 | `GH_CanCreateBranch` | `GH_User` or `GH_Team` | `GH_Repository` | Yes | Per-rule allowance delta — actor can create branches when role alone doesn't grant access |
 | `GH_CanWriteBranch` | `GH_RepoRole` | `GH_Branch` | Yes | Role can push to this specific branch |
 | `GH_CanWriteBranch` | `GH_User` or `GH_Team` | `GH_Branch` | Yes | Per-rule allowance delta — actor can push when role alone doesn't grant access |
-| `GH_CanEditProtection` | `GH_RepoRole` | `GH_BranchProtectionRule` | No | Role can modify/remove this BPR (indirect bypass path) |
+| `GH_CanEditProtection` | `GH_RepoRole` | `GH_Branch` | Yes | Role can modify/remove the BPR(s) governing this branch |
 
 Most edges emit from `GH_RepoRole`. Per-actor edges from `GH_User`/`GH_Team` are only emitted when per-rule allowances (`pushAllowances`, `bypassPullRequestAllowances`) grant access beyond what the role provides. `GH_CanEditProtection` is always role-level (it has no per-actor component).
 
@@ -116,7 +120,7 @@ The query varies by edge type:
 |-----------|--------|---------------------|
 | `GH_CanWriteBranch` | RepoRole → Branch | Role's permission edges + BPR protecting the branch |
 | `GH_CanCreateBranch` | RepoRole → Repository | Role's permission edges + wildcard BPR (if any) |
-| `GH_CanEditProtection` | RepoRole → BPR | Role's edit/admin permission edge + BPR's protected branches |
+| `GH_CanEditProtection` | RepoRole → Branch | Role's edit/admin permission edge + repo's branches + protecting BPR(s) |
 | `GH_CanWriteBranch` | User/Team → Branch | Actor's allowance edges to the BPR + actor's role path with permissions |
 | `GH_CanCreateBranch` | User/Team → Repository | Actor's push allowance to the wildcard BPR + actor's role path |
 
@@ -202,7 +206,7 @@ For each repository and each write-capable role on that repo, evaluates whether 
 
 #### GH_CanEditProtection
 
-If the role has `GH_EditRepoProtections` or `GH_AdminTo`, emit an edge from the role to each BPR on the repo. These edges are non-traversable — they represent an indirect bypass path (the ability to weaken or remove protections) rather than direct push access.
+If the role has `GH_EditRepoProtections` or `GH_AdminTo`, emit an edge from the role to each protected branch on the repo. These edges are traversable — they represent the ability to weaken or remove the branch protection rules governing a specific branch, enabling subsequent code push.
 
 #### GH_CanCreateBranch
 
@@ -291,4 +295,165 @@ RETURN p1, p2, p3
 
 `GH_CanWriteBranch` and `GH_CanCreateBranch` represent **direct** push capability — they confirm the actor can push by evaluating both gates for each branch. These edges are traversable.
 
-`GH_CanEditProtection` represents the ability to weaken or remove branch protection rules — a separate **indirect** bypass path. It is non-traversable because modifying a BPR is a distinct action from pushing code. An analyst combines these visually: a user can edit a BPR (which protects certain branches) and also has write access to the repository.
+`GH_CanEditProtection` represents the ability to weaken or remove the branch protection rules governing a specific branch. It is traversable because a role that can modify protections on a branch can subsequently push code to it — representing a privilege escalation path. The edge targets the protected branch (not the BPR itself) because the security impact is evaluated per-branch.
+
+---
+
+# Computed Secret Scanning Access Edges
+
+This section describes how the `Compute-GitHoundSecretScanningAccess` function works and what it produces.
+
+## Overview
+
+`Compute-GitHoundSecretScanningAccess` is a post-collection step that computes effective secret scanning alert read access. It runs as **Step 11.5** in `Invoke-GitHound`, after secret scanning alerts have been collected and before app installations are collected.
+
+**Why it exists:** The raw `GH_ViewSecretScanningAlerts` permission edges connect roles to organizations or repositories, but do not connect roles directly to the individual alert nodes. Without computed edges, BloodHound pathfinding cannot traverse from a role to the alert (and onward via `GH_ValidToken` to the compromised user identity). This function bridges that gap by resolving which specific alerts each role can read.
+
+**Key characteristics:**
+
+- Pure in-memory computation — no API calls
+- Operates over the full accumulated node and edge collections from prior steps
+- Produces only edges (no new nodes)
+- Simpler than branch access computation — no gate evaluation needed
+
+## Input Data
+
+The function takes two parameters:
+
+| Parameter | Type        | Description                                       |
+|-----------|-------------|---------------------------------------------------|
+| `$Nodes`  | `ArrayList` | All accumulated nodes from prior collection steps |
+| `$Edges`  | `ArrayList` | All accumulated edges from prior collection steps |
+
+The following data must exist in the collections before the function runs:
+
+| Required Nodes | Source Step |
+|---------------|------------|
+| `GH_SecretScanningAlert` | Step 11 (Secret Scanning Alerts) |
+| `GH_Organization` | Step 0 (Organization) |
+| `GH_Repository` | Step 3 (Repositories) |
+| `GH_OrgRole` | Step 0 (Organization) |
+| `GH_RepoRole` | Step 5 (Repository Roles) |
+
+| Required Edges | Description |
+|---------------|-------------|
+| `GH_ViewSecretScanningAlerts` | OrgRole → Organization or RepoRole → Repository |
+| `GH_Contains` | Organization → SecretScanningAlert |
+| `GH_HasSecretScanningAlert` | Repository → SecretScanningAlert |
+
+## Output Structure
+
+The function returns a `PSCustomObject`:
+
+```
+{
+    Nodes = []              # Empty ArrayList (no new nodes created)
+    Edges = [edge, ...]     # ArrayList of computed edge objects
+}
+```
+
+The computed edges are merged into the main collection at the call site:
+
+```powershell
+$secretScanningAccess = Compute-GitHoundSecretScanningAccess -Nodes $nodes -Edges $edges
+if($secretScanningAccess.edges) { $edges.AddRange(@($secretScanningAccess.edges)) }
+```
+
+### Edge Kind Produced
+
+| Edge Kind | Source | Target | Traversable | Description |
+|-----------|--------|--------|-------------|-------------|
+| `GH_CanReadSecretScanningAlert` | `GH_OrgRole` | `GH_SecretScanningAlert` | Yes | Org role can read all alerts in the organization |
+| `GH_CanReadSecretScanningAlert` | `GH_RepoRole` | `GH_SecretScanningAlert` | Yes | Repo role can read alerts in the repository |
+
+### Reason Values
+
+| Reason | Meaning |
+|--------|---------|
+| `org_role_permission` | Org role has `GH_ViewSecretScanningAlerts` on the organization containing the alert |
+| `repo_role_permission` | Repo role has `GH_ViewSecretScanningAlerts` on the repository containing the alert |
+
+### Composition Queries
+
+Each computed edge includes a `query_composition` property containing a Cypher query that reveals the underlying graph elements:
+
+| Source Type | What the query shows |
+|-------------|---------------------|
+| `GH_OrgRole` → Alert | Role's `GH_ViewSecretScanningAlerts` edge to organization + organization's `GH_Contains` edge to alert |
+| `GH_RepoRole` → Alert | Role's `GH_ViewSecretScanningAlerts` edge to repository + repository's `GH_HasSecretScanningAlert` edge to alert |
+
+## Algorithm Walkthrough
+
+### Phase 1: Index Building
+
+Constructs lookup structures from the raw node and edge collections.
+
+**Node index:**
+
+| Index | Key | Value | Purpose |
+|-------|-----|-------|---------|
+| `$nodeById` | node ID | node object | Look up any node by ID (used to determine target kind of `GH_ViewSecretScanningAlerts` edges) |
+
+**Alert indexes:**
+
+| Index | Key | Value | Purpose |
+|-------|-----|-------|---------|
+| `$alertNodeIds` | — | HashSet of alert IDs | Validate that a `GH_Contains` target is actually a `GH_SecretScanningAlert` |
+| `$orgAlerts` | org ID | list of alert IDs | All alerts contained in each organization |
+| `$repoAlerts` | repo ID | list of alert IDs | All alerts associated with each repository |
+
+**Permission edge partitioning:**
+
+`GH_ViewSecretScanningAlerts` edges are split into two lists based on the target node's kind:
+- `$orgViewEdges`: target is `GH_Organization` (source is `GH_OrgRole`)
+- `$repoViewEdges`: target is `GH_Repository` (source is `GH_RepoRole`)
+
+### Phase 2: Org-Level Emission
+
+For each `GH_ViewSecretScanningAlerts` edge targeting a `GH_Organization`:
+
+1. Get the source role ID and target org ID
+2. Look up all alerts in that org via `$orgAlerts[orgId]`
+3. For each alert: emit `GH_CanReadSecretScanningAlert` from the org role to the alert
+4. Reason: `org_role_permission`
+
+### Phase 3: Repo-Level Emission
+
+For each `GH_ViewSecretScanningAlerts` edge targeting a `GH_Repository`:
+
+1. Get the source role ID and target repo ID
+2. Look up all alerts in that repo via `$repoAlerts[repoId]`
+3. For each alert: emit `GH_CanReadSecretScanningAlert` from the repo role to the alert
+4. Reason: `repo_role_permission`
+
+## Edge Deduplication
+
+Uses the same `Add-ComputedEdge` helper pattern as `Compute-GitHoundBranchAccess`. An `$emittedEdges` hashtable keyed by `"startId|endId|kind"` prevents duplicate edges when multiple code paths could emit the same edge.
+
+## Graph Traversal Paths
+
+The complete attack path from user to compromised identity:
+
+**Via org role:**
+```
+User → GH_HasRole → OrgRole → GH_CanReadSecretScanningAlert → SecretScanningAlert → GH_ValidToken → CompromisedUser
+```
+
+**Via repo role (through org):**
+```
+User → GH_HasRole → OrgRole → GH_HasBaseRole → RepoRole → GH_CanReadSecretScanningAlert → SecretScanningAlert → GH_ValidToken → CompromisedUser
+```
+
+**Via repo role (direct):**
+```
+User → GH_HasRole → RepoRole → GH_CanReadSecretScanningAlert → SecretScanningAlert → GH_ValidToken → CompromisedUser
+```
+
+**Via team:**
+```
+User → GH_HasRole → TeamRole → GH_MemberOf → Team → GH_HasRole → RepoRole → GH_CanReadSecretScanningAlert → SecretScanningAlert → GH_ValidToken → CompromisedUser
+```
+
+## Security Significance
+
+This edge completes a critical attack path: an actor who can view secret scanning alerts gains access to the raw leaked secret values. When the leaked secret is a valid GitHub Personal Access Token (detected by the `GH_ValidToken` edge), the actor can impersonate the token owner and exercise all permissions granted to that token. This makes `GH_CanReadSecretScanningAlert` a traversable edge — it represents a real privilege escalation path from "can view alerts" to "can act as the token owner."

@@ -53,7 +53,47 @@ The following table summarizes the custom edge kinds used by `GitHound`:
 | [GH_ManageRepoSecurityProducts] | [GH_RepoRole] | [GH_Repository] | ❌ |
 | [GH_JumpMergeQueue] | [GH_RepoRole] | [GH_Repository] | ❌ |
 | [GH_CreateSoloMergeQueueEntry] | [GH_RepoRole] | [GH_Repository] | ❌ |
-| [GH_EditRepoCustomPropertiesValue] | [GH_RepoRole] | [GH_Repository] | ❌ |
+| [GH_EditRepoCustomPropertiesValues] | [GH_RepoRole] | [GH_Repository] | ❌ |
+| [GH_AddLabel] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_RemoveLabel] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_CloseIssue] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_ReopenIssue] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_ClosePullRequest] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_ReopenPullRequest] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_AddAssignee] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_DeleteIssue] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_RemoveAssignee] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_RequestPrReview] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_MarkAsDuplicate] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_SetMilestone] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_SetIssueType] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_ManageTopics] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_ManageSettingsWiki] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_ManageSettingsProjects] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_ManageSettingsMergeTypes] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_ManageSettingsPages] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_EditRepoMetadata] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_SetInteractionLimits] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_SetSocialPreview] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_EditRepoAnnouncementBanners] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_ReadCodeScanning] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_WriteCodeScanning] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_ViewDependabotAlerts] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_ResolveDependabotAlerts] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_DeleteDiscussion] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_ToggleDiscussionAnswer] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_ToggleDiscussionCommentMinimize] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_EditDiscussionCategory] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_CreateDiscussionCategory] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_ConvertIssuesToDiscussions] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_CloseDiscussion] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_ReopenDiscussion] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_EditCategoryOnDiscussion] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_ManageDiscussionBadges] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_EditDiscussionComment] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_DeleteDiscussionComment] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_CreateTag] | [GH_RepoRole] | [GH_Repository] | :x: |
+| [GH_DeleteTag] | [GH_RepoRole] | [GH_Repository] | :x: |
 | [GH_ProtectedBy] | [GH_BranchProtectionRule] | [GH_Branch] | ✅ |
 | [GH_BypassPullRequestAllowances] | [GH_User], [GH_Team] | [GH_BranchProtectionRule] | ❌ |
 | [GH_RestrictionsCanPush] | [GH_User], [GH_Team] | [GH_BranchProtectionRule] | ❌ |
@@ -61,10 +101,11 @@ The following table summarizes the custom edge kinds used by `GitHound`:
 | [GH_HasWorkflow] | [GH_Repository] | [GH_Workflow] | ❌ |
 | [GH_HasEnvironment] | [GH_Repository] | [GH_Environment] | ❌ |
 |                     | [GH_Branch]     | [GH_Environment] | ❌ |
-| [GH_HasSecret] | [GH_Repository] | [GH_OrgSecret], [GH_RepoSecret] | ❌ |
-|                | [GH_Environment] | [GH_EnvironmentSecret] | ❌ |
-| [GH_HasVariable] | [GH_Repository] | [GH_OrgVariable], [GH_RepoVariable] | ❌ |
+| [GH_HasSecret] | [GH_Repository] | [GH_OrgSecret], [GH_RepoSecret] | ✅ |
+|                | [GH_Environment] | [GH_EnvironmentSecret] | ✅ |
+| [GH_HasVariable] | [GH_Repository] | [GH_OrgVariable], [GH_RepoVariable] | ✅ |
 | [GH_HasSecretScanningAlert] | [GH_Repository] | [GH_SecretScanningAlert] | ❌ |
+| [GH_ValidToken] | [GH_SecretScanningAlert] | [GH_User] | ✅ |
 | [GH_HasSamlIdentityProvider] | [GH_Organization] | [GH_SamlIdentityProvider] | ❌ |
 | [GH_HasExternalIdentity] | [GH_SamlIdentityProvider] | [GH_ExternalIdentity] | ❌ |
 | [GH_MapsToUser] | [GH_ExternalIdentity] | [GH_User] | ❌ |
@@ -77,7 +118,9 @@ The following table summarizes the custom edge kinds used by `GitHound`:
 |                     | [GH_User], [GH_Team] | [GH_Branch] | ✅ |
 | [GH_CanCreateBranch] | [GH_RepoRole] | [GH_Repository] | ✅ |
 |                      | [GH_User], [GH_Team] | [GH_Repository] | ✅ |
-| [GH_CanEditProtection] | [GH_RepoRole] | [GH_BranchProtectionRule] | ❌ |
+| [GH_CanEditProtection] | [GH_RepoRole] | [GH_Branch] | ✅ |
+| [GH_CanReadSecretScanningAlert] | [GH_OrgRole] | [GH_SecretScanningAlert] | ✅ |
+|                                 | [GH_RepoRole] | [GH_SecretScanningAlert] | ✅ |
 
 ## Hybrid Edges
 
@@ -157,7 +200,47 @@ Hybrid edges connect GitHub entities to entities from other supported BloodHound
 [GH_ManageRepoSecurityProducts]: EdgeDescriptions/GH_ManageRepoSecurityProducts.md
 [GH_JumpMergeQueue]: EdgeDescriptions/GH_JumpMergeQueue.md
 [GH_CreateSoloMergeQueueEntry]: EdgeDescriptions/GH_CreateSoloMergeQueueEntry.md
-[GH_EditRepoCustomPropertiesValue]: EdgeDescriptions/GH_EditRepoCustomPropertiesValue.md
+[GH_EditRepoCustomPropertiesValues]: EdgeDescriptions/GH_EditRepoCustomPropertiesValues.md
+[GH_AddLabel]: EdgeDescriptions/GH_AddLabel.md
+[GH_RemoveLabel]: EdgeDescriptions/GH_RemoveLabel.md
+[GH_CloseIssue]: EdgeDescriptions/GH_CloseIssue.md
+[GH_ReopenIssue]: EdgeDescriptions/GH_ReopenIssue.md
+[GH_ClosePullRequest]: EdgeDescriptions/GH_ClosePullRequest.md
+[GH_ReopenPullRequest]: EdgeDescriptions/GH_ReopenPullRequest.md
+[GH_AddAssignee]: EdgeDescriptions/GH_AddAssignee.md
+[GH_DeleteIssue]: EdgeDescriptions/GH_DeleteIssue.md
+[GH_RemoveAssignee]: EdgeDescriptions/GH_RemoveAssignee.md
+[GH_RequestPrReview]: EdgeDescriptions/GH_RequestPrReview.md
+[GH_MarkAsDuplicate]: EdgeDescriptions/GH_MarkAsDuplicate.md
+[GH_SetMilestone]: EdgeDescriptions/GH_SetMilestone.md
+[GH_SetIssueType]: EdgeDescriptions/GH_SetIssueType.md
+[GH_ManageTopics]: EdgeDescriptions/GH_ManageTopics.md
+[GH_ManageSettingsWiki]: EdgeDescriptions/GH_ManageSettingsWiki.md
+[GH_ManageSettingsProjects]: EdgeDescriptions/GH_ManageSettingsProjects.md
+[GH_ManageSettingsMergeTypes]: EdgeDescriptions/GH_ManageSettingsMergeTypes.md
+[GH_ManageSettingsPages]: EdgeDescriptions/GH_ManageSettingsPages.md
+[GH_EditRepoMetadata]: EdgeDescriptions/GH_EditRepoMetadata.md
+[GH_SetInteractionLimits]: EdgeDescriptions/GH_SetInteractionLimits.md
+[GH_SetSocialPreview]: EdgeDescriptions/GH_SetSocialPreview.md
+[GH_EditRepoAnnouncementBanners]: EdgeDescriptions/GH_EditRepoAnnouncementBanners.md
+[GH_ReadCodeScanning]: EdgeDescriptions/GH_ReadCodeScanning.md
+[GH_WriteCodeScanning]: EdgeDescriptions/GH_WriteCodeScanning.md
+[GH_ViewDependabotAlerts]: EdgeDescriptions/GH_ViewDependabotAlerts.md
+[GH_ResolveDependabotAlerts]: EdgeDescriptions/GH_ResolveDependabotAlerts.md
+[GH_DeleteDiscussion]: EdgeDescriptions/GH_DeleteDiscussion.md
+[GH_ToggleDiscussionAnswer]: EdgeDescriptions/GH_ToggleDiscussionAnswer.md
+[GH_ToggleDiscussionCommentMinimize]: EdgeDescriptions/GH_ToggleDiscussionCommentMinimize.md
+[GH_EditDiscussionCategory]: EdgeDescriptions/GH_EditDiscussionCategory.md
+[GH_CreateDiscussionCategory]: EdgeDescriptions/GH_CreateDiscussionCategory.md
+[GH_ConvertIssuesToDiscussions]: EdgeDescriptions/GH_ConvertIssuesToDiscussions.md
+[GH_CloseDiscussion]: EdgeDescriptions/GH_CloseDiscussion.md
+[GH_ReopenDiscussion]: EdgeDescriptions/GH_ReopenDiscussion.md
+[GH_EditCategoryOnDiscussion]: EdgeDescriptions/GH_EditCategoryOnDiscussion.md
+[GH_ManageDiscussionBadges]: EdgeDescriptions/GH_ManageDiscussionBadges.md
+[GH_EditDiscussionComment]: EdgeDescriptions/GH_EditDiscussionComment.md
+[GH_DeleteDiscussionComment]: EdgeDescriptions/GH_DeleteDiscussionComment.md
+[GH_CreateTag]: EdgeDescriptions/GH_CreateTag.md
+[GH_DeleteTag]: EdgeDescriptions/GH_DeleteTag.md
 [GH_ProtectedBy]: EdgeDescriptions/GH_ProtectedBy.md
 [GH_BypassPullRequestAllowances]: EdgeDescriptions/GH_BypassPullRequestAllowances.md
 [GH_RestrictionsCanPush]: EdgeDescriptions/GH_RestrictionsCanPush.md
@@ -167,6 +250,7 @@ Hybrid edges connect GitHub entities to entities from other supported BloodHound
 [GH_HasSecret]: EdgeDescriptions/GH_HasSecret.md
 [GH_HasVariable]: EdgeDescriptions/GH_HasVariable.md
 [GH_HasSecretScanningAlert]: EdgeDescriptions/GH_HasSecretScanningAlert.md
+[GH_ValidToken]: EdgeDescriptions/GH_ValidToken.md
 [GH_HasSamlIdentityProvider]: EdgeDescriptions/GH_HasSamlIdentityProvider.md
 [GH_HasExternalIdentity]: EdgeDescriptions/GH_HasExternalIdentity.md
 [GH_MapsToUser]: EdgeDescriptions/GH_MapsToUser.md
@@ -177,6 +261,7 @@ Hybrid edges connect GitHub entities to entities from other supported BloodHound
 [GH_CanWriteBranch]: EdgeDescriptions/GH_CanWriteBranch.md
 [GH_CanCreateBranch]: EdgeDescriptions/GH_CanCreateBranch.md
 [GH_CanEditProtection]: EdgeDescriptions/GH_CanEditProtection.md
+[GH_CanReadSecretScanningAlert]: EdgeDescriptions/GH_CanReadSecretScanningAlert.md
 [SyncedToGHUser]: EdgeDescriptions/SyncedToGHUser.md
 [GH_CanAssumeAWSRole]: EdgeDescriptions/GH_CanAssumeAWSRole.md
 [CanAssumeIdentity]: EdgeDescriptions/CanAssumeIdentity.md

@@ -14,13 +14,16 @@ For individual node documentation with properties and diagrams, see the [Nodes](
 | GH_BranchProtectionRule | shield            | #FFB347 | A branch protection rule that applies to one or more branches via pattern matching.                |
 | GH_Environment          | leaf              | #D5F2C2 | A GitHub Actions deployment environment with protection rules and deployment branch policies.      |
 | GH_EnvironmentSecret    | lock              | #6FB94A | An environment-level GitHub Actions secret scoped to a specific deployment environment.            |
+| GH_EnvironmentVariable  | lock-open         | #D4A84B | An environment-level GitHub Actions variable scoped to a specific deployment environment.          |
 | GH_ExternalIdentity     | arrows-left-right | #8A8F98 | An external identity from a SAML/SCIM provider linked to a GitHub user for SSO authentication.     |
 | GH_Organization         | building          | #5FED83 | A GitHub Organization—top‑level container for repositories, teams, & settings.                     |
 | GH_OrgRole              | user-tie          | #BFFFD1 | The role a user has at the organization level (e.g. `admin`, `member`).                            |
 | GH_OrgSecret            | lock              | #1FB65A | An organization-level GitHub Actions secret that can be scoped to all, private, or selected repos. |
+| GH_OrgVariable          | lock-open         | #E8B84D | An organization-level GitHub Actions variable that can be scoped to all, private, or selected repos. |
 | GH_Repository           | box-archive       | #9EECFF | A code repository in an organization, containing files, issues, etc.                               |
 | GH_RepoRole             | user-tie          | #DEFEFA | The permission granted to a user or team on a repository (e.g. `admin`, `write`, `read`).          |
 | GH_RepoSecret           | lock              | #32BEE6 | A repository-level GitHub Actions secret accessible only to workflows in that repository.          |
+| GH_RepoVariable         | lock-open         | #E89B5C | A repository-level GitHub Actions variable accessible only to workflows in that repository.        |
 | GH_SamlIdentityProvider | id-badge          | #5A6C8F | A SAML identity provider configured for the organization, enabling SSO.                            |
 | GH_SecretScanningAlert  | key               | #3C7A6E | A GitHub Advanced Security alert indicating a secret was accidentally committed.                   |
 | GH_Team                 | user-group        | #C06EFF | A team within an organization, grouping users for shared access and collaboration.                 |
@@ -37,9 +40,12 @@ These edges represent organizational hierarchy and ownership.
 | Edge Type     | Source            | Target                 | Traversable | Description                              |
 |---------------|-------------------|------------------------|-------------|------------------------------------------|
 | `GH_Contains` | `GH_Organization` | `GH_OrgSecret`         | No          | Organization contains this secret.       |
+| `GH_Contains` | `GH_Organization` | `GH_OrgVariable`       | No          | Organization contains this variable.     |
 | `GH_Contains` | `GH_Organization` | `GH_AppInstallation`   | No          | Organization contains this app installation. |
 | `GH_Contains` | `GH_Repository`   | `GH_RepoSecret`        | No          | Repository contains this secret.         |
+| `GH_Contains` | `GH_Repository`   | `GH_RepoVariable`      | No          | Repository contains this variable.       |
 | `GH_Contains` | `GH_Environment`  | `GH_EnvironmentSecret` | No          | Environment contains this secret.        |
+| `GH_Contains` | `GH_Environment`  | `GH_EnvironmentVariable`| No         | Environment contains this variable.      |
 | `GH_Owns`     | `GH_Organization` | `GH_Repository`        | Yes         | Organization owns this repository.       |
 
 ### Role & Membership Edges
@@ -83,6 +89,7 @@ These edges represent permissions that org roles grant on the organization.
 | `GH_ViewSecretScanningAlerts`                              | `GH_OrgRole`| `GH_Organization` | No          | Can view secret scanning alerts.                           |
 | `GH_WriteOrganizationActionsSecrets`                       | `GH_OrgRole`| `GH_Organization` | No          | Can write Actions secrets.                                 |
 | `GH_WriteOrganizationActionsSettings`                      | `GH_OrgRole`| `GH_Organization` | No          | Can write Actions settings.                                |
+| `GH_WriteOrganizationActionsVariables`                     | `GH_OrgRole`| `GH_Organization` | No          | Can write Actions variables.                               |
 | `GH_WriteOrganizationCustomOrgRole`                        | `GH_OrgRole`| `GH_Organization` | No          | Can write custom org role definitions.                     |
 | `GH_WriteOrganizationCustomRepoRole`                       | `GH_OrgRole`| `GH_Organization` | No          | Can write custom repo role definitions.                    |
 | `GH_WriteOrganizationNetworkConfigurations`                | `GH_OrgRole`| `GH_Organization` | No          | Can write network configurations.                          |
@@ -109,7 +116,47 @@ These edges represent permissions that repo roles grant on repositories.
 | `GH_EditRepoProtections`          | `GH_RepoRole` | `GH_Repository` | No          | Can edit branch protection rules.                    |
 | `GH_JumpMergeQueue`               | `GH_RepoRole` | `GH_Repository` | No          | Can jump the merge queue.                            |
 | `GH_CreateSoloMergeQueueEntry`    | `GH_RepoRole` | `GH_Repository` | No          | Can create solo merge queue entries.                 |
-| `GH_EditRepoCustomPropertiesValue`| `GH_RepoRole` | `GH_Repository` | No          | Can edit custom property values.                     |
+| `GH_EditRepoCustomPropertiesValues`| `GH_RepoRole` | `GH_Repository` | No          | Can edit custom property values.                     |
+| `GH_AddLabel`                     | `GH_RepoRole` | `GH_Repository` | No          | Can add labels to issues and pull requests.          |
+| `GH_RemoveLabel`                  | `GH_RepoRole` | `GH_Repository` | No          | Can remove labels from issues and pull requests.     |
+| `GH_CloseIssue`                   | `GH_RepoRole` | `GH_Repository` | No          | Can close issues.                                    |
+| `GH_ReopenIssue`                  | `GH_RepoRole` | `GH_Repository` | No          | Can reopen closed issues.                            |
+| `GH_ClosePullRequest`             | `GH_RepoRole` | `GH_Repository` | No          | Can close pull requests.                             |
+| `GH_ReopenPullRequest`            | `GH_RepoRole` | `GH_Repository` | No          | Can reopen closed pull requests.                     |
+| `GH_AddAssignee`                  | `GH_RepoRole` | `GH_Repository` | No          | Can assign users to issues and pull requests.        |
+| `GH_DeleteIssue`                  | `GH_RepoRole` | `GH_Repository` | No          | Can delete issues.                                   |
+| `GH_RemoveAssignee`               | `GH_RepoRole` | `GH_Repository` | No          | Can remove assignees from issues and pull requests.  |
+| `GH_RequestPrReview`              | `GH_RepoRole` | `GH_Repository` | No          | Can request pull request reviews.                    |
+| `GH_MarkAsDuplicate`              | `GH_RepoRole` | `GH_Repository` | No          | Can mark issues or pull requests as duplicates.      |
+| `GH_SetMilestone`                 | `GH_RepoRole` | `GH_Repository` | No          | Can set milestones on issues and pull requests.      |
+| `GH_SetIssueType`                 | `GH_RepoRole` | `GH_Repository` | No          | Can set issue types.                                 |
+| `GH_ManageTopics`                 | `GH_RepoRole` | `GH_Repository` | No          | Can manage repository topics.                        |
+| `GH_ManageSettingsWiki`           | `GH_RepoRole` | `GH_Repository` | No          | Can manage wiki settings.                            |
+| `GH_ManageSettingsProjects`       | `GH_RepoRole` | `GH_Repository` | No          | Can manage project settings.                         |
+| `GH_ManageSettingsMergeTypes`     | `GH_RepoRole` | `GH_Repository` | No          | Can manage allowed merge types.                      |
+| `GH_ManageSettingsPages`          | `GH_RepoRole` | `GH_Repository` | No          | Can manage GitHub Pages settings.                    |
+| `GH_EditRepoMetadata`             | `GH_RepoRole` | `GH_Repository` | No          | Can edit repository metadata.                        |
+| `GH_SetInteractionLimits`         | `GH_RepoRole` | `GH_Repository` | No          | Can set interaction limits.                          |
+| `GH_SetSocialPreview`             | `GH_RepoRole` | `GH_Repository` | No          | Can set the social preview image.                    |
+| `GH_EditRepoAnnouncementBanners`  | `GH_RepoRole` | `GH_Repository` | No          | Can edit announcement banners.                       |
+| `GH_ReadCodeScanning`             | `GH_RepoRole` | `GH_Repository` | No          | Can read code scanning results.                      |
+| `GH_WriteCodeScanning`            | `GH_RepoRole` | `GH_Repository` | No          | Can upload code scanning results.                    |
+| `GH_ViewDependabotAlerts`         | `GH_RepoRole` | `GH_Repository` | No          | Can view Dependabot alerts.                          |
+| `GH_ResolveDependabotAlerts`      | `GH_RepoRole` | `GH_Repository` | No          | Can resolve Dependabot alerts.                       |
+| `GH_DeleteDiscussion`             | `GH_RepoRole` | `GH_Repository` | No          | Can delete discussions.                              |
+| `GH_ToggleDiscussionAnswer`       | `GH_RepoRole` | `GH_Repository` | No          | Can toggle discussion answers.                       |
+| `GH_ToggleDiscussionCommentMinimize` | `GH_RepoRole` | `GH_Repository` | No       | Can minimize discussion comments.                    |
+| `GH_EditDiscussionCategory`       | `GH_RepoRole` | `GH_Repository` | No          | Can edit discussion categories.                      |
+| `GH_CreateDiscussionCategory`     | `GH_RepoRole` | `GH_Repository` | No          | Can create discussion categories.                    |
+| `GH_ConvertIssuesToDiscussions`   | `GH_RepoRole` | `GH_Repository` | No          | Can convert issues to discussions.                   |
+| `GH_CloseDiscussion`              | `GH_RepoRole` | `GH_Repository` | No          | Can close discussions.                               |
+| `GH_ReopenDiscussion`             | `GH_RepoRole` | `GH_Repository` | No          | Can reopen discussions.                              |
+| `GH_EditCategoryOnDiscussion`     | `GH_RepoRole` | `GH_Repository` | No          | Can change the category of a discussion.             |
+| `GH_ManageDiscussionBadges`       | `GH_RepoRole` | `GH_Repository` | No          | Can manage discussion badges.                        |
+| `GH_EditDiscussionComment`        | `GH_RepoRole` | `GH_Repository` | No          | Can edit discussion comments.                        |
+| `GH_DeleteDiscussionComment`      | `GH_RepoRole` | `GH_Repository` | No          | Can delete discussion comments.                      |
+| `GH_CreateTag`                    | `GH_RepoRole` | `GH_Repository` | No          | Can create tags and releases.                        |
+| `GH_DeleteTag`                    | `GH_RepoRole` | `GH_Repository` | No          | Can delete tags and releases.                        |
 
 ### Branch Protection Edges
 
@@ -136,7 +183,7 @@ These edges are computed post-collection by `Compute-GitHoundBranchAccess`. They
 | `GH_CanWriteBranch`    | `GH_RepoRole`           | `GH_Branch`               | Yes         | Role can push to this specific branch.                                                          |
 | `GH_CanWriteBranch`    | `GH_User`               | `GH_Branch`               | Yes         | User can push to this branch via per-rule allowance (delta only — when role alone doesn't grant access). |
 | `GH_CanWriteBranch`    | `GH_Team`               | `GH_Branch`               | Yes         | Team can push to this branch via per-rule allowance (delta only — when role alone doesn't grant access). |
-| `GH_CanEditProtection` | `GH_RepoRole`           | `GH_BranchProtectionRule` | No          | Role can modify/remove this branch protection rule (indirect bypass — separate from push access).|
+| `GH_CanEditProtection` | `GH_RepoRole`           | `GH_Branch`               | Yes         | Role can modify or remove the protection rules governing this branch (privilege escalation path).|
 
 Each computed edge includes a `reason` property indicating why access was granted, and a `query_composition` property containing a Cypher query that reveals the underlying graph elements (permission edges, BPRs, allowances) that caused the edge to be created:
 
@@ -152,6 +199,19 @@ Each computed edge includes a `reason` property indicating why access was grante
 
 **Separation of concerns:** `GH_CanWriteBranch` and `GH_CanCreateBranch` represent **direct** push capability. `GH_CanEditProtection` represents the ability to weaken/remove protections — a separate indirect bypass path. The analyst combines these visually: a user can edit a BPR, which protects certain branches, and the user may also have write access.
 
+### Computed Secret Scanning Access Edges
+
+These edges are computed post-collection by `Compute-GitHoundSecretScanningAccess`. They cross-reference `GH_ViewSecretScanningAlerts` permission edges with structural edges (`GH_Contains`, `GH_HasSecretScanningAlert`) to determine which roles can read which secret scanning alerts.
+
+| Edge Type                       | Source        | Target                    | Traversable | Description                                                                      |
+|---------------------------------|---------------|---------------------------|-------------|----------------------------------------------------------------------------------|
+| `GH_CanReadSecretScanningAlert` | `GH_OrgRole`  | `GH_SecretScanningAlert`  | Yes         | Org role can read all alerts in the organization via `GH_ViewSecretScanningAlerts`. |
+| `GH_CanReadSecretScanningAlert` | `GH_RepoRole` | `GH_SecretScanningAlert`  | Yes         | Repo role can read alerts in the repository via `GH_ViewSecretScanningAlerts`.   |
+
+Each computed edge includes a `reason` property (`org_role_permission` or `repo_role_permission`) and a `query_composition` Cypher query showing the underlying permission and structural edges.
+
+**Security significance:** This edge completes the attack path from user to compromised identity: `User → Role → GH_CanReadSecretScanningAlert → Alert → GH_ValidToken → CompromisedUser`. Reading a secret scanning alert reveals the leaked secret value, which (for valid GitHub PATs) enables identity takeover.
+
 ### Resource Relationship Edges
 
 These edges connect repositories to their resources.
@@ -164,7 +224,11 @@ These edges connect repositories to their resources.
 | `GH_HasEnvironment`        | `GH_Branch`     | `GH_Environment`         | No          | Branch can deploy to this environment.         |
 | `GH_HasSecret`             | `GH_Repository` | `GH_OrgSecret`           | Yes         | Repository has access to this org secret. Traversable because write access enables secret access via workflow creation. |
 | `GH_HasSecret`             | `GH_Repository` | `GH_RepoSecret`          | Yes         | Repository has this repo secret. Traversable because write access enables secret access via workflow creation. |
+| `GH_HasSecret`             | `GH_Environment`| `GH_EnvironmentSecret`  | Yes         | Environment has this secret. Traversable because write access enables secret access via workflow creation. |
+| `GH_HasVariable`           | `GH_Repository` | `GH_OrgVariable`         | Yes         | Repository has access to this org variable. Traversable because write access enables variable access via workflow creation. |
+| `GH_HasVariable`           | `GH_Repository` | `GH_RepoVariable`        | Yes         | Repository has this repo variable. Traversable because write access enables variable access via workflow creation. |
 | `GH_HasSecretScanningAlert`| `GH_Repository` | `GH_SecretScanningAlert` | No          | Repository has this secret scanning alert.     |
+| `GH_ValidToken`            | `GH_SecretScanningAlert` | `GH_User`       | Yes         | Alert contains a valid, active PAT belonging to this user. |
 
 ### App Installation Edges
 
@@ -256,7 +320,15 @@ The following edges are marked as "traversable" and form the primary attack path
 | `GH_AddMember`        | Team role can add members (maintainer privilege)   |
 | `GH_HasBaseRole`      | Role inherits from another role                    |
 | `GH_Owns`             | Organization owns repository                       |
+| `GH_HasEnvironment`   | Repository has a deployment environment            |
+| `GH_HasSecret`        | Repository/environment has this secret             |
+| `GH_HasVariable`      | Repository has this variable                       |
 | `GH_ProtectedBy`      | Branch protection rule protects this branch        |
+| `GH_CanCreateBranch`  | Role/actor can create new branches (computed)      |
+| `GH_CanWriteBranch`   | Role/actor can push to this branch (computed)      |
+| `GH_CanEditProtection`| Role can modify/remove branch protections (computed)|
+| `GH_CanReadSecretScanningAlert` | Role can read secret scanning alerts (computed) |
+| `GH_ValidToken`       | Alert contains a valid leaked PAT for this user    |
 | `SyncedToGHUser`      | Identity provider user synced to GitHub user       |
 | `SCIMProvisioned`     | SCIM user provisioned and mapped to GitHub user    |
 | `CanAssumeIdentity`   | GitHub entity can assume Azure identity            |
