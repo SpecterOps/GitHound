@@ -19,6 +19,8 @@ import re
 import sys
 from pathlib import Path
 
+import numpy as np
+
 # ── Dependency check ────────────────────────────────────────────────
 _missing = []
 try:
@@ -49,7 +51,7 @@ if _missing:
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
 MODEL_JSON = REPO_ROOT / "model.json"
-OUTPUT_DIR = REPO_ROOT / "Documentation" / "images"
+OUTPUT_DIR = REPO_ROOT / "Documentation" / "Icons"
 
 FA_SVG_URL = (
     "https://raw.githubusercontent.com/FortAwesome/Font-Awesome"
@@ -196,13 +198,26 @@ def render_icon(
     icon_target = int(ss_size * icon_scale)
     icon_offset = (ss_size - icon_target) // 2
 
+    # ── Even-odd fill: XOR each polygon onto a mask ──────────────
+    icon_mask = Image.new("L", (ss_size, ss_size), 0)
+
     for d in path_strings:
         polygons = path_to_polygons(d, icon_target, vb[0], vb[1], vb[2], vb[3])
         for poly in polygons:
             # Offset polygons to center on canvas
             shifted = [(x + icon_offset, y + icon_offset) for x, y in poly]
             if len(shifted) >= 3:
-                draw.polygon(shifted, fill="black")
+                temp = Image.new("L", (ss_size, ss_size), 0)
+                ImageDraw.Draw(temp).polygon(shifted, fill=255)
+                # XOR: inner paths cut out from outer paths
+                mask_arr = np.array(icon_mask)
+                temp_arr = np.array(temp)
+                mask_arr = np.where(temp_arr > 128, 255 - mask_arr, mask_arr)
+                icon_mask = Image.fromarray(mask_arr)
+
+    # Composite icon mask as black fill onto canvas
+    black_layer = Image.new("RGBA", (ss_size, ss_size), (0, 0, 0, 255))
+    canvas.paste(black_layer, mask=icon_mask)
 
     # ── Downsample ──────────────────────────────────────────────────
     final = canvas.resize((image_size, image_size), Image.LANCZOS)
