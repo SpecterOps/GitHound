@@ -1,5 +1,12 @@
 {
   "custom_types": {
+    "GH_App": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "cube",
+        "color": "#7EC8E3"
+      }
+    },
     "GH_AppInstallation": {
       "icon": {
         "type": "font-awesome",

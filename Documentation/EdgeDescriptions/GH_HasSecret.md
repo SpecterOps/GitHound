@@ -1,6 +1,6 @@
 ---
 kind: GH_HasSecret
-is_traversable: false
+is_traversable: true
 ---
 
 # GH_HasSecret
@@ -12,7 +12,7 @@ is_traversable: false
 
 ## General Information
 
-The non-traversable `GH_HasSecret` edge represents the relationship between a repository or environment and the secrets accessible within that context. Created by `Git-HoundOrganizationSecret`, `Git-HoundSecret`, and `Git-HoundEnvironment`, this edge shows which secrets are available in which scopes. Repositories can have access to both organization-level secrets (scoped to selected repositories) and repository-level secrets, while environments contain their own environment-scoped secrets. Understanding secret accessibility is critical for assessing the blast radius of a compromised workflow or environment.
+The traversable `GH_HasSecret` edge represents the relationship between a repository or environment and the secrets accessible within that context. Created by `Git-HoundOrganizationSecret`, `Git-HoundSecret`, and `Git-HoundEnvironment`, this edge shows which secrets are available in which scopes. Repositories can have access to both organization-level secrets (scoped to selected repositories) and repository-level secrets, while environments contain their own environment-scoped secrets. This edge is traversable because any principal that can push code to a repository (via `GH_CanWriteBranch` or `GH_CanCreateBranch`) can write a workflow that exfiltrates the secret values at runtime, making this a meaningful link in attack path analysis.
 
 ```mermaid
 graph LR

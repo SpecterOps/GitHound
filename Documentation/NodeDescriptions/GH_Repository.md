@@ -1,0 +1,185 @@
+# <img src="../Icons/GH_Repository.png" width="50"/> GH_Repository
+
+Represents a GitHub repository within the organization. Repository nodes capture metadata about the repo including visibility, Actions enablement status, and security configuration. Repository role nodes (GH_RepoRole) are created alongside each repository to represent the permission levels available.
+
+Created by: `Git-HoundRepository`
+
+## Properties
+
+| Property Name               | Data Type | Description                                                                  |
+| --------------------------- | --------- | ---------------------------------------------------------------------------- |
+| objectid                    | string    | The GitHub `node_id` of the repository, used as the unique graph identifier. |
+| id                          | integer   | The numeric GitHub ID of the repository.                                     |
+| node_id                     | string    | The GitHub GraphQL node ID. Redundant with objectid.                         |
+| name                        | string    | The repository name.                                                         |
+| full_name                   | string    | The fully qualified name (e.g., `org/repo`).                                 |
+| environment_name            | string    | The name of the environment (GitHub organization).                           |
+| environment_id              | string    | The node_id of the environment (GitHub organization).                        |
+| owner_id                    | integer   | The numeric ID of the repository owner.                                      |
+| owner_node_id               | string    | The node_id of the repository owner.                                         |
+| owner_name                  | string    | The login of the repository owner.                                           |
+| private                     | boolean   | Whether the repository is private.                                           |
+| visibility                  | string    | The visibility level: `public`, `private`, or `internal`.                    |
+| html_url                    | string    | URL to the repository on GitHub.                                             |
+| description                 | string    | The repository description.                                                  |
+| created_at                  | datetime  | When the repository was created.                                             |
+| updated_at                  | datetime  | When the repository was last updated.                                        |
+| pushed_at                   | datetime  | When the repository last had a push.                                         |
+| archived                    | boolean   | Whether the repository is archived.                                          |
+| disabled                    | boolean   | Whether the repository is disabled.                                          |
+| open_issues_count           | integer   | Number of open issues.                                                       |
+| allow_forking               | boolean   | Whether forking is allowed.                                                  |
+| web_commit_signoff_required | boolean   | Whether web-based commits require sign-off.                                  |
+| forks                       | integer   | Number of forks.                                                             |
+| open_issues                 | integer   | Number of open issues (includes pull requests).                              |
+| watchers                    | integer   | Number of watchers.                                                          |
+| default_branch              | string    | The name of the default branch (e.g., `main`).                               |
+| actions_enabled             | boolean   | Whether GitHub Actions is enabled for this repository.                       |
+| secret_scanning             | string    | Status of secret scanning (e.g., `enabled`, `disabled`).                     |
+
+## Edges
+
+### Outbound Edges
+
+| Edge Kind                | Target Node                   | Traversable | Description                                                               |
+| ------------------------ | ----------------------------- | ----------- | ------------------------------------------------------------------------- |
+| GH_HasBranch              | GH_Branch                      | No          | Repository has a branch.                                                  |
+| GH_HasWorkflow            | GH_Workflow                    | No          | Repository has a workflow.                                                |
+| GH_HasEnvironment         | GH_Environment                 | Yes         | Repository has a deployment environment (when no custom branch policies). |
+| GH_HasSecret              | GH_OrgSecret                   | Yes         | Repository has access to an organization-level secret. Traversable because write access to the repo enables secret access via workflow creation. |
+| GH_HasSecret              | GH_RepoSecret                  | Yes         | Repository has a repository-level secret. Traversable because write access to the repo enables secret access via workflow creation. |
+| GH_HasVariable            | GH_OrgVariable                 | Yes         | Repository has access to an organization-level variable. Traversable because write access to the repo enables variable access via workflow creation. |
+| GH_HasVariable            | GH_RepoVariable                | Yes         | Repository has a repository-level variable. Traversable because write access to the repo enables variable access via workflow creation. |
+| GH_Contains               | GH_RepoSecret                  | No          | Repository contains a repository-level secret.                            |
+| GH_Contains               | GH_RepoVariable                | No          | Repository contains a repository-level variable.                          |
+| GH_HasSecretScanningAlert | GH_SecretScanningAlert         | No          | Repository has a secret scanning alert.                                   |
+| CanAssumeIdentity        | AZFederatedIdentityCredential | Yes         | Repository can assume an Azure federated identity via OIDC (subject: *).  |
+
+### Inbound Edges
+
+| Edge Kind             | Source Node      | Traversable | Description                                                                                         |
+| --------------------- | ---------------- | ----------- | --------------------------------------------------------------------------------------------------- |
+| GH_Owns               | GH_Organization  | Yes         | Organization owns this repository.                                                                  |
+| GH_WriteRepoContents  | GH_RepoRole      | No          | Repo role can write repository contents. Non-traversable because write access alone is necessary but not sufficient for push access — branch protection rules may block it. |
+| GH_AdminTo            | GH_RepoRole      | Yes         | Repo role has admin access. Traversable because admin confers full control of the repository.        |
+| GH_CanCreateBranch    | GH_RepoRole         | Yes       | Repo role can create new branches (computed from permissions + branch protection rules).              |
+| GH_CanCreateBranch    | GH_User or GH_Team  | Yes       | User or team can create new branches via per-rule allowance (computed — delta only).                 |
+| GH_ReadRepoContents              | GH_RepoRole      | No          | Repo role can read repository contents.                                                              |
+| GH_WriteRepoPullRequests         | GH_RepoRole      | No          | Repo role can create and merge pull requests.                                                        |
+| GH_ManageWebhooks                | GH_RepoRole      | No          | Repo role can manage webhooks.                                                                       |
+| GH_ManageDeployKeys              | GH_RepoRole      | No          | Repo role can manage deploy keys.                                                                    |
+| GH_PushProtectedBranch           | GH_RepoRole      | No          | Repo role can push to protected branches.                                                            |
+| GH_DeleteAlertsCodeScanning      | GH_RepoRole      | No          | Repo role can delete code scanning alerts.                                                           |
+| GH_ViewSecretScanningAlerts      | GH_RepoRole      | No          | Repo role can view secret scanning alerts.                                                           |
+| GH_ResolveSecretScanningAlerts   | GH_RepoRole      | No          | Repo role can resolve secret scanning alerts.                                                        |
+| GH_RunOrgMigration               | GH_RepoRole      | No          | Repo role can run organization migrations.                                                           |
+| GH_BypassBranchProtection        | GH_RepoRole      | No          | Repo role can bypass branch protection rules.                                                        |
+| GH_ManageSecurityProducts        | GH_RepoRole      | No          | Repo role can manage security products.                                                              |
+| GH_ManageRepoSecurityProducts    | GH_RepoRole      | No          | Repo role can manage repo security products.                                                         |
+| GH_EditRepoProtections           | GH_RepoRole      | No          | Repo role can edit branch protection rules.                                                          |
+| GH_JumpMergeQueue                | GH_RepoRole      | No          | Repo role can jump the merge queue.                                                                  |
+| GH_CreateSoloMergeQueueEntry     | GH_RepoRole      | No          | Repo role can create solo merge queue entries.                                                       |
+| GH_EditRepoCustomPropertiesValues | GH_RepoRole     | No          | Repo role can edit custom property values.                                                           |
+| GH_AddLabel                        | GH_RepoRole      | No          | Repo role can add labels.                                                                          |
+| GH_RemoveLabel                     | GH_RepoRole      | No          | Repo role can remove labels.                                                                       |
+| GH_CloseIssue                      | GH_RepoRole      | No          | Repo role can close issues.                                                                        |
+| GH_ReopenIssue                     | GH_RepoRole      | No          | Repo role can reopen issues.                                                                       |
+| GH_ClosePullRequest                | GH_RepoRole      | No          | Repo role can close pull requests.                                                                 |
+| GH_ReopenPullRequest               | GH_RepoRole      | No          | Repo role can reopen pull requests.                                                                |
+| GH_AddAssignee                     | GH_RepoRole      | No          | Repo role can assign users.                                                                        |
+| GH_DeleteIssue                     | GH_RepoRole      | No          | Repo role can delete issues.                                                                       |
+| GH_RemoveAssignee                  | GH_RepoRole      | No          | Repo role can remove assignees.                                                                    |
+| GH_RequestPrReview                 | GH_RepoRole      | No          | Repo role can request PR reviews.                                                                  |
+| GH_MarkAsDuplicate                 | GH_RepoRole      | No          | Repo role can mark as duplicate.                                                                   |
+| GH_SetMilestone                    | GH_RepoRole      | No          | Repo role can set milestones.                                                                      |
+| GH_SetIssueType                    | GH_RepoRole      | No          | Repo role can set issue types.                                                                     |
+| GH_ManageTopics                    | GH_RepoRole      | No          | Repo role can manage topics.                                                                       |
+| GH_ManageSettingsWiki              | GH_RepoRole      | No          | Repo role can manage wiki settings.                                                                |
+| GH_ManageSettingsProjects          | GH_RepoRole      | No          | Repo role can manage project settings.                                                             |
+| GH_ManageSettingsMergeTypes        | GH_RepoRole      | No          | Repo role can manage merge type settings.                                                          |
+| GH_ManageSettingsPages             | GH_RepoRole      | No          | Repo role can manage Pages settings.                                                               |
+| GH_EditRepoMetadata                | GH_RepoRole      | No          | Repo role can edit repository metadata.                                                            |
+| GH_SetInteractionLimits            | GH_RepoRole      | No          | Repo role can set interaction limits.                                                              |
+| GH_SetSocialPreview                | GH_RepoRole      | No          | Repo role can set social preview.                                                                  |
+| GH_EditRepoAnnouncementBanners     | GH_RepoRole      | No          | Repo role can edit announcement banners.                                                           |
+| GH_ReadCodeScanning                | GH_RepoRole      | No          | Repo role can read code scanning results.                                                          |
+| GH_WriteCodeScanning               | GH_RepoRole      | No          | Repo role can upload code scanning results.                                                        |
+| GH_ViewDependabotAlerts            | GH_RepoRole      | No          | Repo role can view Dependabot alerts.                                                              |
+| GH_ResolveDependabotAlerts         | GH_RepoRole      | No          | Repo role can resolve Dependabot alerts.                                                           |
+| GH_DeleteDiscussion                | GH_RepoRole      | No          | Repo role can delete discussions.                                                                  |
+| GH_ToggleDiscussionAnswer          | GH_RepoRole      | No          | Repo role can toggle discussion answers.                                                           |
+| GH_ToggleDiscussionCommentMinimize | GH_RepoRole      | No          | Repo role can minimize discussion comments.                                                        |
+| GH_EditDiscussionCategory          | GH_RepoRole      | No          | Repo role can edit discussion categories.                                                          |
+| GH_CreateDiscussionCategory        | GH_RepoRole      | No          | Repo role can create discussion categories.                                                        |
+| GH_ConvertIssuesToDiscussions      | GH_RepoRole      | No          | Repo role can convert issues to discussions.                                                       |
+| GH_CloseDiscussion                 | GH_RepoRole      | No          | Repo role can close discussions.                                                                   |
+| GH_ReopenDiscussion                | GH_RepoRole      | No          | Repo role can reopen discussions.                                                                  |
+| GH_EditCategoryOnDiscussion        | GH_RepoRole      | No          | Repo role can change discussion category.                                                          |
+| GH_ManageDiscussionBadges          | GH_RepoRole      | No          | Repo role can manage discussion badges.                                                            |
+| GH_EditDiscussionComment           | GH_RepoRole      | No          | Repo role can edit discussion comments.                                                            |
+| GH_DeleteDiscussionComment         | GH_RepoRole      | No          | Repo role can delete discussion comments.                                                          |
+| GH_CreateTag                       | GH_RepoRole      | No          | Repo role can create tags and releases.                                                            |
+| GH_DeleteTag                       | GH_RepoRole      | No          | Repo role can delete tags and releases.                                                            |
+
+## Diagram
+
+```mermaid
+flowchart TD
+    GH_Repository[fa:fa-box-archive GH_Repository]
+    GH_Organization[fa:fa-building GH_Organization]
+    GH_Branch[fa:fa-code-branch GH_Branch]
+    GH_Workflow[fa:fa-cogs GH_Workflow]
+    GH_Environment[fa:fa-leaf GH_Environment]
+    GH_OrgSecret[fa:fa-lock GH_OrgSecret]
+    GH_RepoSecret[fa:fa-lock GH_RepoSecret]
+    GH_OrgVariable[fa:fa-lock-open GH_OrgVariable]
+    GH_RepoVariable[fa:fa-lock-open GH_RepoVariable]
+    GH_SecretScanningAlert[fa:fa-key GH_SecretScanningAlert]
+    GH_RepoRole[fa:fa-user-tie GH_RepoRole]
+    AZFederatedIdentityCredential[fa:fa-id-card AZFederatedIdentityCredential]
+
+    style GH_Repository fill:#9EECFF
+    style GH_Organization fill:#5FED83
+    style GH_Branch fill:#FF80D2
+    style GH_Workflow fill:#FFE4A1
+    style GH_Environment fill:#D5F2C2
+    style GH_OrgSecret fill:#1FB65A
+    style GH_RepoSecret fill:#32BEE6
+    style GH_OrgVariable fill:#E8B84D
+    style GH_RepoVariable fill:#E89B5C
+    style GH_SecretScanningAlert fill:#3C7A6E
+    style GH_RepoRole fill:#DEFEFA
+    style AZFederatedIdentityCredential fill:#FF80D2
+
+    GH_PersonalAccessToken[fa:fa-key GH_PersonalAccessToken]
+
+    style GH_PersonalAccessToken fill:#F5A623
+
+    GH_Organization -->|GH_Owns| GH_Repository
+    GH_Repository -.->|GH_HasBranch| GH_Branch
+    GH_Repository -.->|GH_HasWorkflow| GH_Workflow
+    GH_Repository -->|GH_HasEnvironment| GH_Environment
+    GH_Repository -->|GH_HasSecret| GH_OrgSecret
+    GH_Repository -->|GH_HasSecret| GH_RepoSecret
+    GH_Repository -->|GH_HasVariable| GH_OrgVariable
+    GH_Repository -->|GH_HasVariable| GH_RepoVariable
+    GH_Repository -.->|GH_Contains| GH_RepoSecret
+    GH_Repository -.->|GH_Contains| GH_RepoVariable
+    GH_Repository -.->|GH_HasSecretScanningAlert| GH_SecretScanningAlert
+    GH_RepoRole -.->|GH_ReadRepoContents| GH_Repository
+    GH_RepoRole -.->|GH_WriteRepoContents| GH_Repository
+    GH_RepoRole -->|GH_AdminTo| GH_Repository
+    GH_RepoRole -.->|GH_BypassBranchProtection| GH_Repository
+    GH_RepoRole -.->|GH_EditRepoProtections| GH_Repository
+    GH_RepoRole -.->|GH_ViewSecretScanningAlerts| GH_Repository
+    %% Note: Additional non-traversable permission edges (issue triage, discussions, settings) omitted for readability.
+    GH_RepoRole -.->|GH_ReadCodeScanning| GH_Repository
+    GH_RepoRole -.->|GH_WriteCodeScanning| GH_Repository
+    GH_RepoRole -.->|GH_ViewDependabotAlerts| GH_Repository
+    GH_RepoRole -.->|GH_ResolveDependabotAlerts| GH_Repository
+    GH_RepoRole -.->|GH_DeleteIssue| GH_Repository
+    GH_RepoRole -.->|GH_CreateTag| GH_Repository
+    GH_RepoRole -.->|GH_DeleteTag| GH_Repository
+    GH_RepoRole -->|GH_CanCreateBranch| GH_Repository
+    GH_Repository -->|CanAssumeIdentity| AZFederatedIdentityCredential
+```
