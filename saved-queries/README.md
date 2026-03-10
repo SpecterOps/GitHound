@@ -13,6 +13,17 @@ Pre-built Cypher queries for identifying security-relevant configurations across
 
 ## Queries
 
+### :large_blue_diamond: Demo &mdash; Attack Path Scenarios
+
+| # | File | Name | Description |
+|---|------|------|-------------|
+| 1 | `demo-leaked-token-to-secrets.json` | Leaked Token → Identity Compromise → Secret Access | An attacker who can view secret scanning alerts reads a leaked PAT, impersonates the token owner, and uses the victim's write access to exfiltrate secrets from repositories the attacker never had direct access to. |
+| 2 | `demo-github-to-azure-lateral-movement.json` | GitHub Write Access → Azure Identity Assumption | Users with write access to a repository create workflows that request OIDC tokens, assuming Azure workload identities through federated trust relationships. |
+| 3 | `demo-sso-to-cloud-round-trip.json` | SSO Round-Trip: Azure/Okta → GitHub → Cloud Identity | A compromised Azure or Okta identity syncs to GitHub via SSO, writes to a repo with OIDC federation, and pivots into a different Azure workload identity — crossing cloud boundaries twice. |
+| 4 | `demo-branch-protection-bypass-to-secrets.json` | Branch Protection Bypass → Secret Exfiltration | Users who can push to protected branches (via admin bypass, push allowances, or other mechanisms resolved by the GH_CanWriteBranch computed edge) exfiltrate secrets through workflow creation. |
+| 5 | `demo-nested-team-admin-escalation.json` | Nested Team → Shadow Admin Escalation | Users inherit admin access through nested team chains — privileges that are invisible in GitHub's UI but revealed by graph traversal. |
+| 6 | `demo-federated-user-to-repo-access.json` | Federated External User → Sensitive Repository Access | A federated identity (Azure, Okta, PingOne) synced via SSO reaches repository contents through the GitHub user's role chain — showing how a compromised IdP account or stale SCIM mapping leads to source code access. |
+
 ### :red_circle: Critical &mdash; Active Threats
 
 | # | File | Name | Description |
