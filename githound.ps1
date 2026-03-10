@@ -929,7 +929,7 @@ function Git-HoundOrganization
                 'write_organization_actions_variables' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteOrganizationActionsVariables' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
                 #'write_code_quality' {$kind = 'GH_WriteCodeQuality'}
                 #'write_code_scanning' {$kind = 'GH_WriteCodeScanning'}
-                'write_organization_custom_org_role' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteOrganizationCustomOrgRole' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
+                'write_organization_custom_org_role' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteOrganizationCustomOrgRole' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$true})) }
                 'write_organization_custom_repo_role' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteOrganizationCustomRepoRole' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
                 'write_organization_network_configurations' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteOrganizationNetworkConfigurations' -StartId $customRoleId -EndId $orgNode.id -Properties @{traversable=$false})) }
                 #'write_organization_runner_custom_images' {$kind = 'GH_WriteOrganizationRunnerCustomImages'}
