@@ -29,8 +29,8 @@ None
 
 ### Inbound Edges
 
-| Edge Kind     | Source Node  | Traversable | Description                   |
-| ------------- | ------------ | ----------- | ----------------------------- |
+| Edge Kind      | Source Node   | Traversable | Description                   |
+| -------------- | ------------- | ----------- | ----------------------------- |
 | GH_HasWorkflow | GH_Repository | No          | Repository has this workflow. |
 
 ## Diagram

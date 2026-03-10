@@ -76,8 +76,8 @@
           "value": "EI_lAHOCoV2Oc2WFs4CbGNd"
         },
         "end": {
-          "kind": "OktaUser",
           "match_by": "name",
+          "kind": "OktaUser",
           "value": "jatkinson@specterops.io"
         },
         "properties": {
@@ -99,16 +99,16 @@
       {
         "kind": "SyncedToGHUser",
         "start": {
-          "kind": "OktaUser",
           "match_by": "name",
+          "kind": "OktaUser",
           "value": "jatkinson@specterops.io"
         },
         "end": {
           "value": "MDQ6VXNlcjEzMjc4MjEw"
         },
         "properties": {
-          "traversable": true,
-          "composition": "MATCH p=()<-[:GH_SyncedToEnvironment]-(:GH_SamlIdentityProvider)-[:GH_HasExternalIdentity]->(:GH_ExternalIdentity)-[:GH_MapsToUser]->(n) WHERE n.objectid = 'MDQ6VXNLCJEZMJC4MJEW' OR n.name = 'JATKINSON@SPECTEROPS.IO' RETURN p"
+          "composition": "MATCH p=()<-[:GH_SyncedToEnvironment]-(:GH_SamlIdentityProvider)-[:GH_HasExternalIdentity]->(:GH_ExternalIdentity)-[:GH_MapsToUser]->(n) WHERE n.objectid = 'MDQ6VXNLCJEZMJC4MJEW' OR n.name = 'JATKINSON@SPECTEROPS.IO' RETURN p",
+          "traversable": true
         }
       }
     ]

@@ -12,7 +12,7 @@ Created by: `Git-HoundSecret`
 | id                | string    | Same as objectid.                                                      |
 | name              | string    | The name of the secret.                                                |
 | environment_name  | string    | The name of the environment (GitHub organization).                     |
-| environment_id    | string    | The node_id of the environment (GitHub organization).                                |
+| environment_id    | string    | The node_id of the environment (GitHub organization).                  |
 | repository_name   | string    | The name of the containing repository.                                 |
 | repository_id     | string    | The node_id of the containing repository.                              |
 | created_at        | datetime  | When the secret was created.                                           |
@@ -27,8 +27,8 @@ None
 
 ### Inbound Edges
 
-| Edge Kind   | Source Node  | Traversable | Description                      |
-| ----------- | ------------ | ----------- | -------------------------------- |
+| Edge Kind    | Source Node   | Traversable | Description                      |
+| ------------ | ------------- | ----------- | -------------------------------- |
 | GH_Contains  | GH_Repository | No          | Repository contains this secret. |
 | GH_HasSecret | GH_Repository | Yes         | Repository has this secret. Traversable because any user with write access to the repository can access repo secrets by creating a GitHub Actions workflow. |
 

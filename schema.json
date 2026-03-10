@@ -247,8 +247,8 @@
     },
     {
       "name": "GH_AdminTo",
-      "description": "[Repository] Repo role has admin access to the repository. Traversable because admin confers full control.",
-      "is_traversable": true
+      "description": "[Repository] Repo role has admin access to the repository.",
+      "is_traversable": false
     },
     {
       "name": "GH_BypassBranchProtection",
@@ -637,13 +637,13 @@
     },
     {
       "name": "GH_CanReadSecretScanningAlert",
-      "description": "[Computed] Role can read secret scanning alerts (computed from GH_ViewSecretScanningAlerts permission + GH_Contains/GH_HasSecretScanningAlert)",
+      "description": "[Computed] Role can read secret scanning alerts (computed from GH_ViewSecretScanningAlerts permission + GH_Contains)",
       "is_traversable": true
     },
     {
       "name": "GH_ProtectedBy",
       "description": "Branch protection rule protects this branch",
-      "is_traversable": true
+      "is_traversable": false
     },
     {
       "name": "GH_HasWorkflow",
@@ -653,7 +653,7 @@
     {
       "name": "GH_HasEnvironment",
       "description": "Repository or branch has/can deploy to this environment",
-      "is_traversable": true
+      "is_traversable": false
     },
     {
       "name": "GH_HasSecret",
@@ -664,11 +664,6 @@
       "name": "GH_HasVariable",
       "description": "Repository has access to this variable (org-level or repo-level)",
       "is_traversable": true
-    },
-    {
-      "name": "GH_HasSecretScanningAlert",
-      "description": "Repository has this secret scanning alert",
-      "is_traversable": false
     },
     {
       "name": "GH_ValidToken",

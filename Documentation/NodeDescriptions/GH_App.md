@@ -10,7 +10,7 @@ Created by: `Git-HoundAppInstallation`
 
 | Property Name       | Data Type | Description                                                                    |
 | ------------------- | --------- | ------------------------------------------------------------------------------ |
-| objectid            | string    | Composite identifier: `GH_App_{appId}`.                                       |
+| objectid            | string    | Composite identifier: `A_kwHOABLL_s4ABJ8V`.                                    |
 | id                  | integer   | The GitHub App's numeric ID.                                                   |
 | name                | string    | The display name of the app.                                                   |
 | slug                | string    | The app's URL-friendly slug identifier.                                        |

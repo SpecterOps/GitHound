@@ -7,7 +7,7 @@ The following table summarizes the custom edge kinds used by `GitHound`:
 | Edge Type | Source Node Kinds | Target Node Kinds | Traversable |
 |-----------|-------------------|-------------------|-------------|
 | [GH_Contains] | [GH_Organization] | [GH_User], [GH_Team], [GH_Repository], [GH_OrgRole], [GH_RepoRole], [GH_TeamRole], [GH_OrgSecret], [GH_OrgVariable], [GH_AppInstallation], [GH_PersonalAccessToken], [GH_PersonalAccessTokenRequest] | ❌ |
-|               | [GH_Repository]   | [GH_RepoSecret], [GH_RepoVariable] | ❌ |
+|               | [GH_Repository]   | [GH_RepoSecret], [GH_RepoVariable], [GH_SecretScanningAlert] | ❌ |
 |               | [GH_Environment]  | [GH_EnvironmentSecret], [GH_EnvironmentVariable] | ❌ |
 | [GH_Owns] | [GH_Organization] | [GH_Repository] | ✅ |
 | [GH_HasRole] | [GH_User], [GH_Team] | [GH_OrgRole], [GH_RepoRole], [GH_TeamRole] | ✅ |
@@ -38,7 +38,7 @@ The following table summarizes the custom edge kinds used by `GitHound`:
 | [GH_WriteOrganizationNetworkConfigurations] | [GH_OrgRole] | [GH_Organization] | ❌ |
 | [GH_OrgReviewAndManageSecretScanningBypassRequests] | [GH_OrgRole] | [GH_Organization] | ❌ |
 | [GH_OrgReviewAndManageSecretScanningClosureRequests] | [GH_OrgRole] | [GH_Organization] | ❌ |
-| [GH_ReadRepoContents] | [GH_RepoRole] | [GH_Repository] | ✅ |
+| [GH_ReadRepoContents] | [GH_RepoRole] | [GH_Repository] | ❌ |
 | [GH_WriteRepoContents] | [GH_RepoRole] | [GH_Repository] | ❌ |
 | [GH_WriteRepoPullRequests] | [GH_RepoRole] | [GH_Repository] | ❌ |
 | [GH_AdminTo] | [GH_RepoRole] | [GH_Repository] | ❌ |
@@ -94,7 +94,7 @@ The following table summarizes the custom edge kinds used by `GitHound`:
 | [GH_DeleteDiscussionComment] | [GH_RepoRole] | [GH_Repository] | :x: |
 | [GH_CreateTag] | [GH_RepoRole] | [GH_Repository] | :x: |
 | [GH_DeleteTag] | [GH_RepoRole] | [GH_Repository] | :x: |
-| [GH_ProtectedBy] | [GH_BranchProtectionRule] | [GH_Branch] | ✅ |
+| [GH_ProtectedBy] | [GH_BranchProtectionRule] | [GH_Branch] | ❌ |
 | [GH_BypassPullRequestAllowances] | [GH_User], [GH_Team] | [GH_BranchProtectionRule] | ❌ |
 | [GH_RestrictionsCanPush] | [GH_User], [GH_Team] | [GH_BranchProtectionRule] | ❌ |
 | [GH_HasBranch] | [GH_Repository] | [GH_Branch] | ❌ |
@@ -104,7 +104,6 @@ The following table summarizes the custom edge kinds used by `GitHound`:
 | [GH_HasSecret] | [GH_Repository] | [GH_OrgSecret], [GH_RepoSecret] | ✅ |
 |                | [GH_Environment] | [GH_EnvironmentSecret] | ✅ |
 | [GH_HasVariable] | [GH_Repository] | [GH_OrgVariable], [GH_RepoVariable] | ✅ |
-| [GH_HasSecretScanningAlert] | [GH_Repository] | [GH_SecretScanningAlert] | ❌ |
 | [GH_ValidToken] | [GH_SecretScanningAlert] | [GH_User] | ✅ |
 | [GH_HasSamlIdentityProvider] | [GH_Organization] | [GH_SamlIdentityProvider] | ❌ |
 | [GH_HasExternalIdentity] | [GH_SamlIdentityProvider] | [GH_ExternalIdentity] | ❌ |
@@ -132,17 +131,13 @@ Hybrid edges connect GitHub entities to entities from other supported BloodHound
 |---------------------|-----------------------|---------------------------------|-------------|
 | [SyncedToGHUser]    | [AZUser]              | [GH_User]                       | ✅          |
 | [GH_MapsToUser]     | [GH_ExternalIdentity] | [AZUser]                        | ❌          |
-| [CanAssumeIdentity] | [GH_Repository]       | [AZFederatedIdentityCredential] | ✅          |
-|                     | [GH_Branch]           | [AZFederatedIdentityCredential] | ✅          |
-|                     | [GH_Environment]      | [AZFederatedIdentityCredential] | ✅          |
+| [GH_CanAssumeIdentity] | [GH_Repository]       | [AZFederatedIdentityCredential], [AWSRole] | ✅          |
+|                        | [GH_Branch]           | [AZFederatedIdentityCredential], [AWSRole] | ✅          |
+|                        | [GH_Environment]      | [AZFederatedIdentityCredential], [AWSRole] | ✅          |
 
 ### Amazon Web Services
 
-| Edge Type             | Source Node Kinds | Target Node Kinds | Traversable |
-|-----------------------|-------------------|-------------------|-------------|
-| [GH_CanAssumeAWSRole] | [GH_Repository]   | [AWSRole]         | ✅          |
-|                       | [GH_Branch]       | [AWSRole]         | ✅          |
-|                       | [GH_Environment]  | [AWSRole]         | ✅          |
+AWS IAM role assumption uses the same `GH_CanAssumeIdentity` edge (see Microsoft Entra ID section above).
 
 ### Okta
 
@@ -249,7 +244,6 @@ Hybrid edges connect GitHub entities to entities from other supported BloodHound
 [GH_HasEnvironment]: EdgeDescriptions/GH_HasEnvironment.md
 [GH_HasSecret]: EdgeDescriptions/GH_HasSecret.md
 [GH_HasVariable]: EdgeDescriptions/GH_HasVariable.md
-[GH_HasSecretScanningAlert]: EdgeDescriptions/GH_HasSecretScanningAlert.md
 [GH_ValidToken]: EdgeDescriptions/GH_ValidToken.md
 [GH_HasSamlIdentityProvider]: EdgeDescriptions/GH_HasSamlIdentityProvider.md
 [GH_HasExternalIdentity]: EdgeDescriptions/GH_HasExternalIdentity.md
@@ -263,8 +257,7 @@ Hybrid edges connect GitHub entities to entities from other supported BloodHound
 [GH_CanEditProtection]: EdgeDescriptions/GH_CanEditProtection.md
 [GH_CanReadSecretScanningAlert]: EdgeDescriptions/GH_CanReadSecretScanningAlert.md
 [SyncedToGHUser]: EdgeDescriptions/SyncedToGHUser.md
-[GH_CanAssumeAWSRole]: EdgeDescriptions/GH_CanAssumeAWSRole.md
-[CanAssumeIdentity]: EdgeDescriptions/CanAssumeIdentity.md
+[GH_CanAssumeIdentity]: EdgeDescriptions/GH_CanAssumeIdentity.md
 [GH_Organization]: Nodes/GH_Organization.md
 [GH_User]: Nodes/GH_User.md
 [GH_Team]: Nodes/GH_Team.md

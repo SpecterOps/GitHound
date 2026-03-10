@@ -20,16 +20,16 @@ Created by: `Git-HoundTeam`
 
 ### Outbound Edges
 
-| Edge Kind   | Target Node | Traversable | Description                                                    |
-| ----------- | ----------- | ----------- | -------------------------------------------------------------- |
-| GH_MemberOf  | GH_Team      | Yes         | This role belongs to a team.                                   |
-| GH_AddMember | GH_Team      | Yes         | Maintainer role can add members to the team (Maintainer only). |
+| Edge Kind    | Target Node | Traversable | Description                                                    |
+| ------------ | ----------- | ----------- | -------------------------------------------------------------- |
+| GH_MemberOf  | GH_Team     | Yes         | This role belongs to a team.                                   |
+| GH_AddMember | GH_Team     | Yes         | Maintainer role can add members to the team (Maintainer only). |
 
 ### Inbound Edges
 
-| Edge Kind | Source Node | Traversable | Description                           |
-| --------- | ----------- | ----------- | ------------------------------------- |
-| GH_HasRole | GH_User      | Yes         | A user is assigned to this team role. |
+| Edge Kind  | Source Node | Traversable | Description                           |
+| ---------- | ----------- | ----------- | ------------------------------------- |
+| GH_HasRole | GH_User     | Yes         | A user is assigned to this team role. |
 
 ## Diagram
 

@@ -8,10 +8,10 @@ Created by: `Git-HoundBranch`
 
 | Property Name    | Data Type | Description                                                                  |
 | ---------------- | --------- | ---------------------------------------------------------------------------- |
-| objectid         | string    | A deterministic ID derived from the repository owner, name, and branch name. |
-| name             | string    | The fully qualified branch name (e.g., `org/repo\main`).                     |
+| objectid         | string    | A unique identifier for the branch: `REF_kwDOMuFnXLNyZWZzL2hlYWRzL0NhblB1c2gz` |
+| name             | string    | The fully qualified branch name (e.g., `repo\main`).                           |
 | short_name       | string    | The branch reference name (e.g., `main`).                                    |
-| id               | string    | Same as objectid.                                                            |
+| node_id          | string    | Same as objectid.                                                            |
 | environment_name | string    | The name of the environment (GitHub organization).                           |
 | environment_id   | string    | The node_id of the environment (GitHub organization).                        |
 | protected        | boolean   | Whether the branch has a protection rule.                                    |
@@ -23,15 +23,14 @@ Created by: `Git-HoundBranch`
 | Edge Kind         | Target Node                   | Traversable | Description                                                                                   |
 | ----------------- | ----------------------------- | ----------- | --------------------------------------------------------------------------------------------- |
 | GH_HasEnvironment | GH_Environment                | No          | Branch has a deployment environment via custom branch policy (from Git-HoundEnvironment).     |
-| CanAssumeIdentity | AZFederatedIdentityCredential | Yes         | Branch can assume an Azure federated identity via OIDC (subject: `ref:refs/heads/{branch}`).  |
+| GH_CanAssumeIdentity | AZFederatedIdentityCredential | Yes         | Branch can assume an Azure federated identity via OIDC (subject: `ref:refs/heads/{branch}`).  |
 
 ### Inbound Edges
 
 | Edge Kind        | Source Node             | Traversable | Description                                                                               |
 | ---------------- | ----------------------- | ----------- | ----------------------------------------------------------------------------------------- |
-| GH_HasBranch          | GH_Repository           | Yes         | Repository has this branch.                                                               |
-| GH_ProtectedBy        | GH_BranchProtectionRule | Yes         | Branch protection rule protects this branch.                                              |
-| GH_HasEnvironment     | GH_Branch               | No          | Branch has a deployment environment via custom branch policy (from Git-HoundEnvironment). |
+| GH_HasBranch          | GH_Repository           | No         | Repository has this branch.                                                               |
+| GH_ProtectedBy        | GH_BranchProtectionRule | No         | Branch protection rule protects this branch.                                              |
 | GH_CanEditProtection  | GH_RepoRole             | Yes         | Repo role can modify/remove the protection rules governing this branch (computed).        |
 | GH_CanWriteBranch     | GH_RepoRole             | Yes         | Repo role can push to this branch (computed from permissions + BPR state).                |
 | GH_CanWriteBranch     | GH_User or GH_Team      | Yes         | User or team can push to this branch (computed — per-actor allowance delta).              |
@@ -59,9 +58,9 @@ flowchart TD
     style AZFederatedIdentityCredential fill:#FF80D2
 
     GH_Repository -.->|GH_HasBranch| GH_Branch
-    GH_BranchProtectionRule -->|GH_ProtectedBy| GH_Branch
+    GH_BranchProtectionRule -.->|GH_ProtectedBy| GH_Branch
     GH_Branch -.->|GH_HasEnvironment| GH_Environment
-    GH_Branch -->|CanAssumeIdentity| AZFederatedIdentityCredential
+    GH_Branch -->|GH_CanAssumeIdentity| AZFederatedIdentityCredential
     GH_RepoRole -->|GH_CanWriteBranch| GH_Branch
     GH_RepoRole -->|GH_CanEditProtection| GH_Branch
     GH_User -->|GH_CanWriteBranch| GH_Branch

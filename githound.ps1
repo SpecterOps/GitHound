@@ -1525,7 +1525,7 @@ function Git-HoundRepository
             query_environments            = "MATCH p=(:GH_Repository {node_id: '$($repo.node_id)'})-[:GH_HasEnvironment]->(:GH_Environment) RETURN p"
             query_secrets                 = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_HasSecret]->(:GH_Secret) RETURN p"
             query_variables               = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_HasVariable]->(:GH_Variable) RETURN p"
-            query_secret_scanning_alerts  = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_HasSecretScanningAlert]->(:GH_SecretScanningAlert) RETURN p"
+            query_secret_scanning_alerts  = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_Contains]->(:GH_SecretScanningAlert) RETURN p"
             query_explicit_readers        = "MATCH p=(role:GH_Role)-[:GH_HasBaseRole|GH_ReadRepoContents*1..]->(r:GH_Repository {node_id:'$($repo.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
             query_unrolled_readers        = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ReadRepoContents*1..]->(r:GH_Repository {node_id:'$($repo.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
             query_explicit_writers        = "MATCH p=(role:GH_Role)-[:GH_HasBaseRole|GH_WriteRepoContents|GH_WriteRepoPullRequests*1..]->(r:GH_Repository {node_id:'$($repo.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
@@ -1650,7 +1650,7 @@ function Git-HoundRepository
             query_repository_permissions = "MATCH p=(:GH_RepoRole {node_id:'$($repoAdminId)'})-[*1..]->(:GH_Repository) RETURN p"
         }
         $null = $nodes.Add((New-GitHoundNode -Id $repoAdminId -Kind 'GH_RepoRole', 'GH_Role' -Properties $repoAdminProps))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AdminTo' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$true}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AdminTo' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoMetadata' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadRepoContents' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteRepoContents' -StartId $repoAdminId -EndId $repo.node_id -Properties @{traversable=$false}))
@@ -2683,7 +2683,7 @@ query ProtectionRulesByIds($ids: [ID!]!) {
 
                 # Create GH_ProtectedBy edges from this rule to its branches
                 foreach ($branchId in $ruleToBranches[$ruleId]) {
-                    $null = $edges.Add((New-GitHoundEdge -Kind GH_ProtectedBy -StartId $ruleId -EndId $branchId -Properties @{ traversable = $true }))
+                    $null = $edges.Add((New-GitHoundEdge -Kind GH_ProtectedBy -StartId $ruleId -EndId $branchId -Properties @{ traversable = $false }))
                 }
 
                 # Create GH_BypassPullRequestAllowances edges from actors to this rule
@@ -3518,25 +3518,27 @@ function Compute-GitHoundSecretScanningAccess
         }
     }
 
-    # Build org→alerts map from GH_Contains edges where target is a SecretScanningAlert
+    # Build org→alerts and repo→alerts maps from GH_Contains edges where target is a SecretScanningAlert
     $orgAlerts = @{}
-    # Build repo→alerts map from GH_HasSecretScanningAlert edges
     $repoAlerts = @{}
 
     foreach ($edge in $Edges) {
         if ($edge.kind -eq 'GH_Contains' -and $alertNodeIds.Contains($edge.end.value)) {
-            $orgId = $edge.start.value
-            if (-not $orgAlerts.ContainsKey($orgId)) {
-                $orgAlerts[$orgId] = New-Object System.Collections.ArrayList
+            $sourceNode = $nodeById[$edge.start.value]
+            if ($sourceNode -and $sourceNode.kinds -contains 'GH_Organization') {
+                $orgId = $edge.start.value
+                if (-not $orgAlerts.ContainsKey($orgId)) {
+                    $orgAlerts[$orgId] = New-Object System.Collections.ArrayList
+                }
+                $null = $orgAlerts[$orgId].Add($edge.end.value)
             }
-            $null = $orgAlerts[$orgId].Add($edge.end.value)
-        }
-        elseif ($edge.kind -eq 'GH_HasSecretScanningAlert') {
-            $repoId = $edge.start.value
-            if (-not $repoAlerts.ContainsKey($repoId)) {
-                $repoAlerts[$repoId] = New-Object System.Collections.ArrayList
+            elseif ($sourceNode -and $sourceNode.kinds -contains 'GH_Repository') {
+                $repoId = $edge.start.value
+                if (-not $repoAlerts.ContainsKey($repoId)) {
+                    $repoAlerts[$repoId] = New-Object System.Collections.ArrayList
+                }
+                $null = $repoAlerts[$repoId].Add($edge.end.value)
             }
-            $null = $repoAlerts[$repoId].Add($edge.end.value)
         }
     }
 
@@ -3594,7 +3596,7 @@ function Compute-GitHoundSecretScanningAccess
             Add-ComputedEdge -Kind 'GH_CanReadSecretScanningAlert' -StartId $roleId -EndId $alertId -Properties @{
                 traversable       = $true
                 reason            = 'repo_role_permission'
-                query_composition = "MATCH p1=(:GH_RepoRole {objectid:'$roleId'})-[:GH_ViewSecretScanningAlerts]->(:GH_Repository)-[:GH_HasSecretScanningAlert]->(:GH_SecretScanningAlert {objectid:'$alertId'}) RETURN p1"
+                query_composition = "MATCH p1=(:GH_RepoRole {objectid:'$roleId'})-[:GH_ViewSecretScanningAlerts]->(:GH_Repository)-[:GH_Contains]->(:GH_SecretScanningAlert {objectid:'$alertId'}) RETURN p1"
             }
         }
     }
@@ -3951,7 +3953,7 @@ function Git-HoundEnvironment
                 }
                 else 
                 {
-                    $null = $edges.Add((New-GitHoundEdge -Kind GH_HasEnvironment -StartId $repo.Properties.node_id -EndId $environment.node_id -Properties @{ traversable = $true }))
+                    $null = $edges.Add((New-GitHoundEdge -Kind GH_HasEnvironment -StartId $repo.Properties.node_id -EndId $environment.node_id -Properties @{ traversable = $false }))
                 }
 
                 # List environment secrets
@@ -4722,8 +4724,8 @@ function Git-HoundVariable
 
 # This is a second order data type after GH_Organization
 # Inspired by https://github.com/SpecterOps/GitHound/issues/3
-# The GH_HasSecretScanningAlert edge is used to link the alert to the repository
-# However, that edge is not traversable because the GH_ReadSecretScanningAlerts permission is necessary to read the alerts and the GH_ReadRepositoryContents permission is necessary to read the repository
+# The GH_Contains edge is used to link the alert to both the organization and the repository
+# However, that edge is not traversable because the GH_ViewSecretScanningAlerts permission is necessary to read the alerts
 function Git-HoundSecretScanningAlert
 {
     <#
@@ -4748,7 +4750,7 @@ function Git-HoundSecretScanningAlert
         A PSObject representing the GitHub organization for which to retrieve secret scanning alerts.
 
     .OUTPUTS
-        A PSObject containing two properties: Nodes and Edges. Nodes is an array of GH_SecretScanningAlert nodes, and Edges is an array of GH_HasSecretScanningAlert edges.
+        A PSObject containing two properties: Nodes and Edges. Nodes is an array of GH_SecretScanningAlert nodes, and Edges is an array of GH_Contains edges.
 
     .EXAMPLE
         $session = New-GitHoundSession -Token "your_github_token"
@@ -4792,14 +4794,14 @@ function Git-HoundSecretScanningAlert
             updated_at               = Normalize-Null $alert.updated_at
             url                      = Normalize-Null $alert.html_url
             # Accordion Panel Queries
-            query_repository         = "MATCH p=(r:GH_SecretScanningAlert {node_id:'$alertId'})<-[:GH_HasSecretScanningAlert]-(repo:GH_Repository) RETURN p"
+            query_repository         = "MATCH p=(r:GH_SecretScanningAlert {node_id:'$alertId'})<-[:GH_Contains]-(repo:GH_Repository) RETURN p"
             # This currently doesn't take into account that there is an organization-level permission that can allow users to view alerts without having any repository permissions, but it's a start. We can iterate on the queries in future releases.
-            query_alert_viewers      = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ViewSecretScanningAlerts*1..]->(:GH_Repository)-[:GH_HasSecretScanningAlert]->(:GH_SecretScanningAlert {node_id:'$alertId'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
+            query_alert_viewers      = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_ViewSecretScanningAlerts*1..]->(:GH_Repository)-[:GH_Contains]->(:GH_SecretScanningAlert {node_id:'$alertId'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
         }
 
         $null = $nodes.Add((New-GitHoundNode -Id $alertId -Kind 'GH_SecretScanningAlert' -Properties $properties))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $alert.repository.owner.node_id -EndId $alertId -Properties @{ traversable = $false }))
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecretScanningAlert' -StartId $alert.repository.node_id -EndId $alertId -Properties @{ traversable = $false }))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $alert.repository.node_id -EndId $alertId -Properties @{ traversable = $false }))
 
         if($alert.state -eq 'open' -and $alert.secret_type -eq 'github_personal_access_token')
         {
@@ -4919,13 +4921,12 @@ function Git-HoundAppInstallation
             $properties = @{
                 # Common Properties
                 name                 = Normalize-Null $app.app_slug
-                id                   = Normalize-Null $app.id
                 node_id              = Normalize-Null $app.client_id
                 # Relational Properties
                 environment_name     = Normalize-Null $app.account.login
                 environment_id       = Normalize-Null $app.account.node_id
                 repositories_url     = Normalize-Null $app.repositories_url
-                app_id               = Normalize-Null $app.app_id
+                app_id               = Normalize-Null $app.id
                 app_slug             = Normalize-Null $app.app_slug
                 # Node Specific Properties
                 client_id            = Normalize-Null $app.client_id
@@ -5344,11 +5345,11 @@ function Parse-GitHoundOIDCSubject
 {
     <#
     .SYNOPSIS
-        Parses GitHub OIDC subject claims from AZFederatedIdentityCredential nodes and creates CanAssumeIdentity edges.
+        Parses GitHub OIDC subject claims from AZFederatedIdentityCredential nodes and creates GH_CanAssumeIdentity edges.
 
     .DESCRIPTION
         This function processes AZFederatedIdentityCredential nodes that have GitHub OIDC subject claims
-        (subjects beginning with "repo:") and creates CanAssumeIdentity edges from the appropriate GitHub
+        (subjects beginning with "repo:") and creates GH_CanAssumeIdentity edges from the appropriate GitHub
         node (GH_Branch, GH_Environment, or GH_Repository) to the AZFederatedIdentityCredential node.
 
         GitHub OIDC subject claim format: repo:{org}/{repo}:{qualifier}
@@ -5469,7 +5470,7 @@ function Parse-GitHoundOIDCSubject
         }
 
         $null = $edges.Add((New-GitHoundEdge `
-            -Kind 'CanAssumeIdentity' `
+            -Kind 'GH_CanAssumeIdentity' `
             -StartId $startValue `
             -StartKind $startKind `
             -StartMatchBy 'name' `

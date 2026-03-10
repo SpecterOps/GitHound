@@ -23,20 +23,20 @@ Created by: `Git-HoundUser`
 
 ### Outbound Edges
 
-| Edge Kind | Target Node | Traversable | Description                                                                    |
-| --------- | ----------- | ----------- | ------------------------------------------------------------------------------ |
-| GH_HasRole                      | GH_OrgRole               | Yes         | User is assigned to an organization role (Owner or Member).                    |
-| GH_HasRole                      | GH_RepoRole              | Yes         | User is directly assigned to a repository role (from Git-HoundRepositoryRole). |
-| GH_HasRole                      | GH_TeamRole              | Yes         | User has a team role (Member or Maintainer).                                   |
-| GH_BypassPullRequestAllowances  | GH_BranchProtectionRule  | No          | User can bypass PR requirements on this protection rule.                       |
-| GH_RestrictionsCanPush           | GH_BranchProtectionRule  | No          | User is allowed to push to branches protected by this rule.                    |
-| GH_CanWriteBranch                | GH_Branch                | Yes         | User can push to this branch (computed — per-actor allowance delta).           |
-| GH_CanCreateBranch               | GH_Repository            | Yes         | User can create new branches (computed — per-actor allowance delta).           |
+| Edge Kind                      | Target Node             | Traversable | Description                                                                    |
+| ------------------------------ | ----------------------- | ----------- | ------------------------------------------------------------------------------ |
+| GH_HasRole                     | GH_OrgRole              | Yes         | User is assigned to an organization role (Owner or Member).                    |
+| GH_HasRole                     | GH_RepoRole             | Yes         | User is directly assigned to a repository role (from Git-HoundRepositoryRole). |
+| GH_HasRole                     | GH_TeamRole             | Yes         | User has a team role (Member or Maintainer).                                   |
+| GH_BypassPullRequestAllowances | GH_BranchProtectionRule | No          | User can bypass PR requirements on this protection rule.                       |
+| GH_RestrictionsCanPush         | GH_BranchProtectionRule | No          | User is allowed to push to branches protected by this rule.                    |
+| GH_CanWriteBranch              | GH_Branch               | Yes         | User can push to this branch (computed — per-actor allowance delta).           |
+| GH_CanCreateBranch             | GH_Repository           | Yes         | User can create new branches (computed — per-actor allowance delta).           |
 
 ### Inbound Edges
 
-| Edge Kind    | Source Node        | Traversable | Description                                              |
-| ------------ | ------------------ | ----------- | -------------------------------------------------------- |
+| Edge Kind     | Source Node         | Traversable | Description                                              |
+| ------------- | ------------------- | ----------- | -------------------------------------------------------- |
 | GH_MapsToUser | GH_ExternalIdentity | No          | An external SAML/SCIM identity maps to this GitHub user. |
 
 > **Note:** The following outbound edges are also created from GH_User when PAT/PAT Request collection is enabled (`-CollectAll`):

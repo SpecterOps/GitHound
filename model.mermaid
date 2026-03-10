@@ -64,10 +64,10 @@ flowchart TD
     GH_Team -.->|GH_BypassPullRequestAllowances| GH_BranchProtectionRule
     GH_User -.->|GH_RestrictionsCanPush| GH_BranchProtectionRule
     GH_Team -.->|GH_RestrictionsCanPush| GH_BranchProtectionRule
-    GH_BranchProtectionRule -->|GH_ProtectedBy| GH_Branch
+    GH_BranchProtectionRule -.->|GH_ProtectedBy| GH_Branch
     GH_Repository -->|GH_HasBranch| GH_Branch
     GH_Repository -.->|GH_HasWorkflow| GH_Workflow
-    GH_Repository -->|GH_HasEnvironment| GH_Environment
+    GH_Repository -.->|GH_HasEnvironment| GH_Environment
     GH_Branch -.->|GH_HasEnvironment| GH_Environment
     GH_Team -->|GH_HasRole| GH_OrgRole
     GH_User -->|GH_HasRole| GH_OrgRole
@@ -99,7 +99,7 @@ flowchart TD
     GH_OrgRole -->|GH_HasBaseRole| GH_RepoRole
     GH_RepoRole -.->|GH_WriteRepoContents| GH_Repository
     %%GH_RepoRole -.->|GH_WriteRepoPullRequests| GH_Repository
-    GH_RepoRole -->|GH_AdminTo| GH_Repository
+    GH_RepoRole -.->|GH_AdminTo| GH_Repository
     %%GH_RepoRole -.->|GH_ManageWebhooks| GH_Repository
     %%GH_RepoRole -.->|GH_ManageDeployKeys| GH_Repository
     %%GH_RepoRole -.->|GH_PushProtectedBranch| GH_Repository
@@ -126,7 +126,7 @@ flowchart TD
     GH_Repository -->|GH_HasSecret| GH_OrgSecret
     GH_Repository -.->|GH_Contains| GH_RepoSecret
     GH_Repository -->|GH_HasSecret| GH_RepoSecret
-    GH_Repository -.->|GH_HasSecretScanningAlert| GH_SecretScanningAlert
+    GH_Repository -.->|GH_Contains| GH_SecretScanningAlert
     GH_Environment -.->|GH_Contains| GH_EnvironmentSecret
     GH_Environment -.->|GH_HasSecret| GH_EnvironmentSecret
 
@@ -150,6 +150,6 @@ flowchart TD
     OktaUser -->|SyncedToGHUser| GH_User
     PingOneUser -->|SyncedToGHUser| GH_User
     SCIMUser -->|SCIMProvisioned| GH_ExternalIdentity
-    GH_Repository -->|CanAssumeIdentity| AZFederatedIdentityCredential
-    GH_Branch -->|CanAssumeIdentity| AZFederatedIdentityCredential
-    GH_Environment -->|CanAssumeIdentity| AZFederatedIdentityCredential
+    GH_Repository -->|GH_CanAssumeIdentity| AZFederatedIdentityCredential
+    GH_Branch -->|GH_CanAssumeIdentity| AZFederatedIdentityCredential
+    GH_Environment -->|GH_CanAssumeIdentity| AZFederatedIdentityCredential
