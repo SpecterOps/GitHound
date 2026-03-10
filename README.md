@@ -91,7 +91,7 @@ GitHound models 50+ edge types representing permissions, memberships, and cross-
 | **Repository Permissions** | `GH_AdminTo`, `GH_CanPush`, `GH_CanPull` | What roles can do |
 | **Branch Protections** | `GH_BypassPullRequestAllowances`, `GH_RestrictionsCanPush` | Branch-level access |
 | **Secrets** | `GH_HasSecret` | Secret access mapping |
-| **Cross-Cloud** | `CanAssumeIdentity`, `SyncedToGHUser`, `GH_CanAssumeAWSRole` | Attack paths to Azure/AWS |
+| **Cross-Cloud** | `GH_CanAssumeIdentity`, `SyncedToGHUser` | Attack paths to Azure/AWS |
 
 **Primary attack path pattern:**
 
@@ -165,11 +165,11 @@ Find GitHub entities that can assume Azure federated identities (OIDC trust rela
 
 ```cypher
 // All GitHub → Azure OIDC attack paths
-MATCH p = (:GH_Repository|GH_Branch|GH_Environment)-[:CanAssumeIdentity]->(:AZFederatedIdentityCredential)
+MATCH p = (:GH_Repository|GH_Branch|GH_Environment)-[:GH_CanAssumeIdentity]->(:AZFederatedIdentityCredential)
 RETURN p
 
 // Users with paths to Azure via GitHub Actions
-MATCH p = (:GH_User)-[:GH_HasRole|GH_MemberOf|GH_AddMember*1..]->(:GH_RepoRole)-[:GH_CanPush]->(:GH_Repository)-[:CanAssumeIdentity]->(:AZFederatedIdentityCredential)
+MATCH p = (:GH_User)-[:GH_HasRole|GH_MemberOf|GH_AddMember*1..]->(:GH_RepoRole)-[:GH_CanPush]->(:GH_Repository)-[:GH_CanAssumeIdentity]->(:AZFederatedIdentityCredential)
 RETURN p
 ```
 
@@ -183,7 +183,7 @@ RETURN p
 ### Repositories with Secret Scanning Alerts
 
 ```cypher
-MATCH p = (:GH_Repository)-[:GH_HasSecretScanningAlert]->(:GH_SecretScanningAlert)
+MATCH p = (:GH_Repository)-[:GH_Contains]->(:GH_SecretScanningAlert)
 RETURN p
 ```
 

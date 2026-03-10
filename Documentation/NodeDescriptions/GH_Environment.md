@@ -28,13 +28,13 @@ Created by: `Git-HoundEnvironment`
 | GH_Contains        | GH_EnvironmentSecret           | No          | Environment contains an environment-level secret.                                    |
 | GH_Contains        | GH_EnvironmentVariable         | No          | Environment contains an environment-level variable.                                  |
 | GH_HasSecret       | GH_EnvironmentSecret           | Yes         | Environment has this secret. Traversable because write access enables secret access via workflow creation. |
-| CanAssumeIdentity | AZFederatedIdentityCredential | Yes         | Environment can assume an Azure federated identity via OIDC (subject: environment:{envName}). |
+| GH_CanAssumeIdentity | AZFederatedIdentityCredential | Yes         | Environment can assume an Azure federated identity via OIDC (subject: environment:{envName}). |
 
 ### Inbound Edges
 
 | Edge Kind        | Source Node  | Traversable | Description                                                                 |
 | ---------------- | ------------ | ----------- | --------------------------------------------------------------------------- |
-| GH_HasEnvironment | GH_Repository | Yes         | Repository has this environment (when no custom branch policies).           |
+| GH_HasEnvironment | GH_Repository | No         | Repository has this environment (when no custom branch policies).           |
 | GH_HasEnvironment | GH_Branch     | No          | Branch is allowed to deploy to this environment (via custom branch policy). |
 
 ## Diagram
@@ -55,10 +55,10 @@ flowchart TD
     style GH_EnvironmentVariable fill:#D4A84B
     style AZFederatedIdentityCredential fill:#FF80D2
 
-    GH_Repository -->|GH_HasEnvironment| GH_Environment
+    GH_Repository -.->|GH_HasEnvironment| GH_Environment
     GH_Branch -.->|GH_HasEnvironment| GH_Environment
     GH_Environment -.->|GH_Contains| GH_EnvironmentSecret
     GH_Environment -.->|GH_Contains| GH_EnvironmentVariable
     GH_Environment -->|GH_HasSecret| GH_EnvironmentSecret
-    GH_Environment -->|CanAssumeIdentity| AZFederatedIdentityCredential
+    GH_Environment -->|GH_CanAssumeIdentity| AZFederatedIdentityCredential
 ```

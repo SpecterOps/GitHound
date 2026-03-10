@@ -46,6 +46,7 @@ These edges represent organizational hierarchy and ownership.
 | `GH_Contains` | `GH_Repository`   | `GH_RepoVariable`      | No          | Repository contains this variable.       |
 | `GH_Contains` | `GH_Environment`  | `GH_EnvironmentSecret` | No          | Environment contains this secret.        |
 | `GH_Contains` | `GH_Environment`  | `GH_EnvironmentVariable`| No         | Environment contains this variable.      |
+| `GH_Contains` | `GH_Repository`   | `GH_SecretScanningAlert`| No         | Repository contains this secret scanning alert. |
 | `GH_Owns`     | `GH_Organization` | `GH_Repository`        | Yes         | Organization owns this repository.       |
 
 ### Role & Membership Edges
@@ -165,7 +166,7 @@ These edges represent branch-level permissions and protections.
 | Edge Type                        | Source                    | Target                    | Traversable | Computed | Description                                                                      |
 |----------------------------------|---------------------------|---------------------------|-------------|----------|----------------------------------------------------------------------------------|
 | `GH_CanEditProtection`           | `GH_RepoRole`            | `GH_Branch`               | Yes         | Yes      | Role can modify or remove the protection rules governing this branch.            |
-| `GH_ProtectedBy`                 | `GH_BranchProtectionRule` | `GH_Branch`               | Yes         | No       | Branch protection rule protects this branch.                                     |
+| `GH_ProtectedBy`                 | `GH_BranchProtectionRule` | `GH_Branch`               | No          | No       | Branch protection rule protects this branch.                                     |
 | `GH_BypassPullRequestAllowances` | `GH_User`                 | `GH_BranchProtectionRule` | No          | No       | User can bypass PR requirements on this protection rule.                         |
 | `GH_BypassPullRequestAllowances` | `GH_Team`                 | `GH_BranchProtectionRule` | No          | No       | Team can bypass PR requirements on this protection rule.                         |
 | `GH_RestrictionsCanPush`         | `GH_User`                 | `GH_BranchProtectionRule` | No          | No       | User is allowed to push to branches protected by this rule.                      |
@@ -201,7 +202,7 @@ Each computed edge includes a `reason` property indicating why access was grante
 
 ### Computed Secret Scanning Access Edges
 
-These edges are computed post-collection by `Compute-GitHoundSecretScanningAccess`. They cross-reference `GH_ViewSecretScanningAlerts` permission edges with structural edges (`GH_Contains`, `GH_HasSecretScanningAlert`) to determine which roles can read which secret scanning alerts.
+These edges are computed post-collection by `Compute-GitHoundSecretScanningAccess`. They cross-reference `GH_ViewSecretScanningAlerts` permission edges with `GH_Contains` structural edges to determine which roles can read which secret scanning alerts.
 
 | Edge Type                       | Source        | Target                    | Traversable | Description                                                                      |
 |---------------------------------|---------------|---------------------------|-------------|----------------------------------------------------------------------------------|
@@ -220,14 +221,13 @@ These edges connect repositories to their resources.
 |----------------------------|-----------------|--------------------------|-------------|------------------------------------------------|
 | `GH_HasBranch`             | `GH_Repository` | `GH_Branch`              | No          | Repository has this branch.                    |
 | `GH_HasWorkflow`           | `GH_Repository` | `GH_Workflow`            | No          | Repository has this workflow.                  |
-| `GH_HasEnvironment`        | `GH_Repository` | `GH_Environment`         | Yes         | Repository has this environment.               |
+| `GH_HasEnvironment`        | `GH_Repository` | `GH_Environment`         | No          | Repository has this environment.               |
 | `GH_HasEnvironment`        | `GH_Branch`     | `GH_Environment`         | No          | Branch can deploy to this environment.         |
 | `GH_HasSecret`             | `GH_Repository` | `GH_OrgSecret`           | Yes         | Repository has access to this org secret. Traversable because write access enables secret access via workflow creation. |
 | `GH_HasSecret`             | `GH_Repository` | `GH_RepoSecret`          | Yes         | Repository has this repo secret. Traversable because write access enables secret access via workflow creation. |
 | `GH_HasSecret`             | `GH_Environment`| `GH_EnvironmentSecret`  | Yes         | Environment has this secret. Traversable because write access enables secret access via workflow creation. |
 | `GH_HasVariable`           | `GH_Repository` | `GH_OrgVariable`         | Yes         | Repository has access to this org variable. Traversable because write access enables variable access via workflow creation. |
 | `GH_HasVariable`           | `GH_Repository` | `GH_RepoVariable`        | Yes         | Repository has this repo variable. Traversable because write access enables variable access via workflow creation. |
-| `GH_HasSecretScanningAlert`| `GH_Repository` | `GH_SecretScanningAlert` | No          | Repository has this secret scanning alert.     |
 | `GH_ValidToken`            | `GH_SecretScanningAlert` | `GH_User`       | Yes         | Alert contains a valid, active PAT belonging to this user. |
 
 ### App Installation Edges
@@ -260,9 +260,9 @@ These edges connect GitHub nodes to nodes in other platforms (Azure, AWS, Okta, 
 | `SyncedToGHUser`     | `PingOneUser`         | `GH_User`                        | Yes         | PingOne user is synced to GitHub user via SAML/SCIM.                             |
 | `GH_MapsToUser`      | `GH_ExternalIdentity` | `AZUser`/`OktaUser`/`PingOneUser`| No          | External identity maps to identity provider user.                                |
 | `SCIMProvisioned`    | `SCIMUser`            | `GH_User`                        | Yes         | SCIM user is provisioned and mapped to a GitHub user.                            |
-| `CanAssumeIdentity`  | `GH_Repository`       | `AZFederatedIdentityCredential`  | Yes         | Repository can assume Azure federated identity (subject: `*`).                   |
-| `CanAssumeIdentity`  | `GH_Branch`           | `AZFederatedIdentityCredential`  | Yes         | Branch can assume Azure federated identity (subject: `ref:refs/heads/{branch}`). |
-| `CanAssumeIdentity`  | `GH_Environment`      | `AZFederatedIdentityCredential`  | Yes         | Environment can assume Azure federated identity (subject: `environment:{name}`). |
+| `GH_CanAssumeIdentity`  | `GH_Repository`       | `AZFederatedIdentityCredential`  | Yes         | Repository can assume Azure federated identity (subject: `*`).                   |
+| `GH_CanAssumeIdentity`  | `GH_Branch`           | `AZFederatedIdentityCredential`  | Yes         | Branch can assume Azure federated identity (subject: `ref:refs/heads/{branch}`). |
+| `GH_CanAssumeIdentity`  | `GH_Environment`      | `AZFederatedIdentityCredential`  | Yes         | Environment can assume Azure federated identity (subject: `environment:{name}`). |
 
 ## Structural Edge Patterns
 
@@ -305,7 +305,7 @@ Trace role inheritance:
 Find GitHub users who can push to a branch and assume Azure identities:
 
 ```cypher
-(:GH_User)-[:GH_HasRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_WriteRepoContents]->(:GH_Repository)-[:CanAssumeIdentity]->(:AZFederatedIdentityCredential)
+(:GH_User)-[:GH_HasRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_WriteRepoContents]->(:GH_Repository)-[:GH_CanAssumeIdentity]->(:AZFederatedIdentityCredential)
 ```
 
 ## Key Traversable Edges
@@ -320,10 +320,8 @@ The following edges are marked as "traversable" and form the primary attack path
 | `GH_AddMember`        | Team role can add members (maintainer privilege)   |
 | `GH_HasBaseRole`      | Role inherits from another role                    |
 | `GH_Owns`             | Organization owns repository                       |
-| `GH_HasEnvironment`   | Repository has a deployment environment            |
 | `GH_HasSecret`        | Repository/environment has this secret             |
 | `GH_HasVariable`      | Repository has this variable                       |
-| `GH_ProtectedBy`      | Branch protection rule protects this branch        |
 | `GH_CanCreateBranch`  | Role/actor can create new branches (computed)      |
 | `GH_CanWriteBranch`   | Role/actor can push to this branch (computed)      |
 | `GH_CanEditProtection`| Role can modify/remove branch protections (computed)|
@@ -331,7 +329,7 @@ The following edges are marked as "traversable" and form the primary attack path
 | `GH_ValidToken`       | Alert contains a valid leaked PAT for this user    |
 | `SyncedToGHUser`      | Identity provider user synced to GitHub user       |
 | `SCIMProvisioned`     | SCIM user provisioned and mapped to GitHub user    |
-| `CanAssumeIdentity`   | GitHub entity can assume Azure identity            |
+| `GH_CanAssumeIdentity`| GitHub entity can assume Azure identity            |
 
 ## Mitigating Controls & Computed Edges
 

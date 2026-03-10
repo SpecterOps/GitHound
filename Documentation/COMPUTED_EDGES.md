@@ -339,7 +339,7 @@ The following data must exist in the collections before the function runs:
 |---------------|-------------|
 | `GH_ViewSecretScanningAlerts` | OrgRole → Organization or RepoRole → Repository |
 | `GH_Contains` | Organization → SecretScanningAlert |
-| `GH_HasSecretScanningAlert` | Repository → SecretScanningAlert |
+| `GH_Contains` | Repository → SecretScanningAlert |
 
 ## Output Structure
 
@@ -380,7 +380,7 @@ Each computed edge includes a `query_composition` property containing a Cypher q
 | Source Type | What the query shows |
 |-------------|---------------------|
 | `GH_OrgRole` → Alert | Role's `GH_ViewSecretScanningAlerts` edge to organization + organization's `GH_Contains` edge to alert |
-| `GH_RepoRole` → Alert | Role's `GH_ViewSecretScanningAlerts` edge to repository + repository's `GH_HasSecretScanningAlert` edge to alert |
+| `GH_RepoRole` → Alert | Role's `GH_ViewSecretScanningAlerts` edge to repository + repository's `GH_Contains` edge to alert |
 
 ## Algorithm Walkthrough
 

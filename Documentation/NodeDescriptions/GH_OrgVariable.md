@@ -8,7 +8,7 @@ Created by: `Git-HoundOrganizationSecret`
 
 | Property Name     | Data Type | Description                                                                                                                  |
 | ----------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| objectid          | string    | A deterministic ID in the format `GH_OrgVariable_{orgNodeId}_{variableName}`.                                                 |
+| objectid          | string    | A deterministic ID in the format `GH_OrgVariable_{orgNodeId}_{variableName}`.                                                |
 | id                | string    | Same as objectid.                                                                                                            |
 | name              | string    | The name of the variable.                                                                                                    |
 | environment_name  | string    | The name of the environment (GitHub organization).                                                                           |

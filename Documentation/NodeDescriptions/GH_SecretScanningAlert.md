@@ -26,15 +26,15 @@ Created by: `Git-HoundSecretScanningAlert`
 
 ### Outbound Edges
 
-| Edge Kind      | Target Node | Traversable | Description                                                                      |
-| -------------- | ----------- | ----------- | -------------------------------------------------------------------------------- |
+| Edge Kind      | Target Node | Traversable | Description                                                                                                                      |
+| -------------- | ----------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | GH_ValidToken  | GH_User     | Yes         | Alert contains a valid, active PAT belonging to this user. Only emitted when the alert is open and the token is confirmed valid. |
 
 ### Inbound Edges
 
-| Edge Kind                       | Source Node              | Traversable | Description                                                   |
-| ------------------------------- | ------------------------ | ----------- | ------------------------------------------------------------- |
-| GH_HasSecretScanningAlert        | GH_Repository             | No          | Repository has this secret scanning alert.                    |
+| Edge Kind                        | Source Node              | Traversable | Description                                                                      |
+| -------------------------------- | ------------------------ | ----------- | -------------------------------------------------------------------------------- |
+| GH_Contains                      | GH_Repository            | No          | Repository contains this secret scanning alert.                                  |
 | GH_CanReadSecretScanningAlert    | GH_OrgRole, GH_RepoRole  | Yes         | Role can read this alert (computed from GH_ViewSecretScanningAlerts permission). |
 
 ## Diagram
@@ -53,7 +53,7 @@ flowchart TD
     style GH_OrgRole fill:#BFFFD1
     style GH_RepoRole fill:#DEFEFA
 
-    GH_Repository -.->|GH_HasSecretScanningAlert| GH_SecretScanningAlert
+    GH_Repository -.->|GH_Contains| GH_SecretScanningAlert
     GH_SecretScanningAlert -->|GH_ValidToken| GH_User
     GH_OrgRole -->|GH_CanReadSecretScanningAlert| GH_SecretScanningAlert
     GH_RepoRole -->|GH_CanReadSecretScanningAlert| GH_SecretScanningAlert
