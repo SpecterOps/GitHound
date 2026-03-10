@@ -1,6 +1,6 @@
 ---
 kind: GH_WriteOrganizationCustomOrgRole
-is_traversable: false
+is_traversable: true
 ---
 
 # GH_WriteOrganizationCustomOrgRole
@@ -12,7 +12,7 @@ is_traversable: false
 
 ## General Information
 
-The non-traversable `GH_WriteOrganizationCustomOrgRole` edge represents that a role can create or modify custom organization role definitions. This edge is dynamically generated from custom organization role permissions discovered by the collector. Modifying organization role definitions can escalate privileges because an attacker could add permissions to an existing custom role that is already assigned to their account, or create a new role with elevated permissions. This makes it a high-impact permission for privilege escalation within the organization.
+The traversable `GH_WriteOrganizationCustomOrgRole` edge represents that a role can create or modify custom organization role definitions. This edge is dynamically generated from custom organization role permissions discovered by the collector. Modifying organization role definitions can escalate privileges because an attacker could add permissions to an existing custom role that is already assigned to their account, including setting the base_role to inherit all_repo_admin. Since this permission can only belong to custom organization roles, the user necessarily holds the role they can modify — guaranteeing a self-escalation path. This makes it a Tier Zero privilege escalation vector.
 
 ```mermaid
 graph LR

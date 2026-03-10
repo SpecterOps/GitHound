@@ -603,7 +603,7 @@
     {
       "name": "GH_WriteOrganizationCustomOrgRole",
       "description": "[Organization] Org role can write custom org role definitions",
-      "is_traversable": false
+      "is_traversable": true
     },
     {
       "name": "GH_WriteOrganizationCustomRepoRole",
@@ -628,7 +628,7 @@
     {
       "name": "GH_HasBranch",
       "description": "Repository has this branch",
-      "is_traversable": true
+      "is_traversable": false
     },
     {
       "name": "GH_CanEditProtection",
@@ -704,6 +704,26 @@
       "name": "GH_CanAccess",
       "description": "Personal access token or app installation can access this repository or organization",
       "is_traversable": false
+    },
+    {
+      "name": "GH_CanWriteBranch",
+      "description": "[Repository - Computed] Role can push to this branch after evaluating branch protection rules, push restrictions, and bypass allowances",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_CanCreateBranch",
+      "description": "[Repository - Computed] Role can create new branches in this repository (unprotected branches that bypass the merge gate)",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_CanAssumeIdentity",
+      "description": "Repository can assume this cloud identity via OIDC federation (Azure workload identity or AWS IAM role)",
+      "is_traversable": true
+    },
+    {
+      "name": "SyncedToGHUser",
+      "description": "External identity (Azure, Okta, PingOne) is synced to this GitHub user via SSO/SCIM",
+      "is_traversable": true
     }
   ],
   "environments": [
