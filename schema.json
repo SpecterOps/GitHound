@@ -12,7 +12,7 @@
       "description": "A GitHub Organization—top-level container for repositories, teams, and settings",
       "is_display_kind": true,
       "icon": "building",
-      "color": "0x5FED83"
+      "color": "#5FED83"
     },
     {
       "name": "GH_User",
@@ -20,7 +20,7 @@
       "description": "An individual GitHub user account",
       "is_display_kind": true,
       "icon": "user",
-      "color": "0xFF8E40"
+      "color": "#FF8E40"
     },
     {
       "name": "GH_Team",
@@ -28,7 +28,7 @@
       "description": "A team within an organization, grouping users for shared access and collaboration",
       "is_display_kind": true,
       "icon": "user-group",
-      "color": "0xC06EFF"
+      "color": "#C06EFF"
     },
     {
       "name": "GH_Repository",
@@ -36,7 +36,7 @@
       "description": "A code repository in an organization, containing files, issues, and other resources",
       "is_display_kind": true,
       "icon": "box-archive",
-      "color": "0x9EECFF"
+      "color": "#9EECFF"
     },
     {
       "name": "GH_Branch",
@@ -44,7 +44,7 @@
       "description": "A named reference in a repository representing a line of development",
       "is_display_kind": true,
       "icon": "code-branch",
-      "color": "0xFF80D2"
+      "color": "#FF80D2"
     },
     {
       "name": "GH_BranchProtectionRule",
@@ -52,7 +52,7 @@
       "description": "A branch protection rule that applies to one or more branches via pattern matching",
       "is_display_kind": true,
       "icon": "shield",
-      "color": "0xFFB347"
+      "color": "#FFB347"
     },
     {
       "name": "GH_OrgRole",
@@ -60,7 +60,7 @@
       "description": "The role a user has at the organization level (e.g., admin, member)",
       "is_display_kind": true,
       "icon": "user-tie",
-      "color": "0xBFFFD1"
+      "color": "#xBFFFD1"
     },
     {
       "name": "GH_TeamRole",
@@ -68,7 +68,7 @@
       "description": "The role a user has within a team (e.g., maintainer, member)",
       "is_display_kind": true,
       "icon": "user-tie",
-      "color": "0xD0B0FF"
+      "color": "#D0B0FF"
     },
     {
       "name": "GH_RepoRole",
@@ -76,7 +76,7 @@
       "description": "The permission granted to a user or team on a repository (e.g., admin, write, read)",
       "is_display_kind": true,
       "icon": "user-tie",
-      "color": "0xDEFEFA"
+      "color": "#DEFEFA"
     },
     {
       "name": "GH_Workflow",
@@ -84,7 +84,7 @@
       "description": "A GitHub Actions workflow defined in a repository",
       "is_display_kind": true,
       "icon": "cogs",
-      "color": "0xFFE4A1"
+      "color": "#FFE4A1"
     },
     {
       "name": "GH_Environment",
@@ -92,7 +92,7 @@
       "description": "A GitHub Actions deployment environment with protection rules and deployment branch policies",
       "is_display_kind": true,
       "icon": "leaf",
-      "color": "0xD5F2C2"
+      "color": "#D5F2C2"
     },
     {
       "name": "GH_OrgSecret",
@@ -100,7 +100,7 @@
       "description": "An organization-level GitHub Actions secret that can be scoped to all, private, or selected repositories",
       "is_display_kind": true,
       "icon": "lock",
-      "color": "0x1FB65A"
+      "color": "#1FB65A"
     },
     {
       "name": "GH_RepoSecret",
@@ -108,7 +108,7 @@
       "description": "A repository-level GitHub Actions secret accessible only to workflows in that repository",
       "is_display_kind": true,
       "icon": "lock",
-      "color": "0x32BEE6"
+      "color": "#32BEE6"
     },
     {
       "name": "GH_EnvironmentSecret",
@@ -116,7 +116,7 @@
       "description": "An environment-level GitHub Actions secret scoped to a specific deployment environment",
       "is_display_kind": true,
       "icon": "lock",
-      "color": "0x6FB94A"
+      "color": "#6FB94A"
     },
     {
       "name": "GH_OrgVariable",
@@ -124,7 +124,7 @@
       "description": "An organization-level GitHub Actions variable that can be scoped to all, private, or selected repositories. Unlike secrets, variable values are readable.",
       "is_display_kind": true,
       "icon": "lock-open",
-      "color": "0xE8B84D"
+      "color": "#E8B84D"
     },
     {
       "name": "GH_RepoVariable",
@@ -132,7 +132,7 @@
       "description": "A repository-level GitHub Actions variable accessible only to workflows in that repository. Unlike secrets, variable values are readable.",
       "is_display_kind": true,
       "icon": "lock-open",
-      "color": "0xE89B5C"
+      "color": "#E89B5C"
     },
     {
       "name": "GH_EnvironmentVariable",
@@ -140,7 +140,7 @@
       "description": "An environment-level GitHub Actions variable scoped to a specific deployment environment. Unlike secrets, variable values are readable.",
       "is_display_kind": true,
       "icon": "lock-open",
-      "color": "0xD4A84B"
+      "color": "#D4A84B"
     },
     {
       "name": "GH_SecretScanningAlert",
@@ -148,7 +148,7 @@
       "description": "A GitHub Advanced Security alert indicating a secret was accidentally committed to a repository",
       "is_display_kind": true,
       "icon": "key",
-      "color": "0x3C7A6E"
+      "color": "#3C7A6E"
     },
     {
       "name": "GH_SamlIdentityProvider",
@@ -156,7 +156,7 @@
       "description": "A SAML identity provider configured for the organization, enabling SSO",
       "is_display_kind": true,
       "icon": "id-badge",
-      "color": "0x5A6C8F"
+      "color": "#5A6C8F"
     },
     {
       "name": "GH_ExternalIdentity",
@@ -164,7 +164,7 @@
       "description": "An external identity from a SAML/SCIM provider linked to a GitHub user for SSO authentication",
       "is_display_kind": true,
       "icon": "arrows-left-right",
-      "color": "0x8A8F98"
+      "color": "#8A8F98"
     },
     {
       "name": "GH_App",
@@ -172,7 +172,7 @@
       "description": "A GitHub App definition representing the registered application. The app owner controls the private key used to generate installation tokens.",
       "is_display_kind": true,
       "icon": "cube",
-      "color": "0x7EC8E3"
+      "color": "#7EC8E3"
     },
     {
       "name": "GH_AppInstallation",
@@ -180,7 +180,7 @@
       "description": "A GitHub App installed on the organization with specific permissions and repository access",
       "is_display_kind": true,
       "icon": "plug",
-      "color": "0xA8D8EA"
+      "color": "#A8D8EA"
     },
     {
       "name": "GH_PersonalAccessToken",
@@ -188,7 +188,7 @@
       "description": "A fine-grained personal access token granted access to organization resources",
       "is_display_kind": true,
       "icon": "key",
-      "color": "0xF5A623"
+      "color": "#F5A623"
     },
     {
       "name": "GH_PersonalAccessTokenRequest",
@@ -196,7 +196,7 @@
       "description": "A pending request from an organization member to access organization resources with a fine-grained personal access token",
       "is_display_kind": true,
       "icon": "key",
-      "color": "0xD4A017"
+      "color": "#D4A017"
     }
   ],
   "relationship_kinds": [

@@ -5510,6 +5510,7 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
     organization(login: $login) {
         id
         name
+        login
         samlIdentityProvider
         {
             digestMethod
@@ -5621,7 +5622,7 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                 name                      = $result.data.organization.samlIdentityProvider.id
                 node_id                   = $result.data.organization.samlIdentityProvider.id
                 # Relational Properties
-                environment_name         = $result.data.organization.name
+                environment_name         = $result.data.organization.login
                 environment_id           = $result.data.organization.id
                 foreign_environment_id   = $ForeignEnvironmentId
                 # Node Specific Properties
@@ -5650,7 +5651,7 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                     guid                      = Normalize-Null $identity.guid
                     # Relational Properties
                     environment_id           = Normalize-Null $result.data.organization.id
-                    environment_name         = Normalize-Null $result.data.organization.name
+                    environment_name         = Normalize-Null $result.data.organization.login
                     # Node Specific Properties
                     saml_identity_family_name = Normalize-Null $identity.samlIdentity.familyName
                     saml_identity_given_name  = Normalize-Null $identity.samlIdentity.givenName
