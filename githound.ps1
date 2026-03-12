@@ -763,7 +763,7 @@ function Git-HoundOrganization
         name                                                         = Normalize-Null $org.login
         node_id                                                      = Normalize-Null $org.node_id
         # Relational Properties
-        environment_id                                               = Normalize-Null $org.node_id
+        environmentid                                                = Normalize-Null $org.node_id
         environment_name                                             = Normalize-Null $org.login
         # Node Specific Properties
         login                                                        = Normalize-Null $org.login
@@ -824,10 +824,10 @@ function Git-HoundOrganization
         default_workflow_permissions                                 = Normalize-Null $workflowPerms.default_workflow_permissions
         can_approve_pull_request_reviews                             = Normalize-Null $workflowPerms.can_approve_pull_request_reviews
         # Accordion Panel Queries
-        query_organization_roles                      = "MATCH (:GH_Organization {node_id:'$($org.node_id)'})-[:GH_Contains]->(n:GH_OrgRole) RETURN n"
-        query_users                                    = "MATCH (n:GH_User {environment_id:'$($org.node_id)'}) RETURN n"
-        query_teams                                    = "MATCH (n:GH_Team {environment_id:'$($org.node_id)'}) RETURN n"
-        query_repositories                             = "MATCH (n:GH_Repository {environment_id:'$($org.node_id)'}) RETURN n"
+        query_organization_roles                       = "MATCH (:GH_Organization {node_id:'$($org.node_id)'})-[:GH_Contains]->(n:GH_OrgRole) RETURN n"
+        query_users                                    = "MATCH (n:GH_User {environmentid:'$($org.node_id)'}) RETURN n"
+        query_teams                                    = "MATCH (n:GH_Team {environmentid:'$($org.node_id)'}) RETURN n"
+        query_repositories                             = "MATCH (n:GH_Repository {environmentid:'$($org.node_id)'}) RETURN n"
         query_personal_access_tokens                   = "MATCH p=(:GH_Organization {node_id: '$($org.node_id)'})-[:GH_Contains]->(token) WHERE token:GH_PersonalAccessToken OR token:GH_PersonalAccessTokenRequest RETURN p"
         query_secret_scanning_alerts                   = "MATCH p=(:GH_Organization {node_id: '$($org.node_id)'})-[:GH_Contains]->(alert:GH_SecretScanningAlert) RETURN p"
         query_identity_provider                        = "MATCH p=(OIP:GH_SamlIdentityProvider)-[:GH_HasExternalIdentity]->(EI:GH_ExternalIdentity) MATCH p1=(OIP)<-[:GH_HasSamlIdentityProvider]-(:GH_Organization {node_id:'$($org.node_id)'}) MATCH p2=(EI)-[:GH_MapsToUser]->() RETURN p,p1,p2"
@@ -859,7 +859,7 @@ function Git-HoundOrganization
             node_id                = Normalize-Null $customRoleId
             # Relational Properties
             environment_name       = Normalize-Null $org.login
-            environment_id         = Normalize-Null $org.node_id
+            environmentid         = Normalize-Null $org.node_id
             # Node Specific Properties
             short_name             = Normalize-Null $customrole.namehttps://research.bloodhoundenterprise.io/ui/graphview?environmentId=S-1-5-21-1273778777-4208638582-2921056243
             type                   = Normalize-Null 'custom'
@@ -946,7 +946,7 @@ function Git-HoundOrganization
         node_id                = Normalize-Null $orgOwnersId
         # Relational Properties
         environment_name       = Normalize-Null $org.login
-        environment_id         = Normalize-Null $org.node_id
+        environmentid          = Normalize-Null $org.node_id
         # Node Specific Properties
         short_name             = Normalize-Null 'owners'
         type                   = Normalize-Null 'default'
@@ -974,7 +974,7 @@ function Git-HoundOrganization
         node_id           = Normalize-Null $orgMembersId
         # Relational Properties
         environment_name  = Normalize-Null $org.login
-        environment_id    = Normalize-Null $org.node_id
+        environmentid    = Normalize-Null $org.node_id
         # Node Specific Properties
         short_name        = Normalize-Null 'members'
         type              = Normalize-Null 'default'
@@ -1129,7 +1129,7 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
                 node_id           = Normalize-Null $team.id
                 # Relational Properties
                 environment_name  = Normalize-Null $Organization.properties.login
-                environment_id    = Normalize-Null $Organization.properties.node_id
+                environmentid    = Normalize-Null $Organization.properties.node_id
                 # Node Specific Properties
                 slug              = Normalize-Null $team.slug
                 description       = Normalize-Null $team.description
@@ -1158,7 +1158,7 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
                 node_id            = Normalize-Null $memberId
                 # Relational Properties
                 environment_name   = Normalize-Null $Organization.properties.login
-                environment_id     = Normalize-Null $Organization.properties.node_id
+                environmentid     = Normalize-Null $Organization.properties.node_id
                 team_name          = Normalize-Null $team.name
                 team_id            = Normalize-Null $team.id
                 # Node Specific Properties
@@ -1179,7 +1179,7 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
                 node_id            = Normalize-Null $maintainerId
                 # Relational Properties
                 environment_name   = Normalize-Null $Organization.properties.login
-                environment_id     = Normalize-Null $Organization.properties.node_id
+                environmentid     = Normalize-Null $Organization.properties.node_id
                 team_name          = Normalize-Null $team.name
                 team_id            = Normalize-Null $team.id
                 # Node Specific Properties
@@ -1348,7 +1348,7 @@ query MembersWithRole($login: String!, $count: Int = 100, $after: String = null)
                 node_id             = Normalize-Null $user.id
                 # Relational Properties
                 environment_name    = Normalize-Null $Organization.properties.login
-                environment_id      = Normalize-Null $Organization.properties.node_id
+                environmentid      = Normalize-Null $Organization.properties.node_id
                 # Node Specific Properties
                 login               = Normalize-Null $user.login
                 full_name           = Normalize-Null $user.name
@@ -1491,7 +1491,7 @@ function Git-HoundRepository
             node_id                       = Normalize-Null $repo.node_id
             # Relational Properties
             environment_name              = Normalize-Null $Organization.properties.login
-            environment_id                = Normalize-Null $Organization.properties.node_id
+            environmentid                = Normalize-Null $Organization.properties.node_id
             owner_name                    = Normalize-Null $repo.owner.login
             #owner_id                     = Normalize-Null $repo.owner.id
             owner_id                      = Normalize-Null $repo.owner.node_id
@@ -1548,7 +1548,7 @@ function Git-HoundRepository
             node_id                = Normalize-Null $repoReadId
             # Relational Properties
             environment_name       = Normalize-Null $Organization.properties.login
-            environment_id         = Normalize-Null $Organization.properties.node_id
+            environmentid         = Normalize-Null $Organization.properties.node_id
             repository_name        = Normalize-Null $repo.name
             repository_id          = Normalize-Null $repo.node_id
             # Node Specific Properties
@@ -1579,7 +1579,7 @@ function Git-HoundRepository
             node_id                = Normalize-Null $repoWriteId
             # Relational Properties
             environment_name       = Normalize-Null $Organization.properties.login
-            environment_id         = Normalize-Null $Organization.properties.node_id
+            environmentid         = Normalize-Null $Organization.properties.node_id
             repository_name        = Normalize-Null $repo.name
             repository_id          = Normalize-Null $repo.node_id
             # Node Specific Properties
@@ -1637,7 +1637,7 @@ function Git-HoundRepository
             node_id                = Normalize-Null $repoAdminId
             # Relational Properties
             environment_name       = Normalize-Null $Organization.properties.login
-            environment_id         = Normalize-Null $Organization.properties.node_id
+            environmentid         = Normalize-Null $Organization.properties.node_id
             repository_name        = Normalize-Null $repo.name
             repository_id          = Normalize-Null $repo.node_id
             # Node Specific Properties
@@ -1725,7 +1725,7 @@ function Git-HoundRepository
             node_id                = Normalize-Null $repoTriageId
             # Relational Properties
             environment_name       = Normalize-Null $Organization.properties.login
-            environment_id         = Normalize-Null $Organization.properties.node_id
+            environmentid         = Normalize-Null $Organization.properties.node_id
             repository_name        = Normalize-Null $repo.name
             repository_id          = Normalize-Null $repo.node_id
             # Node Specific Properties
@@ -1773,7 +1773,7 @@ function Git-HoundRepository
             node_id                = Normalize-Null $repoMaintainId
             # Relational Properties
             environment_name       = Normalize-Null $Organization.properties.login
-            environment_id         = Normalize-Null $Organization.properties.node_id
+            environmentid         = Normalize-Null $Organization.properties.node_id
             repository_name        = Normalize-Null $repo.name
             repository_id          = Normalize-Null $repo.node_id
             # Node Specific Properties
@@ -1813,7 +1813,7 @@ function Git-HoundRepository
                 node_id                = Normalize-Null $customRepoRoleId
                 # Relational Properties
                 environment_name       = Normalize-Null $Organization.properties.login
-                environment_id         = Normalize-Null $Organization.properties.node_id
+                environmentid         = Normalize-Null $Organization.properties.node_id
                 repository_name        = Normalize-Null $repo.name
                 repository_id          = Normalize-Null $repo.node_id
                 # Node Specific Properties
@@ -2418,7 +2418,7 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
                     node_id            = Normalize-Null $branchId
                     # Relational Properties
                     environment_name   = Normalize-Null $orgLogin
-                    environment_id     = Normalize-Null $orgNodeId
+                    environmentid     = Normalize-Null $orgNodeId
                     repository_name    = Normalize-Null $repo.name
                     repository_id      = Normalize-Null $repo.id
                     # Node Specific Properties
@@ -2520,7 +2520,7 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
                     node_id            = Normalize-Null $branchId
                     # Relational Properties
                     environment_name   = Normalize-Null $orgLogin
-                    environment_id     = Normalize-Null $orgNodeId
+                    environmentid     = Normalize-Null $orgNodeId
                     repository_name    = Normalize-Null $overflowRepo.name
                     repository_id      = Normalize-Null $overflowRepo.nodeId
                     # Node Specific Properties
@@ -2655,7 +2655,7 @@ query ProtectionRulesByIds($ids: [ID!]!) {
                     node_id                         = Normalize-Null $ruleId
                     # Relational Properties
                     environment_name                = Normalize-Null $orgLogin
-                    environment_id                  = Normalize-Null $orgNodeId
+                    environmentid                  = Normalize-Null $orgNodeId
                     repository_name                 = Normalize-Null $ruleRepo.name
                     repository_id                   = Normalize-Null $ruleRepo.id
                     # Node Specific Properties
@@ -3773,7 +3773,7 @@ function Git-HoundWorkflow
                         node_id           = Normalize-Null $workflow.node_id
                         # Relational Properties
                         environment_name  = Normalize-Null $repo.properties.environment_name
-                        environment_id    = Normalize-Null $repo.properties.environment_id
+                        environmentid    = Normalize-Null $repo.properties.environmentid
                         repository_name   = Normalize-Null $repo.name
                         repository_id     = Normalize-Null $repo.id
                         # Node Specific Properties
@@ -3932,7 +3932,7 @@ function Git-HoundEnvironment
                     node_id           = Normalize-Null $environment.node_id
                     # Relational Properties
                     environment_name  = Normalize-Null $repo.properties.environment_name
-                    environment_id    = Normalize-Null $repo.properties.environment_id
+                    environmentid    = Normalize-Null $repo.properties.environmentid
                     repository_name   = Normalize-Null $repo.name
                     repository_id     = Normalize-Null $repo.id
                     # Node Specific Properties
@@ -3947,7 +3947,7 @@ function Git-HoundEnvironment
                 {
                     foreach($policy in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/environments/$($environment.name)/deployment-branch-policies").branch_policies)
                     {
-                        $branchId = [System.BitConverter]::ToString([System.Security.Cryptography.MD5]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes("$($repo.properties.environment_id)_$($repo.properties.full_name)_$($policy.name)"))).Replace('-', '')
+                        $branchId = [System.BitConverter]::ToString([System.Security.Cryptography.MD5]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes("$($repo.properties.environmentid)_$($repo.properties.full_name)_$($policy.name)"))).Replace('-', '')
                         $null = $edges.Add((New-GitHoundEdge -Kind GH_HasEnvironment -StartId $branchId -EndId $environment.node_id -Properties @{ traversable = $false }))
                     }
                 }
@@ -3968,11 +3968,11 @@ function Git-HoundEnvironment
                         node_id                         = Normalize-Null $secretId
                         # Relational Properties
                         environment_name                = Normalize-Null $repo.properties.environment_name
-                        environment_id                  = Normalize-Null $repo.properties.environment_id
+                        environmentid                  = Normalize-Null $repo.properties.environmentid
                         repository_name                 = Normalize-Null $repo.name
                         repository_id                   = Normalize-Null $repo.id
                         deployment_environment_name     = Normalize-Null $environment.name
-                        deployment_environment_id       = Normalize-Null $environment.node_id
+                        deployment_environmentid       = Normalize-Null $environment.node_id
                         # Node Specific Properties
                         created_at                      = Normalize-Null $secret.created_at
                         updated_at                      = Normalize-Null $secret.updated_at
@@ -3994,11 +3994,11 @@ function Git-HoundEnvironment
                         node_id                         = Normalize-Null $variableId
                         # Relational Properties
                         environment_name                = Normalize-Null $repo.properties.environment_name
-                        environment_id                  = Normalize-Null $repo.properties.environment_id
+                        environmentid                  = Normalize-Null $repo.properties.environmentid
                         repository_name                 = Normalize-Null $repo.name
                         repository_id                   = Normalize-Null $repo.id
                         deployment_environment_name     = Normalize-Null $environment.name
-                        deployment_environment_id       = Normalize-Null $environment.node_id
+                        deployment_environmentid       = Normalize-Null $environment.node_id
                         # Node Specific Properties
                         value                           = Normalize-Null $variable.value
                         created_at                      = Normalize-Null $variable.created_at
@@ -4123,7 +4123,7 @@ function Git-HoundOrganizationSecret
                 node_id              = Normalize-Null $secretId
                 # Relational Properties
                 environment_name     = Normalize-Null $orgLogin
-                environment_id       = Normalize-Null $orgNodeId
+                environmentid       = Normalize-Null $orgNodeId
                 # Node Specific Properties
                 created_at           = Normalize-Null $secret.created_at
                 updated_at           = Normalize-Null $secret.updated_at
@@ -4190,7 +4190,7 @@ function Git-HoundOrganizationSecret
                 node_id              = Normalize-Null $variableId
                 # Relational Properties
                 environment_name     = Normalize-Null $orgLogin
-                environment_id       = Normalize-Null $orgNodeId
+                environmentid       = Normalize-Null $orgNodeId
                 # Node Specific Properties
                 value                = Normalize-Null $variable.value
                 created_at           = Normalize-Null $variable.created_at
@@ -4394,7 +4394,7 @@ function Git-HoundSecret
                         node_id              = Normalize-Null $secretId
                         # Relational Properties
                         environment_name     = Normalize-Null $repo.properties.environment_name
-                        environment_id       = Normalize-Null $repo.properties.environment_id
+                        environmentid       = Normalize-Null $repo.properties.environmentid
                         repository_name      = Normalize-Null $repo.name
                         repository_id        = Normalize-Null $repo.id
                         # Node Specific Properties
@@ -4637,7 +4637,7 @@ function Git-HoundVariable
                         node_id              = Normalize-Null $variableId
                         # Relational Properties
                         environment_name     = Normalize-Null $repo.properties.environment_name
-                        environment_id       = Normalize-Null $repo.properties.environment_id
+                        environmentid       = Normalize-Null $repo.properties.environmentid
                         repository_name      = Normalize-Null $repo.name
                         repository_id        = Normalize-Null $repo.id
                         # Node Specific Properties
@@ -4780,7 +4780,7 @@ function Git-HoundSecretScanningAlert
             node_id                  = Normalize-Null $alertId
             # Relational Properties
             environment_name         = Normalize-Null $alert.repository.owner.login
-            environment_id           = Normalize-Null $alert.repository.owner.node_id
+            environmentid           = Normalize-Null $alert.repository.owner.node_id
             repository_name          = Normalize-Null $alert.repository.name
             repository_id            = Normalize-Null $alert.repository.node_id
             repository_url           = Normalize-Null $alert.repository.html_url
@@ -4924,7 +4924,7 @@ function Git-HoundAppInstallation
                 node_id              = Normalize-Null $app.client_id
                 # Relational Properties
                 environment_name     = Normalize-Null $app.account.login
-                environment_id       = Normalize-Null $app.account.node_id
+                environmentid       = Normalize-Null $app.account.node_id
                 repositories_url     = Normalize-Null $app.repositories_url
                 app_id               = Normalize-Null $app.id
                 app_slug             = Normalize-Null $app.app_slug
@@ -5113,7 +5113,7 @@ function Git-HoundPersonalAccessToken
                 node_id              = Normalize-Null $patId
                 # Relational Properties
                 environment_name     = Normalize-Null $orgLogin
-                environment_id       = Normalize-Null $orgNodeId
+                environmentid       = Normalize-Null $orgNodeId
                 owner_login          = Normalize-Null $pat.owner.login
                 #owner_id             = Normalize-Null $pat.owner.id
                 owner_node_id        = Normalize-Null $pat.owner.node_id
@@ -5230,7 +5230,7 @@ function Git-HoundPersonalAccessTokenRequest
             node_id              = Normalize-Null $requestId
             # Relational Properties
             environment_name     = Normalize-Null $orgLogin
-            environment_id       = Normalize-Null $orgNodeId
+            environmentid       = Normalize-Null $orgNodeId
             owner_login          = Normalize-Null $request.owner.login
             #owner_id             = Normalize-Null $request.owner.id
             owner_node_id        = Normalize-Null $request.owner.node_id
@@ -5623,8 +5623,8 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                 node_id                   = $result.data.organization.samlIdentityProvider.id
                 # Relational Properties
                 environment_name         = $result.data.organization.login
-                environment_id           = $result.data.organization.id
-                foreign_environment_id   = $ForeignEnvironmentId
+                environmentid           = $result.data.organization.id
+                foreign_environmentid   = $ForeignEnvironmentId
                 # Node Specific Properties
                 digest_method             = $result.data.organization.samlIdentityProvider.digestMethod
                 idp_certificate           = $result.data.organization.samlIdentityProvider.idpCertificate
@@ -5650,7 +5650,7 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                     name                      = Normalize-Null $identity.guid
                     guid                      = Normalize-Null $identity.guid
                     # Relational Properties
-                    environment_id           = Normalize-Null $result.data.organization.id
+                    environmentid           = Normalize-Null $result.data.organization.id
                     environment_name         = Normalize-Null $result.data.organization.login
                     # Node Specific Properties
                     saml_identity_family_name = Normalize-Null $identity.samlIdentity.familyName
@@ -6072,7 +6072,7 @@ function Invoke-GitHound
     $payload = [PSCustomObject]@{
         '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
         metadata = [PSCustomObject]@{
-            source_kind = "GitHubTest"
+            source_kind = "GitHub"
         }
         graph = [PSCustomObject]@{
             nodes = $filteredNodes

@@ -10,7 +10,7 @@
         "properties": {
           "name": "OIP_kwDOCoV2Oc2WFg",
           "node_id": "OIP_kwDOCoV2Oc2WFg",
-          "environment_name": "SpecterOps Testing",
+          "environment_name": "SpecterTst",
           "environment_id": "O_kgDOCoV2OQ",
           "foreign_environment_id": "integrator-5415459.okta.com",
           "digest_method": "http://www.w3.org/2001/04/xmlenc#sha256",
@@ -31,7 +31,7 @@
           "name": "d9219f20-d6d6-11f0-8f93-069c0d01bdfa",
           "guid": "d9219f20-d6d6-11f0-8f93-069c0d01bdfa",
           "environment_id": "O_kgDOCoV2OQ",
-          "environment_name": "SpecterOps Testing",
+          "environment_name": "SpecterTst",
           "saml_identity_family_name": "",
           "saml_identity_given_name": "",
           "saml_identity_name_id": "jatkinson@specterops.io",
