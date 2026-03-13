@@ -17,7 +17,7 @@ Created by: `Git-HoundTeam`
 | privacy           | string    | The team's privacy level (e.g., `visible`, `secret`).                     |
 | permission        | string    | The team's default permission on repositories.                            |
 | environment_name  | string    | The name of the environment (GitHub organization).                        |
-| environment_id    | string    | The node_id of the environment (GitHub organization).                     |
+| environmentid    | string    | The node_id of the environment (GitHub organization).                     |
 
 ## Edges
 

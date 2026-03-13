@@ -12,7 +12,7 @@ Created by: `Git-HoundOrganizationSecret`
 | id                | string    | Same as objectid.                                                                                                            |
 | name              | string    | The name of the variable.                                                                                                    |
 | environment_name  | string    | The name of the environment (GitHub organization).                                                                           |
-| environment_id    | string    | The node_id of the environment (GitHub organization).                                                                        |
+| environmentid    | string    | The node_id of the environment (GitHub organization).                                                                        |
 | value             | string    | The plaintext value of the variable.                                                                                         |
 | created_at        | datetime  | When the variable was created.                                                                                               |
 | updated_at        | datetime  | When the variable was last updated.                                                                                          |

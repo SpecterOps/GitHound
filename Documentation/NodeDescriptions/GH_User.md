@@ -17,7 +17,7 @@ Created by: `Git-HoundUser`
 | id                | integer   | The numeric GitHub ID of the user.                                     |
 | node_id           | string    | The GitHub GraphQL node ID. Redundant with objectid.                   |
 | environment_name  | string    | The name of the environment (GitHub organization) the user belongs to. |
-| environment_id    | string    | The node_id of the environment (GitHub organization).                  |
+| environmentid    | string    | The node_id of the environment (GitHub organization).                  |
 
 ## Edges
 
