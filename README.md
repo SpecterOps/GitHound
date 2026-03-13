@@ -92,7 +92,7 @@ GitHound models 50+ edge types representing permissions, memberships, and cross-
 | **Repository Permissions** | `GH_AdminTo`, `GH_CanPush`, `GH_CanPull`                   | What roles can do         |
 | **Branch Protections**     | `GH_BypassPullRequestAllowances`, `GH_RestrictionsCanPush` | Branch-level access       |
 | **Secrets**                | `GH_HasSecret`                                             | Secret access mapping     |
-| **Cross-Cloud**            | `GH_CanAssumeIdentity`, `SyncedToGHUser`                   | Attack paths to Azure/AWS |
+| **Cross-Cloud**            | `GH_CanAssumeIdentity`, `GH_SyncedTo`                   | Attack paths to Azure/AWS |
 
 **Primary attack path pattern:**
 
@@ -154,7 +154,7 @@ RETURN p
 ### Users that are managed via SSO (Entra-only)
 
 ```cypher
-MATCH p = (:AZUser)-[:SyncedToGHUser]->(:GH_User)
+MATCH p = (:AZUser)-[:GH_SyncedTo]->(:GH_User)
 RETURN p
 ```
 

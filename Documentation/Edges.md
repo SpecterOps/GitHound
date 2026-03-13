@@ -129,7 +129,7 @@ Hybrid edges connect GitHub entities to entities from other supported BloodHound
 
 | Edge Type           | Source Node Kinds     | Target Node Kinds               | Traversable |
 |---------------------|-----------------------|---------------------------------|-------------|
-| [SyncedToGHUser]    | [AZUser]              | [GH_User]                       | ✅          |
+| [GH_SyncedTo]    | [AZUser]              | [GH_User]                       | ✅          |
 | [GH_MapsToUser]     | [GH_ExternalIdentity] | [AZUser]                        | ❌          |
 | [GH_CanAssumeIdentity] | [GH_Repository]       | [AZFederatedIdentityCredential], [AWSRole] | ✅          |
 |                        | [GH_Branch]           | [AZFederatedIdentityCredential], [AWSRole] | ✅          |
@@ -143,14 +143,14 @@ AWS IAM role assumption uses the same `GH_CanAssumeIdentity` edge (see Microsoft
 
 | Edge Type        | Source Node Kinds     | Target Node Kinds | Traversable |
 |------------------|-----------------------|-------------------|-------------|
-| [SyncedToGHUser] | [OktaUser]            | [GH_User]         | ✅          |
+| [GH_SyncedTo] | [OktaUser]            | [GH_User]         | ✅          |
 | [GH_MapsToUser]  | [GH_ExternalIdentity] | [OktaUser]        | ❌          |
 
 ### PingOne
 
 | Edge Type        | Source Node Kinds     | Target Node Kinds | Traversable |
 |------------------|-----------------------|-------------------|-------------|
-| [SyncedToGHUser] | [PingOneUser]         | [GH_User]         | ✅          |
+| [GH_SyncedTo] | [PingOneUser]         | [GH_User]         | ✅          |
 | [GH_MapsToUser]  | [GH_ExternalIdentity] | [PingOneUser]     | ❌          |
 
 [GH_Contains]: EdgeDescriptions/GH_Contains.md
@@ -256,7 +256,7 @@ AWS IAM role assumption uses the same `GH_CanAssumeIdentity` edge (see Microsoft
 [GH_CanCreateBranch]: EdgeDescriptions/GH_CanCreateBranch.md
 [GH_CanEditProtection]: EdgeDescriptions/GH_CanEditProtection.md
 [GH_CanReadSecretScanningAlert]: EdgeDescriptions/GH_CanReadSecretScanningAlert.md
-[SyncedToGHUser]: EdgeDescriptions/SyncedToGHUser.md
+[GH_SyncedTo]: EdgeDescriptions/GH_SyncedTo.md
 [GH_CanAssumeIdentity]: EdgeDescriptions/GH_CanAssumeIdentity.md
 [GH_Organization]: Nodes/GH_Organization.md
 [GH_User]: Nodes/GH_User.md

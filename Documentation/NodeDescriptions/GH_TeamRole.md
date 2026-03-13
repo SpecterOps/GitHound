@@ -14,7 +14,7 @@ Created by: `Git-HoundTeam`
 | short_name        | string    | The short role name: `member` or `maintainer`.                                       |
 | type              | string    | Always `default` for team roles.                                                     |
 | environment_name  | string    | The name of the environment (GitHub organization).                                   |
-| environmentid    | string    | The node_id of the environment (GitHub organization).                                |
+| environmentid     | string    | The node_id of the environment (GitHub organization).                                |
 
 ## Edges
 
