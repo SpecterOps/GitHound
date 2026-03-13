@@ -14,7 +14,7 @@ Created by: `Git-HoundRepository`
 | short_name        | string    | The short role name (e.g., `read`, `write`, `admin`, `triage`, `maintain`, or custom role name). |
 | type              | string    | `default` for built-in roles or `custom` for custom repository roles.                            |
 | environment_name  | string    | The name of the environment (GitHub organization).                                               |
-| environment_id    | string    | The node_id of the environment (GitHub organization).                                            |
+| environmentid     | string    | The node_id of the environment (GitHub organization).                                            |
 | repository_name   | string    | The name of the repository this role belongs to.                                                 |
 | repository_id     | string    | The node_id of the repository this role belongs to.                                              |
 

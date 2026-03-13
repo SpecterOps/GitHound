@@ -11,7 +11,7 @@ Created by: `Git-HoundGraphQlSamlProvider`
 | objectid                  | string    | The GraphQL ID of the external identity.   |
 | name                      | string    | Same as objectid.                          |
 | guid                      | string    | The GUID of the external identity.         |
-| environment_id            | string    | The GraphQL ID of the environment (GitHub organization). |
+| environmentid             | string    | The GraphQL ID of the environment (GitHub organization). |
 | environment_name          | string    | The name of the environment (GitHub organization).       |
 | saml_identity_family_name | string    | The family name from the SAML identity.    |
 | saml_identity_given_name  | string    | The given name from the SAML identity.     |

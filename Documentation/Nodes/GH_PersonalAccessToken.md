@@ -12,7 +12,7 @@ Created by: `Git-HoundPersonalAccessToken`
 | id                   | string    | The deterministic identifier (same as objectid).                                                      |
 | name                 | string    | The user-assigned display name of the token.                                                          |
 | environment_name     | string    | The name of the environment (GitHub organization) where the token has access.                         |
-| environment_id       | string    | The node_id of the environment (GitHub organization).                                                 |
+| environmentid        | string    | The node_id of the environment (GitHub organization).                                                 |
 | owner_login          | string    | The login handle of the user who owns the token.                                                      |
 | owner_id             | integer   | The numeric GitHub ID of the token owner.                                                             |
 | owner_node_id        | string    | The GraphQL node ID of the token owner.                                                               |
