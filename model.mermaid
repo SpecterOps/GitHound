@@ -146,9 +146,9 @@ flowchart TD
     GH_ExternalIdentity -.->|GH_MapsToUser| AZUser
     GH_ExternalIdentity -.->|GH_MapsToUser| OktaUser
     GH_ExternalIdentity -.->|GH_MapsToUser| PingOneUser
-    AZUser -->|SyncedToGHUser| GH_User
-    OktaUser -->|SyncedToGHUser| GH_User
-    PingOneUser -->|SyncedToGHUser| GH_User
+    AZUser -->|GH_SyncedTo| GH_User
+    OktaUser -->|GH_SyncedTo| GH_User
+    PingOneUser -->|GH_SyncedTo| GH_User
     SCIMUser -->|SCIMProvisioned| GH_ExternalIdentity
     GH_Repository -->|GH_CanAssumeIdentity| AZFederatedIdentityCredential
     GH_Branch -->|GH_CanAssumeIdentity| AZFederatedIdentityCredential

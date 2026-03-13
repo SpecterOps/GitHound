@@ -12,8 +12,8 @@ Created by: `Git-HoundGraphQlSamlProvider`
 | name                   | string    | Same as objectid.                                          |
 | node_id                | string    | Same as objectid.                                          |
 | environment_name       | string    | The name of the environment (GitHub organization).         |
-| environmentid         | string    | The GraphQL ID of the environment (GitHub organization).   |
-| foreign_environmentid | string    | The ID of the foreign environment linked to this provider. |
+| environmentid          | string    | The GraphQL ID of the environment (GitHub organization).   |
+| foreign_environmentid  | string    | The ID of the foreign environment linked to this provider. |
 | digest_method          | string    | The digest method used by the SAML provider.               |
 | idp_certificate        | string    | The identity provider's X.509 certificate.                 |
 | issuer                 | string    | The SAML issuer URL.                                       |

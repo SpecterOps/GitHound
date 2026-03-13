@@ -2,7 +2,7 @@
   "schema": {
     "name": "GitHound",
     "display_name": "GitHub (GitHound)",
-    "version": "1.0.0",
+    "version": "v1.0.0",
     "namespace": "GH"
   },
   "node_kinds": [
@@ -60,7 +60,7 @@
       "description": "The role a user has at the organization level (e.g., admin, member)",
       "is_display_kind": true,
       "icon": "user-tie",
-      "color": "#xBFFFD1"
+      "color": "#BFFFD1"
     },
     {
       "name": "GH_TeamRole",
@@ -721,7 +721,7 @@
       "is_traversable": true
     },
     {
-      "name": "SyncedToGHUser",
+      "name": "GH_SyncedTo",
       "description": "External identity (Azure, Okta, PingOne) is synced to this GitHub user via SSO/SCIM",
       "is_traversable": true
     }

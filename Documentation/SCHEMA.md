@@ -255,9 +255,9 @@ These edges connect GitHub nodes to nodes in other platforms (Azure, AWS, Okta, 
 
 | Edge Type            | Source                | Target                           | Traversable | Description                                                                      |
 |----------------------|-----------------------|----------------------------------|-------------|----------------------------------------------------------------------------------|
-| `SyncedToGHUser`     | `AZUser`              | `GH_User`                        | Yes         | Azure AD user is synced to GitHub user via SAML/SCIM.                            |
-| `SyncedToGHUser`     | `OktaUser`            | `GH_User`                        | Yes         | Okta user is synced to GitHub user via SAML/SCIM.                                |
-| `SyncedToGHUser`     | `PingOneUser`         | `GH_User`                        | Yes         | PingOne user is synced to GitHub user via SAML/SCIM.                             |
+| `GH_SyncedTo`     | `AZUser`              | `GH_User`                        | Yes         | Azure AD user is synced to GitHub user via SAML/SCIM.                            |
+| `GH_SyncedTo`     | `OktaUser`            | `GH_User`                        | Yes         | Okta user is synced to GitHub user via SAML/SCIM.                                |
+| `GH_SyncedTo`     | `PingOneUser`         | `GH_User`                        | Yes         | PingOne user is synced to GitHub user via SAML/SCIM.                             |
 | `GH_MapsToUser`      | `GH_ExternalIdentity` | `AZUser`/`OktaUser`/`PingOneUser`| No          | External identity maps to identity provider user.                                |
 | `SCIMProvisioned`    | `SCIMUser`            | `GH_User`                        | Yes         | SCIM user is provisioned and mapped to a GitHub user.                            |
 | `GH_CanAssumeIdentity`  | `GH_Repository`       | `AZFederatedIdentityCredential`  | Yes         | Repository can assume Azure federated identity (subject: `*`).                   |
@@ -327,7 +327,7 @@ The following edges are marked as "traversable" and form the primary attack path
 | `GH_CanEditProtection`| Role can modify/remove branch protections (computed)|
 | `GH_CanReadSecretScanningAlert` | Role can read secret scanning alerts (computed) |
 | `GH_ValidToken`       | Alert contains a valid leaked PAT for this user    |
-| `SyncedToGHUser`      | Identity provider user synced to GitHub user       |
+| `GH_SyncedTo`      | Identity provider user synced to GitHub user       |
 | `SCIMProvisioned`     | SCIM user provisioned and mapped to GitHub user    |
 | `GH_CanAssumeIdentity`| GitHub entity can assume Azure identity            |
 

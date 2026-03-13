@@ -97,7 +97,7 @@
         }
       },
       {
-        "kind": "SyncedToGHUser",
+        "kind": "GH_SyncedTo",
         "start": {
           "match_by": "name",
           "kind": "OktaUser",

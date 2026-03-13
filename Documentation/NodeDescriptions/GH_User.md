@@ -17,7 +17,7 @@ Created by: `Git-HoundUser`
 | id                | integer   | The numeric GitHub ID of the user.                                     |
 | node_id           | string    | The GitHub GraphQL node ID. Redundant with objectid.                   |
 | environment_name  | string    | The name of the environment (GitHub organization) the user belongs to. |
-| environmentid    | string    | The node_id of the environment (GitHub organization).                  |
+| environmentid     | string    | The node_id of the environment (GitHub organization).                  |
 
 ## Edges
 
@@ -90,7 +90,7 @@ flowchart TD
     GH_User -->|GH_CanWriteBranch| GH_Branch
     GH_User -->|GH_CanCreateBranch| GH_Repository
     GH_ExternalIdentity -.->|GH_MapsToUser| GH_User
-    AZUser -->|SyncedToGHUser| GH_User
-    OktaUser -->|SyncedToGHUser| GH_User
-    PingOneUser -->|SyncedToGHUser| GH_User
+    AZUser -->|GH_SyncedTo| GH_User
+    OktaUser -->|GH_SyncedTo| GH_User
+    PingOneUser -->|GH_SyncedTo| GH_User
 ```
