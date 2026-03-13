@@ -3627,9 +3627,11 @@ function Git-HoundWorkflow
 
         API Reference:
         - List repository workflows: https://docs.github.com/en/rest/actions/workflows?apiVersion=2022-11-28#list-repository-workflows
+        - Get repository content: https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28#get-repository-content
 
         Fine Grained Permissions Reference:
         - "Actions" repository permissions (read)
+        - "Contents" repository permissions (read)
 
     .PARAMETER Session
      A GitHound.Session object used for authentication and API requests.
@@ -3688,7 +3690,7 @@ function Git-HoundWorkflow
         $skippedCount = $allRepoNodes.Count - $repoNodes.Count
 
         $totalRepos = $repoNodes.Count
-        $callsPerRepo = 1
+        $callsPerRepo = 10
         $rateLimitBuffer = 50
 
         if ($skippedCount -gt 0) {
@@ -3766,6 +3768,41 @@ function Git-HoundWorkflow
 
                 foreach($workflow in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/actions/workflows").workflows)
                 {
+                    # Download workflow file contents from the repository
+                    # Try the default branch first, then fall back to other branches if not found
+                    $workflowContent = $null
+                    $workflowBranch = $null
+                    $contentsBasePath = "repos/$($repo.properties.full_name)/contents/$($workflow.path)"
+                    try {
+                        $contentResponse = Invoke-GithubRestMethod -Session $Session -Path $contentsBasePath -ErrorAction Stop
+                        if ($contentResponse.content) {
+                            $workflowContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(($contentResponse.content -replace '\s','')))
+                            $workflowBranch = $repo.properties.default_branch
+                        }
+                    } catch {
+                        # Workflow not on default branch — try other branches
+                        try {
+                            $branches = Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/branches" -ErrorAction Stop
+                            foreach ($branch in $branches) {
+                                try {
+                                    $contentResponse = Invoke-GithubRestMethod -Session $Session -Path "$contentsBasePath`?ref=$($branch.name)" -ErrorAction Stop
+                                    if ($contentResponse.content) {
+                                        $workflowContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(($contentResponse.content -replace '\s','')))
+                                        $workflowBranch = $branch.name
+                                        break
+                                    }
+                                } catch {
+                                    continue
+                                }
+                            }
+                        } catch {
+                            Write-Warning "Could not list branches for $($repo.properties.full_name): $_"
+                        }
+                        if (-not $workflowContent) {
+                            Write-Warning "Could not download workflow contents for $($repo.properties.full_name)/$($workflow.path) on any branch"
+                        }
+                    }
+
                     $props = [pscustomobject]@{
                         # Common Properties
                         name              = Normalize-Null "$($repo.properties.name)\$($workflow.name)"
@@ -3781,6 +3818,9 @@ function Git-HoundWorkflow
                         path              = Normalize-Null $workflow.path
                         state             = Normalize-Null $workflow.state
                         url               = Normalize-Null $workflow.url
+                        html_url          = Normalize-Null $workflow.html_url
+                        branch            = Normalize-Null $workflowBranch
+                        contents          = Normalize-Null $workflowContent
                         # Accordion Panel Queries
                         query_repository  = "MATCH p=(:GH_Repository)-[:GH_HasWorkflow]->(:GH_Workflow {node_id: '$($workflow.node_id)'}) RETURN p"
                         query_editors     = "MATCH p=(role:GH_Role)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf|GH_WriteRepoContents|GH_WriteRepoPullRequests*1..]->(r:GH_Repository)-[:GH_HasWorkflow]->(:GH_Workflow {node_id:'$($workflow.node_id)'}) MATCH p1=(role)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
