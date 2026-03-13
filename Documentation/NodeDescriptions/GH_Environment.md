@@ -15,7 +15,7 @@ Created by: `Git-HoundEnvironment`
 | short_name        | string    | The environment's display name (e.g., `production`, `staging`).               |
 | can_admins_bypass | boolean   | Whether repository administrators can bypass environment protection rules.    |
 | environment_name  | string    | The name of the environment (GitHub organization)                             |
-| environment_id    | string    | The node_id of the environment (GitHub organization)                          |
+| environmentid    | string    | The node_id of the environment (GitHub organization)                          |
 | repository_name   | string    | The full name of the containing repository.                                   |
 | repository_id     | string    | The ID of the containing repository.                                          |
 

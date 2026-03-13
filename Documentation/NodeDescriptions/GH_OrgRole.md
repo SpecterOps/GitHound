@@ -14,7 +14,7 @@ Created by: `Git-HoundOrganization`
 | short_name        | string    | The short display name of the role (e.g., `Owners`, `Members`, or the custom role name). |
 | type              | string    | `default` for built-in roles (Owner, Member) or `custom` for custom organization roles.  |
 | environment_name  | string    | The name of the environment (GitHub organization).                                       |
-| environment_id    | string    | The node_id of the environment (GitHub organization).                                    |
+| environmentid    | string    | The node_id of the environment (GitHub organization).                                    |
 
 ## Edges
 

@@ -12,7 +12,7 @@ Created by: `Git-HoundVariable`
 | id                | string    | Same as objectid.                                                           |
 | name              | string    | The name of the variable.                                                   |
 | environment_name  | string    | The name of the environment (GitHub organization).                          |
-| environment_id    | string    | The node_id of the environment (GitHub organization).                       |
+| environmentid    | string    | The node_id of the environment (GitHub organization).                       |
 | repository_name   | string    | The name of the containing repository.                                      |
 | repository_id     | string    | The node_id of the containing repository.                                   |
 | value             | string    | The plaintext value of the variable.                                        |
