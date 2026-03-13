@@ -14,7 +14,7 @@ Created by: `Git-HoundRepository`
 | name                        | string    | The repository name.                                                         |
 | full_name                   | string    | The fully qualified name (e.g., `org/repo`).                                 |
 | environment_name            | string    | The name of the environment (GitHub organization).                           |
-| environment_id              | string    | The node_id of the environment (GitHub organization).                        |
+| environmentid               | string    | The node_id of the environment (GitHub organization).                        |
 | owner_id                    | integer   | The numeric ID of the repository owner.                                      |
 | owner_node_id               | string    | The node_id of the repository owner.                                         |
 | owner_name                  | string    | The login of the repository owner.                                           |

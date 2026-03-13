@@ -14,7 +14,7 @@ Created by: `Git-HoundWorkflow`
 | id                | integer   | The numeric GitHub ID of the workflow.                                       |
 | node_id           | string    | The GitHub GraphQL node ID. Redundant with objectid.                         |
 | environment_name  | string    | The name of the environment (GitHub organization).                           |
-| environment_id    | string    | The node_id of the environment (GitHub organization).                        |
+| environmentid     | string    | The node_id of the environment (GitHub organization).                        |
 | repository_name   | string    | The full name of the containing repository.                                  |
 | repository_id     | string    | The node_id of the containing repository.                                    |
 | path              | string    | The file path of the workflow definition (e.g., `.github/workflows/ci.yml`). |

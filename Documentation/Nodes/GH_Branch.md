@@ -13,7 +13,7 @@ Created by: `Git-HoundBranch`
 | short_name       | string    | The branch reference name (e.g., `main`).                                    |
 | id               | string    | Same as objectid.                                                            |
 | environment_name | string    | The name of the environment (GitHub organization).                           |
-| environment_id   | string    | The node_id of the environment (GitHub organization).                        |
+| environmentid    | string    | The node_id of the environment (GitHub organization).                        |
 | protected        | boolean   | Whether the branch has a protection rule.                                    |
 
 ## Edges
