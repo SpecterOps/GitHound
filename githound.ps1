@@ -832,7 +832,7 @@ function Git-HoundOrganization
         query_secret_scanning_alerts                   = "MATCH p=(:GH_Organization {node_id: '$($org.node_id)'})-[:GH_Contains]->(alert:GH_SecretScanningAlert) RETURN p"
         query_identity_provider                        = "MATCH p=(OIP:GH_SamlIdentityProvider)-[:GH_HasExternalIdentity]->(EI:GH_ExternalIdentity) MATCH p1=(OIP)<-[:GH_HasSamlIdentityProvider]-(:GH_Organization {node_id:'$($org.node_id)'}) MATCH p2=(EI)-[:GH_MapsToUser]->() RETURN p,p1,p2"
         query_app_installations                        = "MATCH p=(:GH_Organization)-[:GH_Contains]->(:GH_AppInstallation) RETURN p"
-        query_organization_secrets                     = "MATCH p=(:GH_Organization {node_id: '$($org.node_id)'})-[:GH_Contains]->(secret:GH_OrganizationSecret) RETURN p"
+        query_organization_secrets                     = "MATCH p=(:GH_Organization {node_id: '$($org.node_id)'})-[:GH_Contains]->(secret:GH_OrgSecret) RETURN p"
     }
 
     $orgNode = New-GitHoundNode -Id $org.node_id -Kind 'GH_Organization' -Properties $properties
@@ -1519,7 +1519,7 @@ function Git-HoundRepository
             query_branches                = "MATCH p=(:GH_Repository {node_id: '$($repo.node_id)'})-[:GH_HasBranch]->(:GH_Branch) RETURN p"
             query_protected_branches      = "MATCH p=(:GH_Repository {node_id: '$($repo.node_id)'})-[:GH_HasBranch]->(:GH_Branch)<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule) RETURN p"
             query_branch_protection_rules = "MATCH p=(:GH_Repository {node_id: '$($repo.node_id)'})-[:GH_Contains]->(:GH_BranchBranchProtectionRule) RETURN p"
-            query_roles                   = "MATCH p=(:GH_RepoRole)-[*1..]->(:GH_Repository {node_id: '$($repo.node_id)'}) RETURN p"
+            query_roles                   = "MATCH p=(:GH_RepoRole)-[*1..2]->(:GH_Repository {node_id: '$($repo.node_id)'}) RETURN p"
             query_teams                   = "MATCH p=(:GH_Team)-[:GH_MemberOf|GH_HasRole*1..]->(:GH_RepoRole)-[]->(:GH_Repository {node_id: '$($repo.node_id)'}) RETURN p"
             query_workflows               = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_HasWorkflow]->(w:GH_Workflow) RETURN p"
             query_environments            = "MATCH p=(:GH_Repository {node_id: '$($repo.node_id)'})-[:GH_HasEnvironment]->(:GH_Environment) RETURN p"
@@ -5687,6 +5687,7 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
 
                 $EIprops = [pscustomobject]@{
                     # Common Properties
+                    node_id                   = Normalize-Null $identity.id
                     name                      = Normalize-Null $identity.guid
                     guid                      = Normalize-Null $identity.guid
                     # Relational Properties
