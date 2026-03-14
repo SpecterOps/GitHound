@@ -9,6 +9,7 @@ Created by: `Git-HoundGraphQlSamlProvider`
 | Property Name             | Data Type | Description                                |
 | ------------------------- | --------- | ------------------------------------------ |
 | objectid                  | string    | The GraphQL ID of the external identity.   |
+| node_id                   | string    | The GraphQL ID of the external identity.   |
 | name                      | string    | Same as objectid.                          |
 | guid                      | string    | The GUID of the external identity.         |
 | environmentid            | string    | The GraphQL ID of the environment (GitHub organization). |
