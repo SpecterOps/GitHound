@@ -8,33 +8,33 @@ Created by: `Git-HoundAppInstallation`
 
 ## Properties
 
-| Property Name       | Data Type | Description                                                                    |
-| ------------------- | --------- | ------------------------------------------------------------------------------ |
-| objectid            | string    | Composite identifier: `A_kwHOABLL_s4ABJ8V`.                                    |
-| id                  | integer   | The GitHub App's numeric ID.                                                   |
-| name                | string    | The display name of the app.                                                   |
-| slug                | string    | The app's URL-friendly slug identifier.                                        |
-| client_id           | string    | The app's OAuth client ID.                                                     |
-| node_id             | string    | The app's GraphQL node ID.                                                     |
-| description         | string    | The app's description.                                                         |
-| external_url        | string    | The app's external homepage URL.                                               |
-| html_url            | string    | URL to the app's GitHub page.                                                  |
-| owner_login         | string    | The login of the user or organization that owns the app.                       |
-| owner_node_id       | string    | The node_id of the user or organization that owns the app.                     |
-| owner_type          | string    | The type of the owner (e.g., `User`, `Organization`).                          |
-| created_at          | datetime  | When the app was created.                                                      |
-| updated_at          | datetime  | When the app was last updated.                                                 |
-| permissions         | string    | JSON string of the default permissions the app requests.                       |
-| events              | string    | JSON string of the default webhook events the app subscribes to.               |
-| installations_count | integer   | The total number of installations of this app across all organizations.        |
+| Property Name       | Data Type | Description                                                             |
+| ------------------- | --------- | ----------------------------------------------------------------------- |
+| objectid            | string    | Composite identifier: `A_kwHOABLL_s4ABJ8V`.                             |
+| id                  | integer   | The GitHub App's numeric ID.                                            |
+| name                | string    | The display name of the app.                                            |
+| slug                | string    | The app's URL-friendly slug identifier.                                 |
+| client_id           | string    | The app's OAuth client ID.                                              |
+| node_id             | string    | The app's GraphQL node ID.                                              |
+| description         | string    | The app's description.                                                  |
+| external_url        | string    | The app's external homepage URL.                                        |
+| html_url            | string    | URL to the app's GitHub page.                                           |
+| owner_login         | string    | The login of the user or organization that owns the app.                |
+| owner_node_id       | string    | The node_id of the user or organization that owns the app.              |
+| owner_type          | string    | The type of the owner (e.g., `User`, `Organization`).                   |
+| created_at          | datetime  | When the app was created.                                               |
+| updated_at          | datetime  | When the app was last updated.                                          |
+| permissions         | string    | JSON string of the default permissions the app requests.                |
+| events              | string    | JSON string of the default webhook events the app subscribes to.        |
+| installations_count | integer   | The total number of installations of this app across all organizations. |
 
 ## Edges
 
 ### Outbound Edges
 
-| Edge Name      | Target Node        | Traversable | Description                                                      |
-| -------------- | ------------------ | ----------- | ---------------------------------------------------------------- |
-| [GH_InstalledAs](../EdgeDescriptions/GH_InstalledAs.md) | [GH_AppInstallation](GH_AppInstallation.md) | -->         | The app is installed as this installation on an organization.    |
+| Edge Name                                               | Target Node                                 | Traversable | Description                                                   |
+| ------------------------------------------------------- | ------------------------------------------- | ----------- | ------------------------------------------------------------- |
+| [GH_InstalledAs](../EdgeDescriptions/GH_InstalledAs.md) | [GH_AppInstallation](GH_AppInstallation.md) | -->         | The app is installed as this installation on an organization. |
 
 ### Inbound Edges
 

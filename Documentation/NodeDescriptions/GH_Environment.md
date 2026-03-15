@@ -15,7 +15,7 @@ Created by: `Git-HoundEnvironment`
 | short_name        | string    | The environment's display name (e.g., `production`, `staging`).               |
 | can_admins_bypass | boolean   | Whether repository administrators can bypass environment protection rules.    |
 | environment_name  | string    | The name of the environment (GitHub organization)                             |
-| environmentid    | string    | The node_id of the environment (GitHub organization)                          |
+| environmentid     | string    | The node_id of the environment (GitHub organization)                          |
 | repository_name   | string    | The full name of the containing repository.                                   |
 | repository_id     | string    | The ID of the containing repository.                                          |
 
@@ -23,19 +23,19 @@ Created by: `Git-HoundEnvironment`
 
 ### Outbound Edges
 
-| Edge Kind         | Target Node                   | Traversable | Description                                                                          |
-| ----------------- | ----------------------------- | ----------- | ------------------------------------------------------------------------------------ |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)        | [GH_EnvironmentSecret](GH_EnvironmentSecret.md)           | No          | Environment contains an environment-level secret.                                    |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)        | [GH_EnvironmentVariable](GH_EnvironmentVariable.md)         | No          | Environment contains an environment-level variable.                                  |
-| [GH_HasSecret](../EdgeDescriptions/GH_HasSecret.md)       | [GH_EnvironmentSecret](GH_EnvironmentSecret.md)           | Yes         | Environment has this secret. Traversable because write access enables secret access via workflow creation. |
-| [GH_CanAssumeIdentity](../EdgeDescriptions/GH_CanAssumeIdentity.md) | [AZFederatedIdentityCredential](https://bloodhound.specterops.io/resources/nodes/az-federated-identity-credential) | Yes         | Environment can assume an Azure federated identity via OIDC (subject: environment:{envName}). |
+| Edge Kind                                                           | Target Node                                                                                                        | Traversable | Description                                                                                                |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------- | ---------------------------------------------------------------------------------------------------------- |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md)                   | [GH_EnvironmentSecret](GH_EnvironmentSecret.md)                                                                    | No          | Environment contains an environment-level secret.                                                          |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md)                   | [GH_EnvironmentVariable](GH_EnvironmentVariable.md)                                                                | No          | Environment contains an environment-level variable.                                                        |
+| [GH_HasSecret](../EdgeDescriptions/GH_HasSecret.md)                 | [GH_EnvironmentSecret](GH_EnvironmentSecret.md)                                                                    | Yes         | Environment has this secret. Traversable because write access enables secret access via workflow creation. |
+| [GH_CanAssumeIdentity](../EdgeDescriptions/GH_CanAssumeIdentity.md) | [AZFederatedIdentityCredential](https://bloodhound.specterops.io/resources/nodes/az-federated-identity-credential) | Yes         | Environment can assume an Azure federated identity via OIDC (subject: environment:{envName}).              |
 
 ### Inbound Edges
 
-| Edge Kind        | Source Node  | Traversable | Description                                                                 |
-| ---------------- | ------------ | ----------- | --------------------------------------------------------------------------- |
-| [GH_HasEnvironment](../EdgeDescriptions/GH_HasEnvironment.md) | [GH_Repository](GH_Repository.md) | No         | Repository has this environment (when no custom branch policies).           |
-| [GH_HasEnvironment](../EdgeDescriptions/GH_HasEnvironment.md) | [GH_Branch](GH_Branch.md)     | No          | Branch is allowed to deploy to this environment (via custom branch policy). |
+| Edge Kind                                                     | Source Node                       | Traversable | Description                                                                 |
+| ------------------------------------------------------------- | --------------------------------- | ----------- | --------------------------------------------------------------------------- |
+| [GH_HasEnvironment](../EdgeDescriptions/GH_HasEnvironment.md) | [GH_Repository](GH_Repository.md) | No          | Repository has this environment (when no custom branch policies).           |
+| [GH_HasEnvironment](../EdgeDescriptions/GH_HasEnvironment.md) | [GH_Branch](GH_Branch.md)         | No          | Branch is allowed to deploy to this environment (via custom branch policy). |
 
 ## Diagram
 

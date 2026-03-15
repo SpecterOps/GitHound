@@ -6,16 +6,16 @@ Created by: `Git-HoundOrganizationSecret`
 
 ## Properties
 
-| Property Name     | Data Type | Description                                                                                                               |
-| ----------------- | --------- | ------------------------------------------------------------------------------------------------------------------------- |
-| objectid          | string    | A deterministic ID in the format `GH_OrgSecret_{orgNodeId}_{secretName}`.                                                 |
-| id                | string    | Same as objectid.                                                                                                         |
-| name              | string    | The name of the secret.                                                                                                   |
-| environment_name  | string    | The name of the environment (GitHub organization).                                                                        |
+| Property Name    | Data Type | Description                                                                                                               |
+| ---------------- | --------- | ------------------------------------------------------------------------------------------------------------------------- |
+| objectid         | string    | A deterministic ID in the format `GH_OrgSecret_{orgNodeId}_{secretName}`.                                                 |
+| id               | string    | Same as objectid.                                                                                                         |
+| name             | string    | The name of the secret.                                                                                                   |
+| environment_name | string    | The name of the environment (GitHub organization).                                                                        |
 | environmentid    | string    | The node_id of the environment (GitHub organization).                                                                     |
-| created_at        | datetime  | When the secret was created.                                                                                              |
-| updated_at        | datetime  | When the secret was last updated.                                                                                         |
-| visibility        | string    | The secret's visibility scope: `all` (all repos), `private` (private and internal repos), or `selected` (specific repos). |
+| created_at       | datetime  | When the secret was created.                                                                                              |
+| updated_at       | datetime  | When the secret was last updated.                                                                                         |
+| visibility       | string    | The secret's visibility scope: `all` (all repos), `private` (private and internal repos), or `selected` (specific repos). |
 
 ## Edges
 
@@ -25,10 +25,10 @@ None
 
 ### Inbound Edges
 
-| Edge Kind    | Source Node     | Traversable | Description                                                                 |
-| ------------ | --------------- | ----------- | --------------------------------------------------------------------------- |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)  | [GH_Organization](GH_Organization.md) | No          | Organization contains this secret.                                          |
-| [GH_HasSecret](../EdgeDescriptions/GH_HasSecret.md) | [GH_Repository](GH_Repository.md)   | Yes         | Repository has access to this organization secret (resolved by visibility). Traversable because any user with write access to the repository can access org secrets scoped to that repo by creating a GitHub Actions workflow. |
+| Edge Kind                                           | Source Node                           | Traversable | Description                                                                                                                                                                                                                    |
+| --------------------------------------------------- | ------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md)   | [GH_Organization](GH_Organization.md) | No          | Organization contains this secret.                                                                                                                                                                                             |
+| [GH_HasSecret](../EdgeDescriptions/GH_HasSecret.md) | [GH_Repository](GH_Repository.md)     | Yes         | Repository has access to this organization secret (resolved by visibility). Traversable because any user with write access to the repository can access org secrets scoped to that repo by creating a GitHub Actions workflow. |
 
 ## Diagram
 

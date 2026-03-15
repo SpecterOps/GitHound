@@ -6,30 +6,30 @@ Created by: `Git-HoundTeam`
 
 ## Properties
 
-| Property Name     | Data Type | Description                                                                          |
-| ----------------- | --------- | ------------------------------------------------------------------------------------ |
-| objectid          | string    | A deterministic ID derived from the team ID and role name (e.g., `{teamId}_member`). |
-| name              | string    | The fully qualified role name (e.g., `TeamSlug\member`).                             |
-| id                | string    | Same as objectid.                                                                    |
-| short_name        | string    | The short role name: `member` or `maintainer`.                                       |
-| type              | string    | Always `default` for team roles.                                                     |
-| environment_name  | string    | The name of the environment (GitHub organization).                                   |
-| environmentid     | string    | The node_id of the environment (GitHub organization).                                |
+| Property Name    | Data Type | Description                                                                          |
+| ---------------- | --------- | ------------------------------------------------------------------------------------ |
+| objectid         | string    | A deterministic ID derived from the team ID and role name (e.g., `{teamId}_member`). |
+| name             | string    | The fully qualified role name (e.g., `TeamSlug\member`).                             |
+| id               | string    | Same as objectid.                                                                    |
+| short_name       | string    | The short role name: `member` or `maintainer`.                                       |
+| type             | string    | Always `default` for team roles.                                                     |
+| environment_name | string    | The name of the environment (GitHub organization).                                   |
+| environmentid    | string    | The node_id of the environment (GitHub organization).                                |
 
 ## Edges
 
 ### Outbound Edges
 
-| Edge Kind    | Target Node | Traversable | Description                                                    |
-| ------------ | ----------- | ----------- | -------------------------------------------------------------- |
-| [GH_MemberOf](../EdgeDescriptions/GH_MemberOf.md)  | [GH_Team](GH_Team.md)     | Yes         | This role belongs to a team.                                   |
-| [GH_AddMember](../EdgeDescriptions/GH_AddMember.md) | [GH_Team](GH_Team.md)     | Yes         | Maintainer role can add members to the team (Maintainer only). |
+| Edge Kind                                           | Target Node           | Traversable | Description                                                    |
+| --------------------------------------------------- | --------------------- | ----------- | -------------------------------------------------------------- |
+| [GH_MemberOf](../EdgeDescriptions/GH_MemberOf.md)   | [GH_Team](GH_Team.md) | Yes         | This role belongs to a team.                                   |
+| [GH_AddMember](../EdgeDescriptions/GH_AddMember.md) | [GH_Team](GH_Team.md) | Yes         | Maintainer role can add members to the team (Maintainer only). |
 
 ### Inbound Edges
 
-| Edge Kind  | Source Node | Traversable | Description                           |
-| ---------- | ----------- | ----------- | ------------------------------------- |
-| [GH_HasRole](../EdgeDescriptions/GH_HasRole.md) | [GH_User](GH_User.md)     | Yes         | A user is assigned to this team role. |
+| Edge Kind                                       | Source Node           | Traversable | Description                           |
+| ----------------------------------------------- | --------------------- | ----------- | ------------------------------------- |
+| [GH_HasRole](../EdgeDescriptions/GH_HasRole.md) | [GH_User](GH_User.md) | Yes         | A user is assigned to this team role. |
 
 ## Diagram
 

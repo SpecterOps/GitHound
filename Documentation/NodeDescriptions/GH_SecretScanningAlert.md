@@ -26,16 +26,16 @@ Created by: `Git-HoundSecretScanningAlert`
 
 ### Outbound Edges
 
-| Edge Kind      | Target Node | Traversable | Description                                                                                                                      |
-| -------------- | ----------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| [GH_ValidToken](../EdgeDescriptions/GH_ValidToken.md)  | [GH_User](GH_User.md)     | Yes         | Alert contains a valid, active PAT belonging to this user. Only emitted when the alert is open and the token is confirmed valid. |
+| Edge Kind                                             | Target Node           | Traversable | Description                                                                                                                      |
+| ----------------------------------------------------- | --------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| [GH_ValidToken](../EdgeDescriptions/GH_ValidToken.md) | [GH_User](GH_User.md) | Yes         | Alert contains a valid, active PAT belonging to this user. Only emitted when the alert is open and the token is confirmed valid. |
 
 ### Inbound Edges
 
-| Edge Kind                        | Source Node              | Traversable | Description                                                                      |
-| -------------------------------- | ------------------------ | ----------- | -------------------------------------------------------------------------------- |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)                      | [GH_Repository](GH_Repository.md)            | No          | Repository contains this secret scanning alert.                                  |
-| [GH_CanReadSecretScanningAlert](../EdgeDescriptions/GH_CanReadSecretScanningAlert.md)    | [GH_OrgRole](GH_OrgRole.md), [GH_RepoRole](GH_RepoRole.md)  | Yes         | Role can read this alert (computed from [GH_ViewSecretScanningAlerts](../EdgeDescriptions/GH_ViewSecretScanningAlerts.md) permission). |
+| Edge Kind                                                                             | Source Node                                                | Traversable | Description                                                                                                                            |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md)                                     | [GH_Repository](GH_Repository.md)                          | No          | Repository contains this secret scanning alert.                                                                                        |
+| [GH_CanReadSecretScanningAlert](../EdgeDescriptions/GH_CanReadSecretScanningAlert.md) | [GH_OrgRole](GH_OrgRole.md), [GH_RepoRole](GH_RepoRole.md) | Yes         | Role can read this alert (computed from [GH_ViewSecretScanningAlerts](../EdgeDescriptions/GH_ViewSecretScanningAlerts.md) permission). |
 
 ## Diagram
 

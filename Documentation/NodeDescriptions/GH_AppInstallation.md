@@ -10,11 +10,11 @@ Created by: `Git-HoundAppInstallation`
 
 | Property Name        | Data Type | Description                                                                                           |
 | -------------------- | --------- | ----------------------------------------------------------------------------------------------------- |
-| objectid             | string    | Composite identifier: `Iv23liPgjiu18oXLM2q7`.                              |
+| objectid             | string    | Composite identifier: `Iv23liPgjiu18oXLM2q7`.                                                         |
 | id                   | integer   | The GitHub installation ID.                                                                           |
 | name                 | string    | The app's slug identifier.                                                                            |
 | environment_name     | string    | The name of the environment (GitHub organization) where the app is installed.                         |
-| environmentid       | string    | The node_id of the environment (GitHub organization).                                                 |
+| environmentid        | string    | The node_id of the environment (GitHub organization).                                                 |
 | repositories_url     | string    | API URL to list repositories accessible to this installation.                                         |
 | app_id               | integer   | The GitHub App's numeric ID (shared across all installations of the same app).                        |
 | app_slug             | string    | The app's URL-friendly slug identifier.                                                               |
@@ -33,16 +33,16 @@ Created by: `Git-HoundAppInstallation`
 
 ### Outbound Edges
 
-| Edge Name     | Target Node    | Traversable | Description                                                                        |
-| ------------- | -------------- | ----------- | ---------------------------------------------------------------------------------- |
-| [GH_CanAccess](../EdgeDescriptions/GH_CanAccess.md)  | [GH_Repository](GH_Repository.md)  | -.->        | App installation can access this repository (created when `repository_selection` is `all`). |
+| Edge Name                                           | Target Node                       | Traversable | Description                                                                                 |
+| --------------------------------------------------- | --------------------------------- | ----------- | ------------------------------------------------------------------------------------------- |
+| [GH_CanAccess](../EdgeDescriptions/GH_CanAccess.md) | [GH_Repository](GH_Repository.md) | -.->        | App installation can access this repository (created when `repository_selection` is `all`). |
 
 ### Inbound Edges
 
-| Edge Name      | Source Node      | Traversable | Description                                                    |
-| -------------- | ---------------- | ----------- | -------------------------------------------------------------- |
-| [GH_InstalledAs](../EdgeDescriptions/GH_InstalledAs.md) | [GH_App](GH_App.md)           | -->         | The parent app definition that this installation belongs to.   |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)    | [GH_Organization](GH_Organization.md)  | -.->        | The organization that contains this app installation.          |
+| Edge Name                                               | Source Node                           | Traversable | Description                                                  |
+| ------------------------------------------------------- | ------------------------------------- | ----------- | ------------------------------------------------------------ |
+| [GH_InstalledAs](../EdgeDescriptions/GH_InstalledAs.md) | [GH_App](GH_App.md)                   | -->         | The parent app definition that this installation belongs to. |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md)       | [GH_Organization](GH_Organization.md) | -.->        | The organization that contains this app installation.        |
 
 ## Diagram
 

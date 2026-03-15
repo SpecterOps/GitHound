@@ -14,7 +14,7 @@ Created by: `Git-HoundBranch`
 | name                            | string    | Display name (e.g., `repo\main`).                                                                                                                             |
 | id                              | string    | Same as objectid.                                                                                                                                             |
 | environment_name                | string    | The GitHub organization login name.                                                                                                                           |
-| environmentid                  | string    | The GitHub organization node ID.                                                                                                                              |
+| environmentid                   | string    | The GitHub organization node ID.                                                                                                                              |
 | pattern                         | string    | The branch name pattern this rule applies to (e.g., `main`, `release/*`).                                                                                     |
 | enforce_admins                  | boolean   | Whether branch protection rules are enforced for administrators.                                                                                              |
 | lock_branch                     | boolean   | Whether the branch is locked (read-only).                                                                                                                     |
@@ -34,16 +34,16 @@ Created by: `Git-HoundBranch`
 
 ### Outbound Edges
 
-| Edge Kind      | Target Node | Traversable | Description                                  |
-| -------------- | ----------- | ----------- | -------------------------------------------- |
-| [GH_ProtectedBy](../EdgeDescriptions/GH_ProtectedBy.md) | [GH_Branch](GH_Branch.md)   | No          | Branch protection rule protects this branch. |
+| Edge Kind                                               | Target Node               | Traversable | Description                                  |
+| ------------------------------------------------------- | ------------------------- | ----------- | -------------------------------------------- |
+| [GH_ProtectedBy](../EdgeDescriptions/GH_ProtectedBy.md) | [GH_Branch](GH_Branch.md) | No          | Branch protection rule protects this branch. |
 
 ### Inbound Edges
 
-| Edge Kind                      | Source Node        | Traversable | Description                                                         |
-| ------------------------------ | ------------------ | ----------- | ------------------------------------------------------------------- |
+| Edge Kind                                                                               | Source Node                                    | Traversable | Description                                                         |
+| --------------------------------------------------------------------------------------- | ---------------------------------------------- | ----------- | ------------------------------------------------------------------- |
 | [GH_BypassPullRequestAllowances](../EdgeDescriptions/GH_BypassPullRequestAllowances.md) | [GH_User](GH_User.md) or [GH_Team](GH_Team.md) | No          | User or team can bypass pull request requirements on this rule.     |
-| [GH_RestrictionsCanPush](../EdgeDescriptions/GH_RestrictionsCanPush.md)         | [GH_User](GH_User.md) or [GH_Team](GH_Team.md) | No          | User or team is allowed to push to branches protected by this rule. |
+| [GH_RestrictionsCanPush](../EdgeDescriptions/GH_RestrictionsCanPush.md)                 | [GH_User](GH_User.md) or [GH_Team](GH_Team.md) | No          | User or team is allowed to push to branches protected by this rule. |
 
 ## Diagram
 
