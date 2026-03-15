@@ -1,3 +1,7 @@
+# Project-specific ignores #
+############################
+Documentation/OfficialDocs/
+
 # OS generated files #
 ######################
 .DS_Store
