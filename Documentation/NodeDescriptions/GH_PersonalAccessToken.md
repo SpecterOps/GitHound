@@ -31,14 +31,14 @@ Created by: `Git-HoundPersonalAccessToken`
 
 | Edge Kind     | Target Node    | Traversable | Description                                              |
 | ------------- | -------------- | ----------- | -------------------------------------------------------- |
-| GH_CanAccess  | GH_Repository  | No          | Token can access this repository.                        |
+| [GH_CanAccess](../EdgeDescriptions/GH_CanAccess.md)  | [GH_Repository](GH_Repository.md)  | No          | Token can access this repository.                        |
 
 ### Inbound Edges
 
 | Edge Kind                  | Source Node      | Traversable | Description                                              |
 | -------------------------- | ---------------- | ----------- | -------------------------------------------------------- |
-| GH_HasPersonalAccessToken  | GH_User          | No          | User owns this personal access token.                    |
-| GH_Contains                | GH_Organization  | No          | Organization contains this personal access token.        |
+| [GH_HasPersonalAccessToken](../EdgeDescriptions/GH_HasPersonalAccessToken.md)  | [GH_User](GH_User.md)          | No          | User owns this personal access token.                    |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md)                | [GH_Organization](GH_Organization.md)  | No          | Organization contains this personal access token.        |
 
 ## Diagram
 

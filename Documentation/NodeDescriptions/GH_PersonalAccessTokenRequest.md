@@ -36,8 +36,8 @@ None
 
 | Edge Kind                         | Source Node      | Traversable | Description                                              |
 | --------------------------------- | ---------------- | ----------- | -------------------------------------------------------- |
-| GH_HasPersonalAccessTokenRequest  | GH_User          | No          | User submitted this personal access token request.       |
-| GH_Contains                       | GH_Organization  | No          | Organization contains this personal access token request.|
+| [GH_HasPersonalAccessTokenRequest](../EdgeDescriptions/GH_HasPersonalAccessTokenRequest.md)  | [GH_User](GH_User.md)          | No          | User submitted this personal access token request.       |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md)                       | [GH_Organization](GH_Organization.md)  | No          | Organization contains this personal access token request.|
 
 ## Diagram
 

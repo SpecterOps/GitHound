@@ -7,12 +7,12 @@ is_traversable: true
 
 ## Edge Schema
 
-- Source: [GH_RepoRole](../Nodes/GH_RepoRole.md), [GH_User](../Nodes/GH_User.md), [GH_Team](../Nodes/GH_Team.md)
-- Destination: [GH_Repository](../Nodes/GH_Repository.md)
+- Source: [GH_RepoRole](../NodeDescriptions/GH_RepoRole.md), [GH_User](../NodeDescriptions/GH_User.md), [GH_Team](../NodeDescriptions/GH_Team.md)
+- Destination: [GH_Repository](../NodeDescriptions/GH_Repository.md)
 
 ## General Information
 
-The traversable `GH_CanCreateBranch` edge is a computed edge indicating that a role or actor can create new branches in a repository. Created by `Compute-GitHoundBranchAccess` with no additional API calls, the computation evaluates whether a wildcard (`*`) BPR with push restrictions and `blocks_creations` exists. If no such BPR exists, any write-capable role can create branches. If one exists, admin or `push_protected_branch` permission is required, or the actor must be listed in pushAllowances. Per-actor edges from `GH_User` or `GH_Team` are only emitted when BPR allowances grant branch creation access beyond what the role provides. Each edge includes a `reason` property and a `query_composition` Cypher query showing the underlying graph evidence.
+The traversable [GH_CanCreateBranch](GH_CanCreateBranch.md) edge is a computed edge indicating that a role or actor can create new branches in a repository. Created by `Compute-GitHoundBranchAccess` with no additional API calls, the computation evaluates whether a wildcard (`*`) BPR with push restrictions and `blocks_creations` exists. If no such BPR exists, any write-capable role can create branches. If one exists, admin or `push_protected_branch` permission is required, or the actor must be listed in pushAllowances. Per-actor edges from [GH_User](../NodeDescriptions/GH_User.md) or [GH_Team](../NodeDescriptions/GH_Team.md) are only emitted when BPR allowances grant branch creation access beyond what the role provides. Each edge includes a `reason` property and a `query_composition` Cypher query showing the underlying graph evidence.
 
 ## Scenarios
 
@@ -40,7 +40,7 @@ graph LR
 
 ### `push_protected_branch` — Push-protected role bypasses wildcard BPR
 
-A wildcard BPR blocks creations. The `GH_PushProtectedBranch` permission bypasses the push gate regardless of `enforce_admins`.
+A wildcard BPR blocks creations. The [GH_PushProtectedBranch](GH_PushProtectedBranch.md) permission bypasses the push gate regardless of `enforce_admins`.
 
 ```mermaid
 graph LR
@@ -53,7 +53,7 @@ graph LR
 
 ### `push_allowance` — Per-actor push restriction bypass
 
-User or Team listed in the wildcard BPR's `pushAllowances` can create branches. This is a per-actor delta edge — only emitted when the actor's role doesn't already grant `GH_CanCreateBranch`.
+User or Team listed in the wildcard BPR's `pushAllowances` can create branches. This is a per-actor delta edge — only emitted when the actor's role doesn't already grant [GH_CanCreateBranch](GH_CanCreateBranch.md).
 
 ```mermaid
 graph LR

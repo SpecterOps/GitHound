@@ -28,8 +28,8 @@ None
 
 | Edge Kind      | Source Node     | Traversable | Description                                                                    |
 | -------------- | --------------- | ----------- | ------------------------------------------------------------------------------ |
-| GH_Contains    | GH_Organization | No          | Organization contains this variable.                                           |
-| GH_HasVariable | GH_Repository   | Yes         | Repository has access to this organization variable (resolved by visibility). Traversable because write access to the repo enables variable access via workflow creation. |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md)    | [GH_Organization](GH_Organization.md) | No          | Organization contains this variable.                                           |
+| [GH_HasVariable](../EdgeDescriptions/GH_HasVariable.md) | [GH_Repository](GH_Repository.md)   | Yes         | Repository has access to this organization variable (resolved by visibility). Traversable because write access to the repo enables variable access via workflow creation. |
 
 ## Diagram
 

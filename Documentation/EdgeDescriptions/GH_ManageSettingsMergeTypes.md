@@ -7,12 +7,12 @@ is_traversable: false
 
 ## Edge Schema
 
-- Source: [GH_RepoRole](../Nodes/GH_RepoRole.md)
-- Destination: [GH_Repository](../Nodes/GH_Repository.md)
+- Source: [GH_RepoRole](../NodeDescriptions/GH_RepoRole.md)
+- Destination: [GH_Repository](../NodeDescriptions/GH_Repository.md)
 
 ## General Information
 
-The non-traversable `GH_ManageSettingsMergeTypes` edge represents a role's ability to configure allowed merge types (merge commit, squash, rebase) on the repository. This permission is available to Maintain and Admin roles and custom roles that have been granted this specific permission.
+The non-traversable [GH_ManageSettingsMergeTypes](GH_ManageSettingsMergeTypes.md) edge represents a role's ability to configure allowed merge types (merge commit, squash, rebase) on the repository. This permission is available to Maintain and Admin roles and custom roles that have been granted this specific permission.
 
 ```mermaid
 graph LR

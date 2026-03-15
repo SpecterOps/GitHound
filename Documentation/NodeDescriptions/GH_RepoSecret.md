@@ -29,8 +29,8 @@ None
 
 | Edge Kind    | Source Node   | Traversable | Description                      |
 | ------------ | ------------- | ----------- | -------------------------------- |
-| GH_Contains  | GH_Repository | No          | Repository contains this secret. |
-| GH_HasSecret | GH_Repository | Yes         | Repository has this secret. Traversable because any user with write access to the repository can access repo secrets by creating a GitHub Actions workflow. |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md)  | [GH_Repository](GH_Repository.md) | No          | Repository contains this secret. |
+| [GH_HasSecret](../EdgeDescriptions/GH_HasSecret.md) | [GH_Repository](GH_Repository.md) | Yes         | Repository has this secret. Traversable because any user with write access to the repository can access repo secrets by creating a GitHub Actions workflow. |
 
 ## Diagram
 

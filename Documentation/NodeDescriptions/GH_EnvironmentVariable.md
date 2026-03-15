@@ -31,7 +31,7 @@ None
 
 | Edge Kind   | Source Node     | Traversable | Description                         |
 | ----------- | --------------- | ----------- | ----------------------------------- |
-| GH_Contains | GH_Environment  | No          | Environment contains this variable. |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md) | [GH_Environment](GH_Environment.md)  | No          | Environment contains this variable. |
 
 ## Diagram
 

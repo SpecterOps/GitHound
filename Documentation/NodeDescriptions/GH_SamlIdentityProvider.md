@@ -26,13 +26,13 @@ Created by: `Git-HoundGraphQlSamlProvider`
 
 | Edge Kind              | Target Node         | Traversable | Description                                         |
 | ---------------------- | ------------------- | ----------- | --------------------------------------------------- |
-| GH_HasExternalIdentity | GH_ExternalIdentity | No          | Identity provider has an external identity mapping. |
+| [GH_HasExternalIdentity](../EdgeDescriptions/GH_HasExternalIdentity.md) | [GH_ExternalIdentity](GH_ExternalIdentity.md) | No          | Identity provider has an external identity mapping. |
 
 ### Inbound Edges
 
 | Edge Kind                  | Source Node     | Traversable | Description                                   |
 | -------------------------- | --------------- | ----------- | --------------------------------------------- |
-| GH_HasSamlIdentityProvider | GH_Organization | No          | Organization has this SAML identity provider. |
+| [GH_HasSamlIdentityProvider](../EdgeDescriptions/GH_HasSamlIdentityProvider.md) | [GH_Organization](GH_Organization.md) | No          | Organization has this SAML identity provider. |
 
 ## Diagram
 

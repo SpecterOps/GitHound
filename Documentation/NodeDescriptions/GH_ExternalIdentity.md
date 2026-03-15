@@ -30,14 +30,14 @@ Created by: `Git-HoundGraphQlSamlProvider`
 
 | Edge Kind     | Target Node        | Traversable | Description                                                                         |
 | ------------- | ------------------ | ----------- | ----------------------------------------------------------------------------------- |
-| GH_MapsToUser | GH_User            | No          | External identity maps to a GitHub user (via GitHub user ID).                       |
-| GH_MapsToUser | Foreign User Node  | No          | External identity maps to a user in a foreign environment (via SAML/SCIM username). |
+| [GH_MapsToUser](../EdgeDescriptions/GH_MapsToUser.md) | [GH_User](GH_User.md)            | No          | External identity maps to a GitHub user (via GitHub user ID).                       |
+| [GH_MapsToUser](../EdgeDescriptions/GH_MapsToUser.md) | Foreign User Node  | No          | External identity maps to a user in a foreign environment (via SAML/SCIM username). |
 
 ### Inbound Edges
 
 | Edge Kind              | Source Node             | Traversable | Description                                        |
 | ---------------------- | ----------------------- | ----------- | -------------------------------------------------- |
-| GH_HasExternalIdentity | GH_SamlIdentityProvider | No          | SAML identity provider has this external identity. |
+| [GH_HasExternalIdentity](../EdgeDescriptions/GH_HasExternalIdentity.md) | [GH_SamlIdentityProvider](GH_SamlIdentityProvider.md) | No          | SAML identity provider has this external identity. |
 
 ## Diagram
 

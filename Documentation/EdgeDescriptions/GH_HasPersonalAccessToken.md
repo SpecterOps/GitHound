@@ -7,12 +7,12 @@ is_traversable: false
 
 ## Edge Schema
 
-- Source: [GH_User](../Nodes/GH_User.md)
-- Destination: [GH_PersonalAccessToken](../Nodes/GH_PersonalAccessToken.md)
+- Source: [GH_User](../NodeDescriptions/GH_User.md)
+- Destination: [GH_PersonalAccessToken](../NodeDescriptions/GH_PersonalAccessToken.md)
 
 ## General Information
 
-The non-traversable `GH_HasPersonalAccessToken` edge represents the relationship between a user and their fine-grained personal access tokens that have been granted access to the organization. Created by `Git-HoundPersonalAccessToken`, this edge links each approved token back to the user who created it. Fine-grained personal access tokens are security-significant because they provide programmatic access to organization resources with specific scoped permissions. Tracking token ownership is essential for understanding which users have standing API access and for identifying tokens that may need revocation.
+The non-traversable [GH_HasPersonalAccessToken](GH_HasPersonalAccessToken.md) edge represents the relationship between a user and their fine-grained personal access tokens that have been granted access to the organization. Created by `Git-HoundPersonalAccessToken`, this edge links each approved token back to the user who created it. Fine-grained personal access tokens are security-significant because they provide programmatic access to organization resources with specific scoped permissions. Tracking token ownership is essential for understanding which users have standing API access and for identifying tokens that may need revocation.
 
 ```mermaid
 graph LR

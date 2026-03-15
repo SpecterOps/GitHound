@@ -22,14 +22,14 @@ Created by: `Git-HoundTeam`
 
 | Edge Kind    | Target Node | Traversable | Description                                                    |
 | ------------ | ----------- | ----------- | -------------------------------------------------------------- |
-| GH_MemberOf  | GH_Team     | Yes         | This role belongs to a team.                                   |
-| GH_AddMember | GH_Team     | Yes         | Maintainer role can add members to the team (Maintainer only). |
+| [GH_MemberOf](../EdgeDescriptions/GH_MemberOf.md)  | [GH_Team](GH_Team.md)     | Yes         | This role belongs to a team.                                   |
+| [GH_AddMember](../EdgeDescriptions/GH_AddMember.md) | [GH_Team](GH_Team.md)     | Yes         | Maintainer role can add members to the team (Maintainer only). |
 
 ### Inbound Edges
 
 | Edge Kind  | Source Node | Traversable | Description                           |
 | ---------- | ----------- | ----------- | ------------------------------------- |
-| GH_HasRole | GH_User     | Yes         | A user is assigned to this team role. |
+| [GH_HasRole](../EdgeDescriptions/GH_HasRole.md) | [GH_User](GH_User.md)     | Yes         | A user is assigned to this team role. |
 
 ## Diagram
 

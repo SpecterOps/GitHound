@@ -29,8 +29,8 @@ None
 
 | Edge Kind      | Source Node   | Traversable | Description                        |
 | -------------- | ------------- | ----------- | ---------------------------------- |
-| GH_Contains    | GH_Repository | No          | Repository contains this variable. |
-| GH_HasVariable | GH_Repository | Yes         | Repository has this variable. Traversable because write access to the repo enables variable access via workflow creation. |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md)    | [GH_Repository](GH_Repository.md) | No          | Repository contains this variable. |
+| [GH_HasVariable](../EdgeDescriptions/GH_HasVariable.md) | [GH_Repository](GH_Repository.md) | Yes         | Repository has this variable. Traversable because write access to the repo enables variable access via workflow creation. |
 
 ## Diagram
 

@@ -7,12 +7,12 @@ is_traversable: true
 
 ## Edge Schema
 
-- Source: [GH_RepoRole](../Nodes/GH_RepoRole.md), [GH_User](../Nodes/GH_User.md), [GH_Team](../Nodes/GH_Team.md)
-- Destination: [GH_Branch](../Nodes/GH_Branch.md)
+- Source: [GH_RepoRole](../NodeDescriptions/GH_RepoRole.md), [GH_User](../NodeDescriptions/GH_User.md), [GH_Team](../NodeDescriptions/GH_Team.md)
+- Destination: [GH_Branch](../NodeDescriptions/GH_Branch.md)
 
 ## General Information
 
-The traversable `GH_CanWriteBranch` edge is a computed edge indicating that a role or actor can push to a specific branch. Created by `Compute-GitHoundBranchAccess` with no additional API calls, the computation evaluates both the merge gate (PR review requirements) and push gate (push restrictions) of any branch protection rule protecting the branch. Role-level edges are the common case; per-actor edges from `GH_User` or `GH_Team` are only emitted when BPR allowances grant access beyond what the role provides. Each edge includes a `reason` property (`no_protection`, `admin`, `push_protected_branch`, `bypass_branch_protection`, `push_allowance`, `bypass_pr_allowance`) and a `query_composition` Cypher query showing the underlying graph evidence.
+The traversable [GH_CanWriteBranch](GH_CanWriteBranch.md) edge is a computed edge indicating that a role or actor can push to a specific branch. Created by `Compute-GitHoundBranchAccess` with no additional API calls, the computation evaluates both the merge gate (PR review requirements) and push gate (push restrictions) of any branch protection rule protecting the branch. Role-level edges are the common case; per-actor edges from [GH_User](../NodeDescriptions/GH_User.md) or [GH_Team](../NodeDescriptions/GH_Team.md) are only emitted when BPR allowances grant access beyond what the role provides. Each edge includes a `reason` property (`no_protection`, `admin`, `push_protected_branch`, `bypass_branch_protection`, `push_allowance`, `bypass_pr_allowance`) and a `query_composition` Cypher query showing the underlying graph evidence.
 
 ## Scenarios
 
@@ -41,7 +41,7 @@ graph LR
 
 ### `push_protected_branch` — Push gate bypass
 
-Push gate blocked by `push_restrictions` (no merge gate block). The `GH_PushProtectedBranch` permission bypasses the push gate regardless of `enforce_admins`.
+Push gate blocked by `push_restrictions` (no merge gate block). The [GH_PushProtectedBranch](GH_PushProtectedBranch.md) permission bypasses the push gate regardless of `enforce_admins`.
 
 ```mermaid
 graph LR
@@ -54,7 +54,7 @@ graph LR
 
 ### `bypass_branch_protection` — Merge gate bypass
 
-Merge gate blocked by PR reviews. The `GH_BypassBranchProtection` permission bypasses the merge gate. Requires `enforce_admins=false`; suppressed when `enforce_admins=true`.
+Merge gate blocked by PR reviews. The [GH_BypassBranchProtection](GH_BypassBranchProtection.md) permission bypasses the merge gate. Requires `enforce_admins=false`; suppressed when `enforce_admins=true`.
 
 ```mermaid
 graph LR

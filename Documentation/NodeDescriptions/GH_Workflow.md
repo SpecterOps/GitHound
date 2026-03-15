@@ -33,7 +33,7 @@ None
 
 | Edge Kind      | Source Node   | Traversable | Description                   |
 | -------------- | ------------- | ----------- | ----------------------------- |
-| GH_HasWorkflow | GH_Repository | No          | Repository has this workflow. |
+| [GH_HasWorkflow](../EdgeDescriptions/GH_HasWorkflow.md) | [GH_Repository](GH_Repository.md) | No          | Repository has this workflow. |
 
 ## Diagram
 

@@ -7,12 +7,12 @@ is_traversable: true
 
 ## Edge Schema
 
-- Source: [GH_Organization](../Nodes/GH_Organization.md)
-- Destination: [GH_Repository](../Nodes/GH_Repository.md)
+- Source: [GH_Organization](../NodeDescriptions/GH_Organization.md)
+- Destination: [GH_Repository](../NodeDescriptions/GH_Repository.md)
 
 ## General Information
 
-The traversable `GH_Owns` edge represents that an organization owns a repository. Created by `Git-HoundRepository`, this edge establishes the foundation of the access control model by linking repositories to their owning organization. It is traversable because repository ownership is a critical relationship for understanding how organizational permissions cascade down to repository-level access, making it essential for attack path analysis.
+The traversable [GH_Owns](GH_Owns.md) edge represents that an organization owns a repository. Created by `Git-HoundRepository`, this edge establishes the foundation of the access control model by linking repositories to their owning organization. It is traversable because repository ownership is a critical relationship for understanding how organizational permissions cascade down to repository-level access, making it essential for attack path analysis.
 
 ```mermaid
 graph LR

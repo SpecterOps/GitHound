@@ -7,12 +7,12 @@ is_traversable: false
 
 ## Edge Schema
 
-- Source: [GH_Repository](../Nodes/GH_Repository.md), [GH_Branch](../Nodes/GH_Branch.md)
-- Destination: [GH_Environment](../Nodes/GH_Environment.md)
+- Source: [GH_Repository](../NodeDescriptions/GH_Repository.md), [GH_Branch](../NodeDescriptions/GH_Branch.md)
+- Destination: [GH_Environment](../NodeDescriptions/GH_Environment.md)
 
 ## General Information
 
-The non-traversable `GH_HasEnvironment` edge represents the relationship between a repository or branch and its deployment environments. Created by `Git-HoundEnvironment`, this edge links environments to the repositories that define them and to the branches that are allowed to deploy to them (via deployment branch policies). Environments are security-relevant because they can gate access to secrets and cloud credentials, and their deployment branch policies control which branches can trigger deployments.
+The non-traversable [GH_HasEnvironment](GH_HasEnvironment.md) edge represents the relationship between a repository or branch and its deployment environments. Created by `Git-HoundEnvironment`, this edge links environments to the repositories that define them and to the branches that are allowed to deploy to them (via deployment branch policies). Environments are security-relevant because they can gate access to secrets and cloud credentials, and their deployment branch policies control which branches can trigger deployments.
 
 ```mermaid
 graph LR

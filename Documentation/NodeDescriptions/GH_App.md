@@ -1,6 +1,6 @@
 # <img src="../Icons/GH_App.png" width="50"/> GH_App
 
-Represents a GitHub App definition — the registered application entity. The app owner holds the private key that can generate installation access tokens for **every** `GH_AppInstallation` of this app. If the private key is compromised, all installations across all organizations are affected.
+Represents a GitHub App definition — the registered application entity. The app owner holds the private key that can generate installation access tokens for **every** [GH_AppInstallation](GH_AppInstallation.md) of this app. If the private key is compromised, all installations across all organizations are affected.
 
 App definitions are retrieved via the public `GET /apps/{app_slug}` endpoint (no authentication required) after discovering unique app slugs from the organization's app installations.
 
@@ -34,7 +34,7 @@ Created by: `Git-HoundAppInstallation`
 
 | Edge Name      | Target Node        | Traversable | Description                                                      |
 | -------------- | ------------------ | ----------- | ---------------------------------------------------------------- |
-| GH_InstalledAs | GH_AppInstallation | -->         | The app is installed as this installation on an organization.    |
+| [GH_InstalledAs](../EdgeDescriptions/GH_InstalledAs.md) | [GH_AppInstallation](GH_AppInstallation.md) | -->         | The app is installed as this installation on an organization.    |
 
 ### Inbound Edges
 

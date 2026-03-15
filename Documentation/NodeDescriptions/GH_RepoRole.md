@@ -24,77 +24,77 @@ Created by: `Git-HoundRepository`
 
 | Edge Kind                          | Target Node            | Traversable | Description                                                                      |
 | ---------------------------------- | ---------------------- | ----------- | -------------------------------------------------------------------------------- |
-| GH_CanEditProtection               | GH_Branch              | Yes         | Role can modify or remove the protection rules governing this branch (computed). |
-| GH_ReadRepoContents                | GH_Repository          | No          | Read role can read repository contents.                                          |
-| GH_WriteRepoContents               | GH_Repository          | No          | Write/Admin role can push to the repository.                                     |
-| GH_WriteRepoPullRequests           | GH_Repository          | No          | Write/Admin role can create and merge pull requests.                             |
-| GH_AdminTo                         | GH_Repository          | No          | Admin role has full administrative access.                                       |
-| GH_ManageWebhooks                  | GH_Repository          | No          | Admin role can manage webhooks.                                                  |
-| GH_ManageDeployKeys                | GH_Repository          | No          | Admin role can manage deploy keys.                                               |
-| GH_PushProtectedBranch             | GH_Repository          | No          | Admin/Maintain role can push to protected branches.                              |
-| GH_DeleteAlertsCodeScanning        | GH_Repository          | No          | Admin role can delete code scanning alerts.                                      |
-| GH_ViewSecretScanningAlerts        | GH_Repository          | No          | Admin role can view secret scanning alerts.                                      |
-| GH_RunOrgMigration                 | GH_Repository          | No          | Admin role can run organization migrations.                                      |
-| GH_BypassBranchProtection          | GH_Repository          | No          | Admin role can bypass branch protection rules.                                   |
-| GH_ManageSecurityProducts          | GH_Repository          | No          | Admin role can manage security products.                                         |
-| GH_ManageRepoSecurityProducts      | GH_Repository          | No          | Admin role can manage repo security products.                                    |
-| GH_EditRepoProtections             | GH_Repository          | No          | Admin role can edit branch protection rules.                                     |
-| GH_JumpMergeQueue                  | GH_Repository          | No          | Admin role can jump the merge queue.                                             |
-| GH_CreateSoloMergeQueueEntry       | GH_Repository          | No          | Admin role can create solo merge queue entries.                                  |
-| GH_EditRepoCustomPropertiesValues  | GH_Repository          | No          | Admin role can edit custom property values.                                      |
-| GH_AddLabel                        | GH_Repository          | No          | Triage/Write/Maintain/Admin role can add labels.                                 |
-| GH_RemoveLabel                     | GH_Repository          | No          | Triage/Write/Maintain/Admin role can remove labels.                              |
-| GH_CloseIssue                      | GH_Repository          | No          | Triage/Write/Maintain/Admin role can close issues.                               |
-| GH_ReopenIssue                     | GH_Repository          | No          | Triage/Write/Maintain/Admin role can reopen issues.                              |
-| GH_ClosePullRequest                | GH_Repository          | No          | Triage/Write/Maintain/Admin role can close pull requests.                        |
-| GH_ReopenPullRequest               | GH_Repository          | No          | Triage/Write/Maintain/Admin role can reopen pull requests.                       |
-| GH_AddAssignee                     | GH_Repository          | No          | Triage/Write/Maintain/Admin role can assign users.                               |
-| GH_DeleteIssue                     | GH_Repository          | No          | Admin role can delete issues.                                                    |
-| GH_RemoveAssignee                  | GH_Repository          | No          | Triage/Write/Maintain/Admin role can remove assignees.                           |
-| GH_RequestPrReview                 | GH_Repository          | No          | Triage/Write/Maintain/Admin role can request PR reviews.                         |
-| GH_MarkAsDuplicate                 | GH_Repository          | No          | Triage/Write/Maintain/Admin role can mark as duplicate.                          |
-| GH_SetMilestone                    | GH_Repository          | No          | Triage/Write/Maintain/Admin role can set milestones.                             |
-| GH_SetIssueType                    | GH_Repository          | No          | Triage/Write/Maintain/Admin role can set issue types.                            |
-| GH_ManageTopics                    | GH_Repository          | No          | Maintain/Admin role can manage topics.                                           |
-| GH_ManageSettingsWiki              | GH_Repository          | No          | Maintain/Admin role can manage wiki settings.                                    |
-| GH_ManageSettingsProjects          | GH_Repository          | No          | Maintain/Admin role can manage project settings.                                 |
-| GH_ManageSettingsMergeTypes        | GH_Repository          | No          | Maintain/Admin role can manage merge type settings.                              |
-| GH_ManageSettingsPages             | GH_Repository          | No          | Maintain/Admin role can manage Pages settings.                                   |
-| GH_EditRepoMetadata                | GH_Repository          | No          | Maintain/Admin role can edit repository metadata.                                |
-| GH_SetInteractionLimits            | GH_Repository          | No          | Maintain/Admin role can set interaction limits.                                  |
-| GH_SetSocialPreview                | GH_Repository          | No          | Maintain/Admin role can set social preview.                                      |
-| GH_EditRepoAnnouncementBanners     | GH_Repository          | No          | Maintain/Admin role can edit announcement banners.                               |
-| GH_ReadCodeScanning                | GH_Repository          | No          | Write/Maintain/Admin role can read code scanning results.                        |
-| GH_WriteCodeScanning               | GH_Repository          | No          | Write/Maintain/Admin role can upload code scanning results.                      |
-| GH_ViewDependabotAlerts            | GH_Repository          | No          | Write/Maintain/Admin role can view Dependabot alerts.                            |
-| GH_ResolveDependabotAlerts         | GH_Repository          | No          | Write/Maintain/Admin role can resolve Dependabot alerts.                         |
-| GH_DeleteDiscussion                | GH_Repository          | No          | Triage/Write/Maintain/Admin role can delete discussions.                         |
-| GH_ToggleDiscussionAnswer          | GH_Repository          | No          | Triage/Write/Maintain/Admin role can toggle discussion answers.                  |
-| GH_ToggleDiscussionCommentMinimize | GH_Repository          | No          | Triage/Write/Maintain/Admin role can minimize discussion comments.               |
-| GH_EditDiscussionCategory          | GH_Repository          | No          | Triage/Write/Maintain/Admin role can edit discussion categories.                 |
-| GH_CreateDiscussionCategory        | GH_Repository          | No          | Triage/Write/Maintain/Admin role can create discussion categories.               |
-| GH_ConvertIssuesToDiscussions      | GH_Repository          | No          | Triage/Write/Maintain/Admin role can convert issues to discussions.              |
-| GH_CloseDiscussion                 | GH_Repository          | No          | Triage/Write/Maintain/Admin role can close discussions.                          |
-| GH_ReopenDiscussion                | GH_Repository          | No          | Triage/Write/Maintain/Admin role can reopen discussions.                         |
-| GH_EditCategoryOnDiscussion        | GH_Repository          | No          | Triage/Write/Maintain/Admin role can change discussion category.                 |
-| GH_ManageDiscussionBadges          | GH_Repository          | No          | Write/Maintain/Admin role can manage discussion badges.                          |
-| GH_EditDiscussionComment           | GH_Repository          | No          | Triage/Write/Maintain/Admin role can edit discussion comments.                   |
-| GH_DeleteDiscussionComment         | GH_Repository          | No          | Triage/Write/Maintain/Admin role can delete discussion comments.                 |
-| GH_CreateTag                       | GH_Repository          | No          | Maintain/Admin role can create tags and releases.                                |
-| GH_DeleteTag                       | GH_Repository          | No          | Admin role can delete tags and releases.                                         |
-| GH_HasBaseRole                     | GH_RepoRole            | Yes         | Role inherits from a base role (e.g., Triage → Read, Maintain → Write).          |
-| GH_CanCreateBranch                 | GH_Repository          | Yes         | Role can create new branches (computed from permissions + BPR state).            |
-| GH_CanWriteBranch                  | GH_Branch              | Yes         | Role can push to this branch (computed from permissions + BPR state).            |
-| GH_CanReadSecretScanningAlert      | GH_SecretScanningAlert | Yes         | Role can read secret scanning alerts in the repository (computed).               |
+| [GH_CanEditProtection](../EdgeDescriptions/GH_CanEditProtection.md)               | [GH_Branch](GH_Branch.md)              | Yes         | Role can modify or remove the protection rules governing this branch (computed). |
+| [GH_ReadRepoContents](../EdgeDescriptions/GH_ReadRepoContents.md)                | [GH_Repository](GH_Repository.md)          | No          | Read role can read repository contents.                                          |
+| [GH_WriteRepoContents](../EdgeDescriptions/GH_WriteRepoContents.md)               | [GH_Repository](GH_Repository.md)          | No          | Write/Admin role can push to the repository.                                     |
+| [GH_WriteRepoPullRequests](../EdgeDescriptions/GH_WriteRepoPullRequests.md)           | [GH_Repository](GH_Repository.md)          | No          | Write/Admin role can create and merge pull requests.                             |
+| [GH_AdminTo](../EdgeDescriptions/GH_AdminTo.md)                         | [GH_Repository](GH_Repository.md)          | No          | Admin role has full administrative access.                                       |
+| [GH_ManageWebhooks](../EdgeDescriptions/GH_ManageWebhooks.md)                  | [GH_Repository](GH_Repository.md)          | No          | Admin role can manage webhooks.                                                  |
+| [GH_ManageDeployKeys](../EdgeDescriptions/GH_ManageDeployKeys.md)                | [GH_Repository](GH_Repository.md)          | No          | Admin role can manage deploy keys.                                               |
+| [GH_PushProtectedBranch](../EdgeDescriptions/GH_PushProtectedBranch.md)             | [GH_Repository](GH_Repository.md)          | No          | Admin/Maintain role can push to protected branches.                              |
+| [GH_DeleteAlertsCodeScanning](../EdgeDescriptions/GH_DeleteAlertsCodeScanning.md)        | [GH_Repository](GH_Repository.md)          | No          | Admin role can delete code scanning alerts.                                      |
+| [GH_ViewSecretScanningAlerts](../EdgeDescriptions/GH_ViewSecretScanningAlerts.md)        | [GH_Repository](GH_Repository.md)          | No          | Admin role can view secret scanning alerts.                                      |
+| [GH_RunOrgMigration](../EdgeDescriptions/GH_RunOrgMigration.md)                 | [GH_Repository](GH_Repository.md)          | No          | Admin role can run organization migrations.                                      |
+| [GH_BypassBranchProtection](../EdgeDescriptions/GH_BypassBranchProtection.md)          | [GH_Repository](GH_Repository.md)          | No          | Admin role can bypass branch protection rules.                                   |
+| [GH_ManageSecurityProducts](../EdgeDescriptions/GH_ManageSecurityProducts.md)          | [GH_Repository](GH_Repository.md)          | No          | Admin role can manage security products.                                         |
+| [GH_ManageRepoSecurityProducts](../EdgeDescriptions/GH_ManageRepoSecurityProducts.md)      | [GH_Repository](GH_Repository.md)          | No          | Admin role can manage repo security products.                                    |
+| [GH_EditRepoProtections](../EdgeDescriptions/GH_EditRepoProtections.md)             | [GH_Repository](GH_Repository.md)          | No          | Admin role can edit branch protection rules.                                     |
+| [GH_JumpMergeQueue](../EdgeDescriptions/GH_JumpMergeQueue.md)                  | [GH_Repository](GH_Repository.md)          | No          | Admin role can jump the merge queue.                                             |
+| [GH_CreateSoloMergeQueueEntry](../EdgeDescriptions/GH_CreateSoloMergeQueueEntry.md)       | [GH_Repository](GH_Repository.md)          | No          | Admin role can create solo merge queue entries.                                  |
+| [GH_EditRepoCustomPropertiesValues](../EdgeDescriptions/GH_EditRepoCustomPropertiesValues.md)  | [GH_Repository](GH_Repository.md)          | No          | Admin role can edit custom property values.                                      |
+| [GH_AddLabel](../EdgeDescriptions/GH_AddLabel.md)                        | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can add labels.                                 |
+| [GH_RemoveLabel](../EdgeDescriptions/GH_RemoveLabel.md)                     | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can remove labels.                              |
+| [GH_CloseIssue](../EdgeDescriptions/GH_CloseIssue.md)                      | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can close issues.                               |
+| [GH_ReopenIssue](../EdgeDescriptions/GH_ReopenIssue.md)                     | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can reopen issues.                              |
+| [GH_ClosePullRequest](../EdgeDescriptions/GH_ClosePullRequest.md)                | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can close pull requests.                        |
+| [GH_ReopenPullRequest](../EdgeDescriptions/GH_ReopenPullRequest.md)               | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can reopen pull requests.                       |
+| [GH_AddAssignee](../EdgeDescriptions/GH_AddAssignee.md)                     | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can assign users.                               |
+| [GH_DeleteIssue](../EdgeDescriptions/GH_DeleteIssue.md)                     | [GH_Repository](GH_Repository.md)          | No          | Admin role can delete issues.                                                    |
+| [GH_RemoveAssignee](../EdgeDescriptions/GH_RemoveAssignee.md)                  | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can remove assignees.                           |
+| [GH_RequestPrReview](../EdgeDescriptions/GH_RequestPrReview.md)                 | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can request PR reviews.                         |
+| [GH_MarkAsDuplicate](../EdgeDescriptions/GH_MarkAsDuplicate.md)                 | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can mark as duplicate.                          |
+| [GH_SetMilestone](../EdgeDescriptions/GH_SetMilestone.md)                    | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can set milestones.                             |
+| [GH_SetIssueType](../EdgeDescriptions/GH_SetIssueType.md)                    | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can set issue types.                            |
+| [GH_ManageTopics](../EdgeDescriptions/GH_ManageTopics.md)                    | [GH_Repository](GH_Repository.md)          | No          | Maintain/Admin role can manage topics.                                           |
+| [GH_ManageSettingsWiki](../EdgeDescriptions/GH_ManageSettingsWiki.md)              | [GH_Repository](GH_Repository.md)          | No          | Maintain/Admin role can manage wiki settings.                                    |
+| [GH_ManageSettingsProjects](../EdgeDescriptions/GH_ManageSettingsProjects.md)          | [GH_Repository](GH_Repository.md)          | No          | Maintain/Admin role can manage project settings.                                 |
+| [GH_ManageSettingsMergeTypes](../EdgeDescriptions/GH_ManageSettingsMergeTypes.md)        | [GH_Repository](GH_Repository.md)          | No          | Maintain/Admin role can manage merge type settings.                              |
+| [GH_ManageSettingsPages](../EdgeDescriptions/GH_ManageSettingsPages.md)             | [GH_Repository](GH_Repository.md)          | No          | Maintain/Admin role can manage Pages settings.                                   |
+| [GH_EditRepoMetadata](../EdgeDescriptions/GH_EditRepoMetadata.md)                | [GH_Repository](GH_Repository.md)          | No          | Maintain/Admin role can edit repository metadata.                                |
+| [GH_SetInteractionLimits](../EdgeDescriptions/GH_SetInteractionLimits.md)            | [GH_Repository](GH_Repository.md)          | No          | Maintain/Admin role can set interaction limits.                                  |
+| [GH_SetSocialPreview](../EdgeDescriptions/GH_SetSocialPreview.md)                | [GH_Repository](GH_Repository.md)          | No          | Maintain/Admin role can set social preview.                                      |
+| [GH_EditRepoAnnouncementBanners](../EdgeDescriptions/GH_EditRepoAnnouncementBanners.md)     | [GH_Repository](GH_Repository.md)          | No          | Maintain/Admin role can edit announcement banners.                               |
+| [GH_ReadCodeScanning](../EdgeDescriptions/GH_ReadCodeScanning.md)                | [GH_Repository](GH_Repository.md)          | No          | Write/Maintain/Admin role can read code scanning results.                        |
+| [GH_WriteCodeScanning](../EdgeDescriptions/GH_WriteCodeScanning.md)               | [GH_Repository](GH_Repository.md)          | No          | Write/Maintain/Admin role can upload code scanning results.                      |
+| [GH_ViewDependabotAlerts](../EdgeDescriptions/GH_ViewDependabotAlerts.md)            | [GH_Repository](GH_Repository.md)          | No          | Write/Maintain/Admin role can view Dependabot alerts.                            |
+| [GH_ResolveDependabotAlerts](../EdgeDescriptions/GH_ResolveDependabotAlerts.md)         | [GH_Repository](GH_Repository.md)          | No          | Write/Maintain/Admin role can resolve Dependabot alerts.                         |
+| [GH_DeleteDiscussion](../EdgeDescriptions/GH_DeleteDiscussion.md)                | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can delete discussions.                         |
+| [GH_ToggleDiscussionAnswer](../EdgeDescriptions/GH_ToggleDiscussionAnswer.md)          | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can toggle discussion answers.                  |
+| [GH_ToggleDiscussionCommentMinimize](../EdgeDescriptions/GH_ToggleDiscussionCommentMinimize.md) | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can minimize discussion comments.               |
+| [GH_EditDiscussionCategory](../EdgeDescriptions/GH_EditDiscussionCategory.md)          | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can edit discussion categories.                 |
+| [GH_CreateDiscussionCategory](../EdgeDescriptions/GH_CreateDiscussionCategory.md)        | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can create discussion categories.               |
+| [GH_ConvertIssuesToDiscussions](../EdgeDescriptions/GH_ConvertIssuesToDiscussions.md)      | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can convert issues to discussions.              |
+| [GH_CloseDiscussion](../EdgeDescriptions/GH_CloseDiscussion.md)                 | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can close discussions.                          |
+| [GH_ReopenDiscussion](../EdgeDescriptions/GH_ReopenDiscussion.md)                | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can reopen discussions.                         |
+| [GH_EditCategoryOnDiscussion](../EdgeDescriptions/GH_EditCategoryOnDiscussion.md)        | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can change discussion category.                 |
+| [GH_ManageDiscussionBadges](../EdgeDescriptions/GH_ManageDiscussionBadges.md)          | [GH_Repository](GH_Repository.md)          | No          | Write/Maintain/Admin role can manage discussion badges.                          |
+| [GH_EditDiscussionComment](../EdgeDescriptions/GH_EditDiscussionComment.md)           | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can edit discussion comments.                   |
+| [GH_DeleteDiscussionComment](../EdgeDescriptions/GH_DeleteDiscussionComment.md)         | [GH_Repository](GH_Repository.md)          | No          | Triage/Write/Maintain/Admin role can delete discussion comments.                 |
+| [GH_CreateTag](../EdgeDescriptions/GH_CreateTag.md)                       | [GH_Repository](GH_Repository.md)          | No          | Maintain/Admin role can create tags and releases.                                |
+| [GH_DeleteTag](../EdgeDescriptions/GH_DeleteTag.md)                       | [GH_Repository](GH_Repository.md)          | No          | Admin role can delete tags and releases.                                         |
+| [GH_HasBaseRole](../EdgeDescriptions/GH_HasBaseRole.md)                     | [GH_RepoRole](GH_RepoRole.md)            | Yes         | Role inherits from a base role (e.g., Triage → Read, Maintain → Write).          |
+| [GH_CanCreateBranch](../EdgeDescriptions/GH_CanCreateBranch.md)                 | [GH_Repository](GH_Repository.md)          | Yes         | Role can create new branches (computed from permissions + BPR state).            |
+| [GH_CanWriteBranch](../EdgeDescriptions/GH_CanWriteBranch.md)                  | [GH_Branch](GH_Branch.md)              | Yes         | Role can push to this branch (computed from permissions + BPR state).            |
+| [GH_CanReadSecretScanningAlert](../EdgeDescriptions/GH_CanReadSecretScanningAlert.md)      | [GH_SecretScanningAlert](GH_SecretScanningAlert.md) | Yes         | Role can read secret scanning alerts in the repository (computed).               |
 
 ### Inbound Edges
 
 | Edge Kind      | Source Node  | Traversable | Description                                                                       |
 | -------------- | ------------ | ----------- | --------------------------------------------------------------------------------- |
-| GH_HasRole     | GH_User      | Yes         | A user is directly assigned to this repository role.                              |
-| GH_HasRole     | GH_Team      | Yes         | A team is assigned to this repository role.                                       |
-| GH_HasBaseRole | GH_OrgRole   | Yes         | An org-level `all_repo_*` role inherits to this repo role.                        |
-| GH_HasBaseRole | GH_RepoRole  | Yes         | A higher-level repo role inherits from this role (e.g., custom role → base role). |
+| [GH_HasRole](../EdgeDescriptions/GH_HasRole.md)     | [GH_User](GH_User.md)      | Yes         | A user is directly assigned to this repository role.                              |
+| [GH_HasRole](../EdgeDescriptions/GH_HasRole.md)     | [GH_Team](GH_Team.md)      | Yes         | A team is assigned to this repository role.                                       |
+| [GH_HasBaseRole](../EdgeDescriptions/GH_HasBaseRole.md) | [GH_OrgRole](GH_OrgRole.md)   | Yes         | An org-level `all_repo_*` role inherits to this repo role.                        |
+| [GH_HasBaseRole](../EdgeDescriptions/GH_HasBaseRole.md) | [GH_RepoRole](GH_RepoRole.md)  | Yes         | A higher-level repo role inherits from this role (e.g., custom role → base role). |
 
 ## Diagram
 
