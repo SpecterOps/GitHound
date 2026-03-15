@@ -57,7 +57,7 @@ flowchart TD
     GH_Branch[fa:fa-code-branch GH_Branch]
     GH_ExternalIdentity[fa:fa-arrows-left-right GH_ExternalIdentity]
     AZUser[fa:fa-user AZUser]
-    OktaUser[fa:fa-user OktaUser]
+    Okta_User[fa:fa-user Okta_User]
     PingOneUser[fa:fa-user PingOneUser]
 
     style GH_User fill:#FF8E40
@@ -67,7 +67,7 @@ flowchart TD
     style GH_Branch fill:#FF80D2
     style GH_ExternalIdentity fill:#8A8F98
     style AZUser fill:#FF80D2
-    style OktaUser fill:#FFE4A1
+    style Okta_User fill:#FFE4A1
     style PingOneUser fill:#FFE4A1
 
     GH_PersonalAccessToken[fa:fa-key GH_PersonalAccessToken]
@@ -91,6 +91,6 @@ flowchart TD
     GH_User -->|GH_CanCreateBranch| GH_Repository
     GH_ExternalIdentity -.->|GH_MapsToUser| GH_User
     AZUser -->|GH_SyncedTo| GH_User
-    OktaUser -->|GH_SyncedTo| GH_User
+    Okta_User -->|GH_SyncedTo| GH_User
     PingOneUser -->|GH_SyncedTo| GH_User
 ```

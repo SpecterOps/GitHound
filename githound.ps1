@@ -5647,8 +5647,8 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                 # It has not been tested with GitHub Enterprise Managed Users (aka SCIM implementations)
                 'http://www.okta.com/*'
                 {
-                    $ForeignUserNodeKind = 'OktaUser'
-                    $ForeginEnvironmentNodeKind = 'OktaOrganization'
+                    $ForeignUserNodeKind = 'Okta_User'
+                    $ForeginEnvironmentNodeKind = 'Okta_Organization'
                     $ForeignEnvironmentId = $result.data.organization.samlIdentityProvider.ssoUrl.Split('/')[2]
                     #$null = $edges.Add((New-GitHoundEdge -Kind 'GH_SyncedToEnvironment' -StartId $result.data.organization.samlIdentityProvider.id -EndId $ForeignEnvironmentName -EndKind $ForeginEnvironmentNodeKind -EndMatchBy name -Properties @{traversable=$false}))
                 }

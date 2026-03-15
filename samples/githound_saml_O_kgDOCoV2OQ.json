@@ -76,7 +76,7 @@
           "value": "EI_lAHOCoV2Oc2WFs4CbGNd"
         },
         "end": {
-          "kind": "OktaUser",
+          "kind": "Okta_User",
           "value": "jatkinson@specterops.io",
           "match_by": "name"
         },
@@ -99,7 +99,7 @@
       {
         "kind": "GH_SyncedTo",
         "start": {
-          "kind": "OktaUser",
+          "kind": "Okta_User",
           "value": "jatkinson@specterops.io",
           "match_by": "name"
         },

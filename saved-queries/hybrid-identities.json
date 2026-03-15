@@ -1,5 +1,5 @@
 {
   "name": "[GitHub] External Identities",
-  "query": "MATCH p=(s)-[]->(d:GH_User) WHERE s:AZUser OR s:OktaUser RETURN p LIMIT 1000",
+  "query": "MATCH p=(s)-[]->(d:GH_User) WHERE s:AZUser OR s:Okta_User RETURN p LIMIT 1000",
   "description": "Returns all external identities (e.g., Azure or Okta users) that are associated with GitHub users."
 }

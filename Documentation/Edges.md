@@ -143,8 +143,8 @@ AWS IAM role assumption uses the same `GH_CanAssumeIdentity` edge (see Microsoft
 
 | Edge Type        | Source Node Kinds     | Target Node Kinds | Traversable |
 |------------------|-----------------------|-------------------|-------------|
-| [GH_SyncedTo] | [OktaUser]            | [GH_User]         | ✅          |
-| [GH_MapsToUser]  | [GH_ExternalIdentity] | [OktaUser]        | ❌          |
+| [GH_SyncedTo] | [Okta_User]            | [GH_User]         | ✅          |
+| [GH_MapsToUser]  | [GH_ExternalIdentity] | [Okta_User]        | ❌          |
 
 ### PingOne
 
@@ -285,5 +285,5 @@ AWS IAM role assumption uses the same `GH_CanAssumeIdentity` edge (see Microsoft
 [AZUser]: https://bloodhound.specterops.io/resources/nodes/az-user
 [AZFederatedIdentityCredential]: https://bloodhound.specterops.io/resources/nodes/az-federated-identity-credential
 [AWSRole]: https://bloodhound.specterops.io/resources/nodes/aws-role
-[OktaUser]: https://github.com/SpecterOps/OktaHound
+[Okta_User]: https://github.com/SpecterOps/OktaHound
 [PingOneUser]: https://github.com/SpecterOps/PingHound

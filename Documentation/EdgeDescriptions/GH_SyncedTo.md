@@ -7,7 +7,7 @@ is_traversable: true
 
 ## Edge Schema
 
-- Source: [AZUser](https://bloodhound.specterops.io/resources/nodes/az-user), [OktaUser](https://github.com/SpecterOps/OktaHound), [PingOneUser](https://github.com/SpecterOps/PingHound)
+- Source: [AZUser](https://bloodhound.specterops.io/resources/nodes/az-user), [Okta_User](https://github.com/SpecterOps/OktaHound), [PingOneUser](https://github.com/SpecterOps/PingHound)
 - Destination: [GH_User](../Nodes/GH_User.md)
 
 ## General Information
@@ -17,7 +17,7 @@ The traversable `GH_SyncedTo` edge is a hybrid edge that maps an external IdP us
 ```mermaid
 graph LR
     azUser("AZUser alice@specterops.io")
-    oktaUser("OktaUser bob@specterops.io")
+    oktaUser("Okta_User bob@specterops.io")
     ghUser1("GH_User alice")
     ghUser2("GH_User bob")
     azUser -- GH_SyncedTo --> ghUser1
