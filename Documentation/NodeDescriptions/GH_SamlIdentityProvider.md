@@ -6,33 +6,33 @@ Created by: `Git-HoundGraphQlSamlProvider`
 
 ## Properties
 
-| Property Name          | Data Type | Description                                                |
-| ---------------------- | --------- | ---------------------------------------------------------- |
-| objectid               | string    | The GraphQL ID of the SAML identity provider.              |
-| name                   | string    | Same as objectid.                                          |
-| node_id                | string    | Same as objectid.                                          |
-| environment_name       | string    | The name of the environment (GitHub organization).         |
-| environmentid          | string    | The GraphQL ID of the environment (GitHub organization).   |
-| foreign_environmentid  | string    | The ID of the foreign environment linked to this provider. |
-| digest_method          | string    | The digest method used by the SAML provider.               |
-| idp_certificate        | string    | The identity provider's X.509 certificate.                 |
-| issuer                 | string    | The SAML issuer URL.                                       |
-| signature_method       | string    | The signature method used by the SAML provider.            |
-| sso_url                | string    | The SAML single sign-on URL.                               |
+| Property Name         | Data Type | Description                                                |
+| --------------------- | --------- | ---------------------------------------------------------- |
+| objectid              | string    | The GraphQL ID of the SAML identity provider.              |
+| name                  | string    | Same as objectid.                                          |
+| node_id               | string    | Same as objectid.                                          |
+| environment_name      | string    | The name of the environment (GitHub organization).         |
+| environmentid         | string    | The GraphQL ID of the environment (GitHub organization).   |
+| foreign_environmentid | string    | The ID of the foreign environment linked to this provider. |
+| digest_method         | string    | The digest method used by the SAML provider.               |
+| idp_certificate       | string    | The identity provider's X.509 certificate.                 |
+| issuer                | string    | The SAML issuer URL.                                       |
+| signature_method      | string    | The signature method used by the SAML provider.            |
+| sso_url               | string    | The SAML single sign-on URL.                               |
 
 ## Edges
 
 ### Outbound Edges
 
-| Edge Kind              | Target Node         | Traversable | Description                                         |
-| ---------------------- | ------------------- | ----------- | --------------------------------------------------- |
-| GH_HasExternalIdentity | GH_ExternalIdentity | No          | Identity provider has an external identity mapping. |
+| Edge Kind                                                               | Target Node                                   | Traversable | Description                                         |
+| ----------------------------------------------------------------------- | --------------------------------------------- | ----------- | --------------------------------------------------- |
+| [GH_HasExternalIdentity](../EdgeDescriptions/GH_HasExternalIdentity.md) | [GH_ExternalIdentity](GH_ExternalIdentity.md) | No          | Identity provider has an external identity mapping. |
 
 ### Inbound Edges
 
-| Edge Kind                  | Source Node     | Traversable | Description                                   |
-| -------------------------- | --------------- | ----------- | --------------------------------------------- |
-| GH_HasSamlIdentityProvider | GH_Organization | No          | Organization has this SAML identity provider. |
+| Edge Kind                                                                       | Source Node                           | Traversable | Description                                   |
+| ------------------------------------------------------------------------------- | ------------------------------------- | ----------- | --------------------------------------------- |
+| [GH_HasSamlIdentityProvider](../EdgeDescriptions/GH_HasSamlIdentityProvider.md) | [GH_Organization](GH_Organization.md) | No          | Organization has this SAML identity provider. |
 
 ## Diagram
 

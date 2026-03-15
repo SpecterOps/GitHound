@@ -6,18 +6,18 @@ Created by: `Git-HoundSecret`
 
 ## Properties
 
-| Property Name     | Data Type | Description                                                            |
-| ----------------- | --------- | ---------------------------------------------------------------------- |
-| objectid          | string    | A deterministic ID in the format `GHSecret_{repoNodeId}_{secretName}`. |
-| id                | string    | Same as objectid.                                                      |
-| name              | string    | The name of the secret.                                                |
-| environment_name  | string    | The name of the environment (GitHub organization).                     |
+| Property Name    | Data Type | Description                                                            |
+| ---------------- | --------- | ---------------------------------------------------------------------- |
+| objectid         | string    | A deterministic ID in the format `GHSecret_{repoNodeId}_{secretName}`. |
+| id               | string    | Same as objectid.                                                      |
+| name             | string    | The name of the secret.                                                |
+| environment_name | string    | The name of the environment (GitHub organization).                     |
 | environmentid    | string    | The node_id of the environment (GitHub organization).                  |
-| repository_name   | string    | The name of the containing repository.                                 |
-| repository_id     | string    | The node_id of the containing repository.                              |
-| created_at        | datetime  | When the secret was created.                                           |
-| updated_at        | datetime  | When the secret was last updated.                                      |
-| visibility        | string    | The secret's visibility scope.                                         |
+| repository_name  | string    | The name of the containing repository.                                 |
+| repository_id    | string    | The node_id of the containing repository.                              |
+| created_at       | datetime  | When the secret was created.                                           |
+| updated_at       | datetime  | When the secret was last updated.                                      |
+| visibility       | string    | The secret's visibility scope.                                         |
 
 ## Edges
 
@@ -27,10 +27,10 @@ None
 
 ### Inbound Edges
 
-| Edge Kind    | Source Node   | Traversable | Description                      |
-| ------------ | ------------- | ----------- | -------------------------------- |
-| GH_Contains  | GH_Repository | No          | Repository contains this secret. |
-| GH_HasSecret | GH_Repository | Yes         | Repository has this secret. Traversable because any user with write access to the repository can access repo secrets by creating a GitHub Actions workflow. |
+| Edge Kind                                           | Source Node                       | Traversable | Description                                                                                                                                                 |
+| --------------------------------------------------- | --------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md)   | [GH_Repository](GH_Repository.md) | No          | Repository contains this secret.                                                                                                                            |
+| [GH_HasSecret](../EdgeDescriptions/GH_HasSecret.md) | [GH_Repository](GH_Repository.md) | Yes         | Repository has this secret. Traversable because any user with write access to the repository can access repo secrets by creating a GitHub Actions workflow. |
 
 ## Diagram
 

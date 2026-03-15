@@ -26,9 +26,9 @@ flowchart TD
     GH_Workflow[fa:fa-cogs GH_Workflow]
     GH_PersonalAccessToken[fa:fa-key GH_PersonalAccessToken]
     GH_PersonalAccessTokenRequest[fa:fa-key GH_PersonalAccessTokenRequest]
-    OktaUser[fa:fa-user OktaUser]
+    Okta_User[fa:fa-user Okta_User]
     PingOneUser[fa:fa-user PingOneUser]
-    SCIMUser[fa:fa-user SCIMUser]
+    SCIM_User[fa:fa-user SCIM_User]
 
     style AZFederatedIdentityCredential fill:#FF80D2
     style AZUser fill:#FF80D2
@@ -53,9 +53,9 @@ flowchart TD
     style GH_Workflow fill:#FFE4A1
     style GH_PersonalAccessToken fill:#F5A623
     style GH_PersonalAccessTokenRequest fill:#D4A017
-    style OktaUser fill:#FFE4A1
+    style Okta_User fill:#FFE4A1
     style PingOneUser fill:#FFE4A1
-    style SCIMUser fill:#FFE4A1
+    style SCIM_User fill:#FFE4A1
 
     GH_Team -->|GH_MemberOf| GH_Team
     GH_Organization -->|GH_Owns| GH_Repository
@@ -144,12 +144,12 @@ flowchart TD
     GH_SamlIdentityProvider -.->|GH_HasExternalIdentity| GH_ExternalIdentity
     GH_ExternalIdentity -.->|GH_MapsToUser| GH_User
     GH_ExternalIdentity -.->|GH_MapsToUser| AZUser
-    GH_ExternalIdentity -.->|GH_MapsToUser| OktaUser
+    GH_ExternalIdentity -.->|GH_MapsToUser| Okta_User
     GH_ExternalIdentity -.->|GH_MapsToUser| PingOneUser
     AZUser -->|GH_SyncedTo| GH_User
-    OktaUser -->|GH_SyncedTo| GH_User
+    Okta_User -->|GH_SyncedTo| GH_User
     PingOneUser -->|GH_SyncedTo| GH_User
-    SCIMUser -->|SCIMProvisioned| GH_ExternalIdentity
+    SCIM_User -->|SCIM_Provisioned| GH_ExternalIdentity
     GH_Repository -->|GH_CanAssumeIdentity| AZFederatedIdentityCredential
     GH_Branch -->|GH_CanAssumeIdentity| AZFederatedIdentityCredential
     GH_Environment -->|GH_CanAssumeIdentity| AZFederatedIdentityCredential

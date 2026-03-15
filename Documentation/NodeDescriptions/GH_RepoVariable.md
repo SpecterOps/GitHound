@@ -6,18 +6,18 @@ Created by: `Git-HoundVariable`
 
 ## Properties
 
-| Property Name     | Data Type | Description                                                                 |
-| ----------------- | --------- | --------------------------------------------------------------------------- |
-| objectid          | string    | A deterministic ID in the format `GH_Variable_{repoNodeId}_{variableName}`. |
-| id                | string    | Same as objectid.                                                           |
-| name              | string    | The name of the variable.                                                   |
-| environment_name  | string    | The name of the environment (GitHub organization).                          |
+| Property Name    | Data Type | Description                                                                 |
+| ---------------- | --------- | --------------------------------------------------------------------------- |
+| objectid         | string    | A deterministic ID in the format `GH_Variable_{repoNodeId}_{variableName}`. |
+| id               | string    | Same as objectid.                                                           |
+| name             | string    | The name of the variable.                                                   |
+| environment_name | string    | The name of the environment (GitHub organization).                          |
 | environmentid    | string    | The node_id of the environment (GitHub organization).                       |
-| repository_name   | string    | The name of the containing repository.                                      |
-| repository_id     | string    | The node_id of the containing repository.                                   |
-| value             | string    | The plaintext value of the variable.                                        |
-| created_at        | datetime  | When the variable was created.                                              |
-| updated_at        | datetime  | When the variable was last updated.                                         |
+| repository_name  | string    | The name of the containing repository.                                      |
+| repository_id    | string    | The node_id of the containing repository.                                   |
+| value            | string    | The plaintext value of the variable.                                        |
+| created_at       | datetime  | When the variable was created.                                              |
+| updated_at       | datetime  | When the variable was last updated.                                         |
 
 ## Edges
 
@@ -27,10 +27,10 @@ None
 
 ### Inbound Edges
 
-| Edge Kind      | Source Node   | Traversable | Description                        |
-| -------------- | ------------- | ----------- | ---------------------------------- |
-| GH_Contains    | GH_Repository | No          | Repository contains this variable. |
-| GH_HasVariable | GH_Repository | Yes         | Repository has this variable. Traversable because write access to the repo enables variable access via workflow creation. |
+| Edge Kind                                               | Source Node                       | Traversable | Description                                                                                                               |
+| ------------------------------------------------------- | --------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md)       | [GH_Repository](GH_Repository.md) | No          | Repository contains this variable.                                                                                        |
+| [GH_HasVariable](../EdgeDescriptions/GH_HasVariable.md) | [GH_Repository](GH_Repository.md) | Yes         | Repository has this variable. Traversable because write access to the repo enables variable access via workflow creation. |
 
 ## Diagram
 

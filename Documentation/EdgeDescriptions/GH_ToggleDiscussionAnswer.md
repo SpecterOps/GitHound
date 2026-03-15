@@ -7,12 +7,12 @@ is_traversable: false
 
 ## Edge Schema
 
-- Source: [GH_RepoRole](../Nodes/GH_RepoRole.md)
-- Destination: [GH_Repository](../Nodes/GH_Repository.md)
+- Source: [GH_RepoRole](../NodeDescriptions/GH_RepoRole.md)
+- Destination: [GH_Repository](../NodeDescriptions/GH_Repository.md)
 
 ## General Information
 
-The non-traversable `GH_ToggleDiscussionAnswer` edge represents a role's ability to mark or unmark a discussion comment as the accepted answer. This permission is available to Triage, Write, Maintain, and Admin roles and custom roles that have been granted this specific permission.
+The non-traversable [GH_ToggleDiscussionAnswer](GH_ToggleDiscussionAnswer.md) edge represents a role's ability to mark or unmark a discussion comment as the accepted answer. This permission is available to Triage, Write, Maintain, and Admin roles and custom roles that have been granted this specific permission.
 
 ```mermaid
 graph LR

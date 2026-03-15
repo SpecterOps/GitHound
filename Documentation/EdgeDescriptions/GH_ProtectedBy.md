@@ -7,12 +7,12 @@ is_traversable: false
 
 ## Edge Schema
 
-- Source: [GH_BranchProtectionRule](../Nodes/GH_BranchProtectionRule.md)
-- Destination: [GH_Branch](../Nodes/GH_Branch.md)
+- Source: [GH_BranchProtectionRule](../NodeDescriptions/GH_BranchProtectionRule.md)
+- Destination: [GH_Branch](../NodeDescriptions/GH_Branch.md)
 
 ## General Information
 
-The non-traversable `GH_ProtectedBy` edge represents that a branch protection rule applies to a specific branch. Created by `Git-HoundBranch` when branch protection rules are collected, this edge links protection rules to the branches they govern. Understanding which protections apply to a branch is critical for determining the effective access model — protections such as required reviews, status checks, and push restrictions directly impact who can modify a branch. This edge is consumed by the computed edge functions (`Compute-GitHoundBranchAccess`) to determine effective push access; the computed `GH_CanWriteBranch` and `GH_CanEditProtection` edges carry traversability instead.
+The non-traversable [GH_ProtectedBy](GH_ProtectedBy.md) edge represents that a branch protection rule applies to a specific branch. Created by `Git-HoundBranch` when branch protection rules are collected, this edge links protection rules to the branches they govern. Understanding which protections apply to a branch is critical for determining the effective access model — protections such as required reviews, status checks, and push restrictions directly impact who can modify a branch. This edge is consumed by the computed edge functions (`Compute-GitHoundBranchAccess`) to determine effective push access; the computed [GH_CanWriteBranch](GH_CanWriteBranch.md) and [GH_CanEditProtection](GH_CanEditProtection.md) edges carry traversability instead.
 
 ```mermaid
 graph LR

@@ -12,9 +12,9 @@ Created by: `Git-HoundEnvironment`
 | id                          | string    | Same as objectid.                                                                 |
 | name                        | string    | The name of the secret.                                                           |
 | environment_name            | string    | The name of the environment (GitHub organization)                                 |
-| environmentid              | string    | The node_id of the environment (GitHub organization)                              |
+| environmentid               | string    | The node_id of the environment (GitHub organization)                              |
 | deployment_environment_name | string    | The name of the containing deployment environment.                                |
-| deployment_environmentid   | string    | The node_id of the containing deployment environment.                             |
+| deployment_environmentid    | string    | The node_id of the containing deployment environment.                             |
 | created_at                  | datetime  | When the secret was created.                                                      |
 | updated_at                  | datetime  | When the secret was last updated.                                                 |
 
@@ -26,9 +26,9 @@ None
 
 ### Inbound Edges
 
-| Edge Kind    | Source Node    | Traversable | Description                       |
-| ------------ | -------------- | ----------- | --------------------------------- |
-| GH_Contains  | GH_Environment | No          | Environment contains this secret. |
+| Edge Kind                                         | Source Node                         | Traversable | Description                       |
+| ------------------------------------------------- | ----------------------------------- | ----------- | --------------------------------- |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md) | [GH_Environment](GH_Environment.md) | No          | Environment contains this secret. |
 
 ## Diagram
 

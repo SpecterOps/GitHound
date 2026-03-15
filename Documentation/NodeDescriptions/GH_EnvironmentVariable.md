@@ -12,11 +12,11 @@ Created by: `Git-HoundEnvironment`
 | id                          | string    | Same as objectid.                                                                     |
 | name                        | string    | The name of the variable.                                                             |
 | environment_name            | string    | The name of the environment (GitHub organization).                                    |
-| environmentid              | string    | The node_id of the environment (GitHub organization).                                 |
+| environmentid               | string    | The node_id of the environment (GitHub organization).                                 |
 | repository_name             | string    | The name of the containing repository.                                                |
 | repository_id               | string    | The node_id of the containing repository.                                             |
 | deployment_environment_name | string    | The name of the containing deployment environment.                                    |
-| deployment_environmentid   | string    | The node_id of the containing deployment environment.                                 |
+| deployment_environmentid    | string    | The node_id of the containing deployment environment.                                 |
 | value                       | string    | The plaintext value of the variable.                                                  |
 | created_at                  | datetime  | When the variable was created.                                                        |
 | updated_at                  | datetime  | When the variable was last updated.                                                   |
@@ -29,9 +29,9 @@ None
 
 ### Inbound Edges
 
-| Edge Kind   | Source Node     | Traversable | Description                         |
-| ----------- | --------------- | ----------- | ----------------------------------- |
-| GH_Contains | GH_Environment  | No          | Environment contains this variable. |
+| Edge Kind                                         | Source Node                         | Traversable | Description                         |
+| ------------------------------------------------- | ----------------------------------- | ----------- | ----------------------------------- |
+| [GH_Contains](../EdgeDescriptions/GH_Contains.md) | [GH_Environment](GH_Environment.md) | No          | Environment contains this variable. |
 
 ## Diagram
 

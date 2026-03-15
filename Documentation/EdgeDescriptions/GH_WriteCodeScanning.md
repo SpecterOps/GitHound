@@ -7,12 +7,12 @@ is_traversable: false
 
 ## Edge Schema
 
-- Source: [GH_RepoRole](../Nodes/GH_RepoRole.md)
-- Destination: [GH_Repository](../Nodes/GH_Repository.md)
+- Source: [GH_RepoRole](../NodeDescriptions/GH_RepoRole.md)
+- Destination: [GH_Repository](../NodeDescriptions/GH_Repository.md)
 
 ## General Information
 
-The non-traversable `GH_WriteCodeScanning` edge represents a role's ability to upload code scanning analysis results. This permission is available to Write, Maintain, and Admin roles and custom roles that have been granted this specific permission. An attacker could upload falsified SARIF results to suppress real alerts or inject misleading findings.
+The non-traversable [GH_WriteCodeScanning](GH_WriteCodeScanning.md) edge represents a role's ability to upload code scanning analysis results. This permission is available to Write, Maintain, and Admin roles and custom roles that have been granted this specific permission. An attacker could upload falsified SARIF results to suppress real alerts or inject misleading findings.
 
 ```mermaid
 graph LR
