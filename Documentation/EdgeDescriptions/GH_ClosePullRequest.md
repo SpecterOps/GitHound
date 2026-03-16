@@ -1,8 +1,3 @@
----
-kind: GH_ClosePullRequest
-is_traversable: false
----
-
 # GH_ClosePullRequest
 
 ## Edge Schema

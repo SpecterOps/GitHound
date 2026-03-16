@@ -1,8 +1,3 @@
----
-kind: GH_ManageWebhooks
-is_traversable: false
----
-
 # GH_ManageWebhooks
 
 ## Edge Schema

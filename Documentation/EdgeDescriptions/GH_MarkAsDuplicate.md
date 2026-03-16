@@ -1,8 +1,3 @@
----
-kind: GH_MarkAsDuplicate
-is_traversable: false
----
-
 # GH_MarkAsDuplicate
 
 ## Edge Schema

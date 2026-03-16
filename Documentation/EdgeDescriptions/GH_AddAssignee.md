@@ -1,8 +1,3 @@
----
-kind: GH_AddAssignee
-is_traversable: false
----
-
 # GH_AddAssignee
 
 ## Edge Schema

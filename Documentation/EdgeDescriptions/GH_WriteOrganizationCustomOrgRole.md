@@ -1,8 +1,3 @@
----
-kind: GH_WriteOrganizationCustomOrgRole
-is_traversable: true
----
-
 # GH_WriteOrganizationCustomOrgRole
 
 ## Edge Schema

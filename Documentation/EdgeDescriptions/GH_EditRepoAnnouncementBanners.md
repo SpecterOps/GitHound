@@ -1,8 +1,3 @@
----
-kind: GH_EditRepoAnnouncementBanners
-is_traversable: false
----
-
 # GH_EditRepoAnnouncementBanners
 
 ## Edge Schema

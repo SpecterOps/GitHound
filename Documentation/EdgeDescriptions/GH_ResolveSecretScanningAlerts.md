@@ -1,8 +1,3 @@
----
-kind: GH_ResolveSecretScanningAlerts
-is_traversable: false
----
-
 # GH_ResolveSecretScanningAlerts
 
 ## Edge Schema

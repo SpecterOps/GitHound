@@ -1,8 +1,3 @@
----
-kind: GH_CreateTag
-is_traversable: false
----
-
 # GH_CreateTag
 
 ## Edge Schema

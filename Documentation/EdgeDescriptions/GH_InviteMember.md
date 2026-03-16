@@ -1,8 +1,3 @@
----
-kind: GH_InviteMember
-is_traversable: false
----
-
 # GH_InviteMember
 
 ## Edge Schema

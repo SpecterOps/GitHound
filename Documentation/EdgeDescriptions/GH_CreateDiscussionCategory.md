@@ -1,8 +1,3 @@
----
-kind: GH_CreateDiscussionCategory
-is_traversable: false
----
-
 # GH_CreateDiscussionCategory
 
 ## Edge Schema

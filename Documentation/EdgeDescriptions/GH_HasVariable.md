@@ -1,8 +1,3 @@
----
-kind: GH_HasVariable
-is_traversable: true
----
-
 # GH_HasVariable
 
 ## Edge Schema

@@ -1,8 +1,3 @@
----
-kind: GH_HasPersonalAccessToken
-is_traversable: false
----
-
 # GH_HasPersonalAccessToken
 
 ## Edge Schema

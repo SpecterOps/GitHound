@@ -1,8 +1,3 @@
----
-kind: GH_ProtectedBy
-is_traversable: false
----
-
 # GH_ProtectedBy
 
 ## Edge Schema

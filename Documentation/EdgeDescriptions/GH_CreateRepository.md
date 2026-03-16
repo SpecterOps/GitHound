@@ -1,8 +1,3 @@
----
-kind: GH_CreateRepository
-is_traversable: false
----
-
 # GH_CreateRepository
 
 ## Edge Schema

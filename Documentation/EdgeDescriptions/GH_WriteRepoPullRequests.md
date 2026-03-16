@@ -1,8 +1,3 @@
----
-kind: GH_WriteRepoPullRequests
-is_traversable: false
----
-
 # GH_WriteRepoPullRequests
 
 ## Edge Schema

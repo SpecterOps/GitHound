@@ -1,8 +1,3 @@
----
-kind: GH_SetMilestone
-is_traversable: false
----
-
 # GH_SetMilestone
 
 ## Edge Schema

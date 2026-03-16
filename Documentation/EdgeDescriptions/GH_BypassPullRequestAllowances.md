@@ -1,8 +1,3 @@
----
-kind: GH_BypassPullRequestAllowances
-is_traversable: false
----
-
 # GH_BypassPullRequestAllowances
 
 ## Edge Schema

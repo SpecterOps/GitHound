@@ -1,8 +1,3 @@
----
-kind: GH_HasWorkflow
-is_traversable: false
----
-
 # GH_HasWorkflow
 
 ## Edge Schema

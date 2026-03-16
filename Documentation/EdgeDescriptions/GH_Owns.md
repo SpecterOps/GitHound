@@ -1,8 +1,3 @@
----
-kind: GH_Owns
-is_traversable: true
----
-
 # GH_Owns
 
 ## Edge Schema

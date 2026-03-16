@@ -1,8 +1,3 @@
----
-kind: GH_RestrictionsCanPush
-is_traversable: false
----
-
 # GH_RestrictionsCanPush
 
 ## Edge Schema

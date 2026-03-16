@@ -1,8 +1,3 @@
----
-kind: GH_HasBaseRole
-is_traversable: true
----
-
 # GH_HasBaseRole
 
 ## Edge Schema

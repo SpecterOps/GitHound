@@ -1,8 +1,3 @@
----
-kind: GH_AddLabel
-is_traversable: false
----
-
 # GH_AddLabel
 
 ## Edge Schema

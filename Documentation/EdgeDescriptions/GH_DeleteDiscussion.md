@@ -1,8 +1,3 @@
----
-kind: GH_DeleteDiscussion
-is_traversable: false
----
-
 # GH_DeleteDiscussion
 
 ## Edge Schema

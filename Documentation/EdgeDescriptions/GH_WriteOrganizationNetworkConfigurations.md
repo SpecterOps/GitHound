@@ -1,8 +1,3 @@
----
-kind: GH_WriteOrganizationNetworkConfigurations
-is_traversable: false
----
-
 # GH_WriteOrganizationNetworkConfigurations
 
 ## Edge Schema

@@ -1,8 +1,3 @@
----
-kind: GH_Contains
-is_traversable: false
----
-
 # GH_Contains
 
 ## Edge Schema

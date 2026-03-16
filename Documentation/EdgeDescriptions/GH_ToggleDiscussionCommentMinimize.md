@@ -1,8 +1,3 @@
----
-kind: GH_ToggleDiscussionCommentMinimize
-is_traversable: false
----
-
 # GH_ToggleDiscussionCommentMinimize
 
 ## Edge Schema

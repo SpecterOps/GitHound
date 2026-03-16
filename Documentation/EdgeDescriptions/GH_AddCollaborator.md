@@ -1,8 +1,3 @@
----
-kind: GH_AddCollaborator
-is_traversable: false
----
-
 # GH_AddCollaborator
 
 ## Edge Schema

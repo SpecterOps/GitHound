@@ -1,8 +1,3 @@
----
-kind: GH_CanReadSecretScanningAlert
-is_traversable: true
----
-
 # GH_CanReadSecretScanningAlert
 
 ## Edge Schema

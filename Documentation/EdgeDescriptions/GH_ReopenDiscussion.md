@@ -1,8 +1,3 @@
----
-kind: GH_ReopenDiscussion
-is_traversable: false
----
-
 # GH_ReopenDiscussion
 
 ## Edge Schema

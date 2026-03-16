@@ -1,8 +1,3 @@
----
-kind: GH_CanEditProtection
-is_traversable: true
----
-
 # GH_CanEditProtection
 
 ## Edge Schema

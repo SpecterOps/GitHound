@@ -1,8 +1,3 @@
----
-kind: GH_ManageSettingsProjects
-is_traversable: false
----
-
 # GH_ManageSettingsProjects
 
 ## Edge Schema

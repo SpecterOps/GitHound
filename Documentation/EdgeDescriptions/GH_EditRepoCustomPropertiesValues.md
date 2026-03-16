@@ -1,8 +1,3 @@
----
-kind: GH_EditRepoCustomPropertiesValues
-is_traversable: false
----
-
 # GH_EditRepoCustomPropertiesValues
 
 ## Edge Schema

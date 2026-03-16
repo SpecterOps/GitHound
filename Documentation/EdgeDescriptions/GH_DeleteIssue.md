@@ -1,8 +1,3 @@
----
-kind: GH_DeleteIssue
-is_traversable: false
----
-
 # GH_DeleteIssue
 
 ## Edge Schema

@@ -1,8 +1,3 @@
----
-kind: GH_WriteRepoContents
-is_traversable: false
----
-
 # GH_WriteRepoContents
 
 ## Edge Schema

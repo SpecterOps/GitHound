@@ -1,8 +1,3 @@
----
-kind: GH_CreateTeam
-is_traversable: false
----
-
 # GH_CreateTeam
 
 ## Edge Schema

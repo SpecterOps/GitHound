@@ -1,8 +1,3 @@
----
-kind: GH_CanAccess
-is_traversable: false
----
-
 # GH_CanAccess
 
 ## Edge Schema

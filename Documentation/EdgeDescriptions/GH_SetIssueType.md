@@ -1,8 +1,3 @@
----
-kind: GH_SetIssueType
-is_traversable: false
----
-
 # GH_SetIssueType
 
 ## Edge Schema

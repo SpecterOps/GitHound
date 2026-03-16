@@ -1,8 +1,3 @@
----
-kind: GH_HasExternalIdentity
-is_traversable: false
----
-
 # GH_HasExternalIdentity
 
 ## Edge Schema

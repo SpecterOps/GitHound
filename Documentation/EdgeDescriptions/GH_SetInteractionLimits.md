@@ -1,8 +1,3 @@
----
-kind: GH_SetInteractionLimits
-is_traversable: false
----
-
 # GH_SetInteractionLimits
 
 ## Edge Schema

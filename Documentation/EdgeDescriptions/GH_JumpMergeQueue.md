@@ -1,8 +1,3 @@
----
-kind: GH_JumpMergeQueue
-is_traversable: false
----
-
 # GH_JumpMergeQueue
 
 ## Edge Schema

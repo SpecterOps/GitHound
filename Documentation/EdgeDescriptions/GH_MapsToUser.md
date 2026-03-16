@@ -1,8 +1,3 @@
----
-kind: GH_MapsToUser
-is_traversable: false
----
-
 # GH_MapsToUser
 
 ## Edge Schema

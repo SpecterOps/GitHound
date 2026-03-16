@@ -1,8 +1,3 @@
----
-kind: GH_RemoveLabel
-is_traversable: false
----
-
 # GH_RemoveLabel
 
 ## Edge Schema

@@ -1,8 +1,3 @@
----
-kind: GH_CanAssumeIdentity
-is_traversable: true
----
-
 # GH_CanAssumeIdentity
 
 ## Edge Schema

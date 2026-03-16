@@ -1,8 +1,3 @@
----
-kind: GH_SetSocialPreview
-is_traversable: false
----
-
 # GH_SetSocialPreview
 
 ## Edge Schema

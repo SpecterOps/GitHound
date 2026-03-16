@@ -1,8 +1,3 @@
----
-kind: GH_ManageSettingsMergeTypes
-is_traversable: false
----
-
 # GH_ManageSettingsMergeTypes
 
 ## Edge Schema

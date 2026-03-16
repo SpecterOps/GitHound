@@ -1,8 +1,3 @@
----
-kind: GH_HasSecret
-is_traversable: true
----
-
 # GH_HasSecret
 
 ## Edge Schema

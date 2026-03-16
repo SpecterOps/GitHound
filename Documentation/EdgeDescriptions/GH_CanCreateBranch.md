@@ -1,8 +1,3 @@
----
-kind: GH_CanCreateBranch
-is_traversable: true
----
-
 # GH_CanCreateBranch
 
 ## Edge Schema

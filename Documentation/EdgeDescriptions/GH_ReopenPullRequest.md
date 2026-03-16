@@ -1,8 +1,3 @@
----
-kind: GH_ReopenPullRequest
-is_traversable: false
----
-
 # GH_ReopenPullRequest
 
 ## Edge Schema

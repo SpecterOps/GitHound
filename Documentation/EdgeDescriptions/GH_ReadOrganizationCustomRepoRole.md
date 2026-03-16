@@ -1,8 +1,3 @@
----
-kind: GH_ReadOrganizationCustomRepoRole
-is_traversable: false
----
-
 # GH_ReadOrganizationCustomRepoRole
 
 ## Edge Schema

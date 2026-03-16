@@ -1,8 +1,3 @@
----
-kind: GH_EditRepoProtections
-is_traversable: false
----
-
 # GH_EditRepoProtections
 
 ## Edge Schema
