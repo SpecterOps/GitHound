@@ -276,7 +276,7 @@ def main() -> None:
                 image_size=args.size,
                 icon_scale=args.scale,
             )
-            out_path = OUTPUT_DIR / f"{node_name}.png"
+            out_path = OUTPUT_DIR / f"{node_name.lower()}.png"
             img.save(out_path, "PNG")
             print(f"  [+] {out_path.name}")
         except Exception as e:

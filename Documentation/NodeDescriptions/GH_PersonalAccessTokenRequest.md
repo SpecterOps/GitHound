@@ -1,4 +1,4 @@
-# <img src="../Icons/GH_PersonalAccessTokenRequest.png" width="50"/> GH_PersonalAccessTokenRequest
+# <img src="../Icons/gh_personalaccesstokenrequest.png" width="50"/> GH_PersonalAccessTokenRequest
 
 Represents a pending request from an organization member to access organization resources with a fine-grained personal access token. PAT requests are linked to their owning user and the organization. The requested permissions are captured as a JSON string in the properties.
 

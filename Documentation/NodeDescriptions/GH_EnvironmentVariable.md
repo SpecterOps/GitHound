@@ -1,4 +1,4 @@
-# <img src="../Icons/GH_EnvironmentVariable.png" width="50"/> GH_EnvironmentVariable
+# <img src="../Icons/gh_environmentvariable.png" width="50"/> GH_EnvironmentVariable
 
 Represents an environment-level GitHub Actions variable. These variables are scoped to a specific deployment environment and are only available to workflow jobs that reference that environment. Unlike secrets, variable values are readable via the API.
 

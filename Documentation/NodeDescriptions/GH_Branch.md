@@ -1,4 +1,4 @@
-# <img src="../Icons/GH_Branch.png" width="50"/> GH_Branch
+# <img src="../Icons/gh_branch.png" width="50"/> GH_Branch
 
 Represents a Git branch within a repository. Branch nodes capture basic branch information and whether the branch is protected. Protection rule details are stored in separate [GH_BranchProtectionRule](GH_BranchProtectionRule.md) nodes, linked via [GH_ProtectedBy](../EdgeDescriptions/GH_ProtectedBy.md) edges.
 
