@@ -20,20 +20,6 @@ Created by: `Git-HoundGraphQlSamlProvider`
 | signature_method      | string    | The signature method used by the SAML provider.            |
 | sso_url               | string    | The SAML single sign-on URL.                               |
 
-## Edges
-
-### Outbound Edges
-
-| Edge Kind                                                               | Target Node                                   | Traversable | Description                                         |
-| ----------------------------------------------------------------------- | --------------------------------------------- | ----------- | --------------------------------------------------- |
-| [GH_HasExternalIdentity](../EdgeDescriptions/GH_HasExternalIdentity.md) | [GH_ExternalIdentity](GH_ExternalIdentity.md) | No          | Identity provider has an external identity mapping. |
-
-### Inbound Edges
-
-| Edge Kind                                                                       | Source Node                           | Traversable | Description                                   |
-| ------------------------------------------------------------------------------- | ------------------------------------- | ----------- | --------------------------------------------- |
-| [GH_HasSamlIdentityProvider](../EdgeDescriptions/GH_HasSamlIdentityProvider.md) | [GH_Organization](GH_Organization.md) | No          | Organization has this SAML identity provider. |
-
 ## Diagram
 
 ```mermaid

@@ -18,18 +18,6 @@ Created by: `Git-HoundEnvironment`
 | created_at                  | datetime  | When the secret was created.                                                      |
 | updated_at                  | datetime  | When the secret was last updated.                                                 |
 
-## Edges
-
-### Outbound Edges
-
-None
-
-### Inbound Edges
-
-| Edge Kind                                         | Source Node                         | Traversable | Description                       |
-| ------------------------------------------------- | ----------------------------------- | ----------- | --------------------------------- |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md) | [GH_Environment](GH_Environment.md) | No          | Environment contains this secret. |
-
 ## Diagram
 
 ```mermaid

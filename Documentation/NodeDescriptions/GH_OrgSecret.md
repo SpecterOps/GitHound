@@ -17,19 +17,6 @@ Created by: `Git-HoundOrganizationSecret`
 | updated_at       | datetime  | When the secret was last updated.                                                                                         |
 | visibility       | string    | The secret's visibility scope: `all` (all repos), `private` (private and internal repos), or `selected` (specific repos). |
 
-## Edges
-
-### Outbound Edges
-
-None
-
-### Inbound Edges
-
-| Edge Kind                                           | Source Node                           | Traversable | Description                                                                                                                                                                                                                    |
-| --------------------------------------------------- | ------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)   | [GH_Organization](GH_Organization.md) | No          | Organization contains this secret.                                                                                                                                                                                             |
-| [GH_HasSecret](../EdgeDescriptions/GH_HasSecret.md) | [GH_Repository](GH_Repository.md)     | Yes         | Repository has access to this organization secret (resolved by visibility). Traversable because any user with write access to the repository can access org secrets scoped to that repo by creating a GitHub Actions workflow. |
-
 ## Diagram
 
 ```mermaid

@@ -26,19 +26,6 @@ Created by: `Git-HoundPersonalAccessTokenRequest`
 | created_at           | string    | ISO 8601 timestamp of when the request was submitted.                                         |
 | permissions          | string    | JSON string of the permissions being requested (e.g., `{"organization":{},"repository":{}}`). |
 
-## Edges
-
-### Outbound Edges
-
-None
-
-### Inbound Edges
-
-| Edge Kind                                                                                   | Source Node                           | Traversable | Description                                               |
-| ------------------------------------------------------------------------------------------- | ------------------------------------- | ----------- | --------------------------------------------------------- |
-| [GH_HasPersonalAccessTokenRequest](../EdgeDescriptions/GH_HasPersonalAccessTokenRequest.md) | [GH_User](GH_User.md)                 | No          | User submitted this personal access token request.        |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)                                           | [GH_Organization](GH_Organization.md) | No          | Organization contains this personal access token request. |
-
 ## Diagram
 
 ```mermaid

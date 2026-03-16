@@ -68,42 +68,6 @@ Created by: `Git-HoundOrganization`
 | actions_allowed_actions                                      | string    | Which Actions are allowed to run: `all`, `local_only`, or `selected`.                                                                                                                         |
 | actions_sha_pinning_required                                 | boolean   | Whether SHA pinning is required for GitHub Actions.                                                                                                                                           |
 
-## Edges
-
-### Outbound Edges
-
-| Edge Kind                                                                       | Target Node                                                       | Traversable | Description                                                         |
-| ------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------- | ------------------------------------------------------------------- |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)                               | [GH_OrgSecret](GH_OrgSecret.md)                                   | No          | Organization contains an organization-level Actions secret.         |
-| [GH_HasSamlIdentityProvider](../EdgeDescriptions/GH_HasSamlIdentityProvider.md) | [GH_SamlIdentityProvider](GH_SamlIdentityProvider.md)             | No          | Organization has a configured SAML identity provider.               |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)                               | [GH_PersonalAccessToken](GH_PersonalAccessToken.md)               | No          | Organization contains a granted fine-grained personal access token. |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)                               | [GH_PersonalAccessTokenRequest](GH_PersonalAccessTokenRequest.md) | No          | Organization contains a pending personal access token request.      |
-
-### Inbound Edges
-
-| Edge Kind                                                                                                                       | Source Node                 | Traversable | Description                                                             |
-| ------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | ----------- | ----------------------------------------------------------------------- |
-| [GH_CreateRepository](../EdgeDescriptions/GH_CreateRepository.md)                                                               | [GH_OrgRole](GH_OrgRole.md) | No          | Org role has permission to create repositories.                         |
-| [GH_InviteMember](../EdgeDescriptions/GH_InviteMember.md)                                                                       | [GH_OrgRole](GH_OrgRole.md) | No          | Org role has permission to invite members.                              |
-| [GH_AddCollaborator](../EdgeDescriptions/GH_AddCollaborator.md)                                                                 | [GH_OrgRole](GH_OrgRole.md) | No          | Org role has permission to add outside collaborators.                   |
-| [GH_CreateTeam](../EdgeDescriptions/GH_CreateTeam.md)                                                                           | [GH_OrgRole](GH_OrgRole.md) | No          | Org role has permission to create teams.                                |
-| [GH_TransferRepository](../EdgeDescriptions/GH_TransferRepository.md)                                                           | [GH_OrgRole](GH_OrgRole.md) | No          | Org role has permission to transfer repositories.                       |
-| [GH_ManageOrganizationWebhooks](../EdgeDescriptions/GH_ManageOrganizationWebhooks.md)                                           | [GH_OrgRole](GH_OrgRole.md) | No          | Custom org role can manage organization webhooks.                       |
-| [GH_WriteOrganizationActionsSecrets](../EdgeDescriptions/GH_WriteOrganizationActionsSecrets.md)                                 | [GH_OrgRole](GH_OrgRole.md) | No          | Custom org role can write Actions secrets.                              |
-| [GH_WriteOrganizationActionsSettings](../EdgeDescriptions/GH_WriteOrganizationActionsSettings.md)                               | [GH_OrgRole](GH_OrgRole.md) | No          | Custom org role can write Actions settings.                             |
-| [GH_ViewSecretScanningAlerts](../EdgeDescriptions/GH_ViewSecretScanningAlerts.md)                                               | [GH_OrgRole](GH_OrgRole.md) | No          | Custom org role can view secret scanning alerts.                        |
-| [GH_ResolveSecretScanningAlerts](../EdgeDescriptions/GH_ResolveSecretScanningAlerts.md)                                         | [GH_OrgRole](GH_OrgRole.md) | No          | Custom org role can resolve secret scanning alerts.                     |
-| [GH_ReadOrganizationActionsUsageMetrics](../EdgeDescriptions/GH_ReadOrganizationActionsUsageMetrics.md)                         | [GH_OrgRole](GH_OrgRole.md) | No          | Custom org role can read Actions usage metrics.                         |
-| [GH_ReadOrganizationCustomOrgRole](../EdgeDescriptions/GH_ReadOrganizationCustomOrgRole.md)                                     | [GH_OrgRole](GH_OrgRole.md) | No          | Custom org role can read custom org role definitions.                   |
-| [GH_ReadOrganizationCustomRepoRole](../EdgeDescriptions/GH_ReadOrganizationCustomRepoRole.md)                                   | [GH_OrgRole](GH_OrgRole.md) | No          | Custom org role can read custom repo role definitions.                  |
-| [GH_WriteOrganizationCustomOrgRole](../EdgeDescriptions/GH_WriteOrganizationCustomOrgRole.md)                                   | [GH_OrgRole](GH_OrgRole.md) | No          | Custom org role can write custom org role definitions.                  |
-| [GH_WriteOrganizationCustomRepoRole](../EdgeDescriptions/GH_WriteOrganizationCustomRepoRole.md)                                 | [GH_OrgRole](GH_OrgRole.md) | No          | Custom org role can write custom repo role definitions.                 |
-| [GH_WriteOrganizationNetworkConfigurations](../EdgeDescriptions/GH_WriteOrganizationNetworkConfigurations.md)                   | [GH_OrgRole](GH_OrgRole.md) | No          | Custom org role can write network configurations.                       |
-| [GH_OrgBypassCodeScanningDismissalRequests](../EdgeDescriptions/GH_OrgBypassCodeScanningDismissalRequests.md)                   | [GH_OrgRole](GH_OrgRole.md) | No          | Custom org role can bypass code scanning dismissal requests.            |
-| [GH_OrgBypassSecretScanningClosureRequests](../EdgeDescriptions/GH_OrgBypassSecretScanningClosureRequests.md)                   | [GH_OrgRole](GH_OrgRole.md) | No          | Custom org role can bypass secret scanning closure requests.            |
-| [GH_OrgReviewAndManageSecretScanningBypassRequests](../EdgeDescriptions/GH_OrgReviewAndManageSecretScanningBypassRequests.md)   | [GH_OrgRole](GH_OrgRole.md) | No          | Custom org role can review and manage secret scanning bypass requests.  |
-| [GH_OrgReviewAndManageSecretScanningClosureRequests](../EdgeDescriptions/GH_OrgReviewAndManageSecretScanningClosureRequests.md) | [GH_OrgRole](GH_OrgRole.md) | No          | Custom org role can review and manage secret scanning closure requests. |
-
 ## Diagram
 
 ```mermaid

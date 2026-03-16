@@ -29,21 +29,6 @@ Created by: `Git-HoundAppInstallation`
 | permissions          | string    | JSON string of the permissions granted to the app (e.g., `{"contents": "read", "metadata": "read"}`). |
 | events               | string    | JSON string of the webhook events the app subscribes to.                                              |
 
-## Edges
-
-### Outbound Edges
-
-| Edge Name                                           | Target Node                       | Traversable | Description                                                                                 |
-| --------------------------------------------------- | --------------------------------- | ----------- | ------------------------------------------------------------------------------------------- |
-| [GH_CanAccess](../EdgeDescriptions/GH_CanAccess.md) | [GH_Repository](GH_Repository.md) | -.->        | App installation can access this repository (created when `repository_selection` is `all`). |
-
-### Inbound Edges
-
-| Edge Name                                               | Source Node                           | Traversable | Description                                                  |
-| ------------------------------------------------------- | ------------------------------------- | ----------- | ------------------------------------------------------------ |
-| [GH_InstalledAs](../EdgeDescriptions/GH_InstalledAs.md) | [GH_App](GH_App.md)                   | -->         | The parent app definition that this installation belongs to. |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)       | [GH_Organization](GH_Organization.md) | -.->        | The organization that contains this app installation.        |
-
 ## Diagram
 
 ```mermaid

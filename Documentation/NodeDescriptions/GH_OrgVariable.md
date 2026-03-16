@@ -18,19 +18,6 @@ Created by: `Git-HoundOrganizationSecret`
 | updated_at       | datetime  | When the variable was last updated.                                                                                         |
 | visibility       | string    | The variable's visibility scope: `all` (all repos), `private` (private and internal repos), or `selected` (specific repos). |
 
-## Edges
-
-### Outbound Edges
-
-None
-
-### Inbound Edges
-
-| Edge Kind                                               | Source Node                           | Traversable | Description                                                                                                                                                               |
-| ------------------------------------------------------- | ------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)       | [GH_Organization](GH_Organization.md) | No          | Organization contains this variable.                                                                                                                                      |
-| [GH_HasVariable](../EdgeDescriptions/GH_HasVariable.md) | [GH_Repository](GH_Repository.md)     | Yes         | Repository has access to this organization variable (resolved by visibility). Traversable because write access to the repo enables variable access via workflow creation. |
-
 ## Diagram
 
 ```mermaid

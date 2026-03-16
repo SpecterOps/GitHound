@@ -30,21 +30,6 @@ Created by: `Git-HoundBranch`
 | allows_force_pushes             | boolean   | Whether force pushes are allowed to matching branches.                                                                                                        |
 | allows_deletions                | boolean   | Whether matching branches can be deleted.                                                                                                                     |
 
-## Edges
-
-### Outbound Edges
-
-| Edge Kind                                               | Target Node               | Traversable | Description                                  |
-| ------------------------------------------------------- | ------------------------- | ----------- | -------------------------------------------- |
-| [GH_ProtectedBy](../EdgeDescriptions/GH_ProtectedBy.md) | [GH_Branch](GH_Branch.md) | No          | Branch protection rule protects this branch. |
-
-### Inbound Edges
-
-| Edge Kind                                                                               | Source Node                                    | Traversable | Description                                                         |
-| --------------------------------------------------------------------------------------- | ---------------------------------------------- | ----------- | ------------------------------------------------------------------- |
-| [GH_BypassPullRequestAllowances](../EdgeDescriptions/GH_BypassPullRequestAllowances.md) | [GH_User](GH_User.md) or [GH_Team](GH_Team.md) | No          | User or team can bypass pull request requirements on this rule.     |
-| [GH_RestrictionsCanPush](../EdgeDescriptions/GH_RestrictionsCanPush.md)                 | [GH_User](GH_User.md) or [GH_Team](GH_Team.md) | No          | User or team is allowed to push to branches protected by this rule. |
-
 ## Diagram
 
 ```mermaid

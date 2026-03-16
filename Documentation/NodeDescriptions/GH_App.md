@@ -28,18 +28,6 @@ Created by: `Git-HoundAppInstallation`
 | events              | string    | JSON string of the default webhook events the app subscribes to.        |
 | installations_count | integer   | The total number of installations of this app across all organizations. |
 
-## Edges
-
-### Outbound Edges
-
-| Edge Name                                               | Target Node                                 | Traversable | Description                                                   |
-| ------------------------------------------------------- | ------------------------------------------- | ----------- | ------------------------------------------------------------- |
-| [GH_InstalledAs](../EdgeDescriptions/GH_InstalledAs.md) | [GH_AppInstallation](GH_AppInstallation.md) | -->         | The app is installed as this installation on an organization. |
-
-### Inbound Edges
-
-None
-
 ## Diagram
 
 ```mermaid

@@ -23,18 +23,6 @@ Created by: `Git-HoundWorkflow`
 | branch           | string    | The branch where the workflow file was found.                                |
 | contents         | string    | The full YAML contents of the workflow file, downloaded from the repository. |
 
-## Edges
-
-### Outbound Edges
-
-None
-
-### Inbound Edges
-
-| Edge Kind                                               | Source Node                       | Traversable | Description                   |
-| ------------------------------------------------------- | --------------------------------- | ----------- | ----------------------------- |
-| [GH_HasWorkflow](../EdgeDescriptions/GH_HasWorkflow.md) | [GH_Repository](GH_Repository.md) | No          | Repository has this workflow. |
-
 ## Diagram
 
 ```mermaid

@@ -25,21 +25,6 @@ Created by: `Git-HoundPersonalAccessToken`
 | access_granted_at    | string    | ISO 8601 timestamp of when access was granted to the organization.                                 |
 | permissions          | string    | JSON string of the permissions granted to the token (e.g., `{"organization":{},"repository":{}}`). |
 
-## Edges
-
-### Outbound Edges
-
-| Edge Kind                                           | Target Node                       | Traversable | Description                       |
-| --------------------------------------------------- | --------------------------------- | ----------- | --------------------------------- |
-| [GH_CanAccess](../EdgeDescriptions/GH_CanAccess.md) | [GH_Repository](GH_Repository.md) | No          | Token can access this repository. |
-
-### Inbound Edges
-
-| Edge Kind                                                                     | Source Node                           | Traversable | Description                                       |
-| ----------------------------------------------------------------------------- | ------------------------------------- | ----------- | ------------------------------------------------- |
-| [GH_HasPersonalAccessToken](../EdgeDescriptions/GH_HasPersonalAccessToken.md) | [GH_User](GH_User.md)                 | No          | User owns this personal access token.             |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)                             | [GH_Organization](GH_Organization.md) | No          | Organization contains this personal access token. |
-
 ## Diagram
 
 ```mermaid

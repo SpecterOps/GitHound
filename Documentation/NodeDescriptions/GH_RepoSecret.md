@@ -19,19 +19,6 @@ Created by: `Git-HoundSecret`
 | updated_at       | datetime  | When the secret was last updated.                                      |
 | visibility       | string    | The secret's visibility scope.                                         |
 
-## Edges
-
-### Outbound Edges
-
-None
-
-### Inbound Edges
-
-| Edge Kind                                           | Source Node                       | Traversable | Description                                                                                                                                                 |
-| --------------------------------------------------- | --------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)   | [GH_Repository](GH_Repository.md) | No          | Repository contains this secret.                                                                                                                            |
-| [GH_HasSecret](../EdgeDescriptions/GH_HasSecret.md) | [GH_Repository](GH_Repository.md) | Yes         | Repository has this secret. Traversable because any user with write access to the repository can access repo secrets by creating a GitHub Actions workflow. |
-
 ## Diagram
 
 ```mermaid

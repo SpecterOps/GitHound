@@ -19,19 +19,6 @@ Created by: `Git-HoundVariable`
 | created_at       | datetime  | When the variable was created.                                              |
 | updated_at       | datetime  | When the variable was last updated.                                         |
 
-## Edges
-
-### Outbound Edges
-
-None
-
-### Inbound Edges
-
-| Edge Kind                                               | Source Node                       | Traversable | Description                                                                                                               |
-| ------------------------------------------------------- | --------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------- |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)       | [GH_Repository](GH_Repository.md) | No          | Repository contains this variable.                                                                                        |
-| [GH_HasVariable](../EdgeDescriptions/GH_HasVariable.md) | [GH_Repository](GH_Repository.md) | Yes         | Repository has this variable. Traversable because write access to the repo enables variable access via workflow creation. |
-
 ## Diagram
 
 ```mermaid
