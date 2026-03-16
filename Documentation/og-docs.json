@@ -1,7 +1,7 @@
 {
     "extensionPath": "schema.json",
     "gitHubBaseUrl": "https://github.com/SpecterOps/GitHound",
-    "titlePrefix": "",
+    "stripTitlePrefix": "GitHub: ",
     "queriesDir": "saved-queries",
     "zoneRulesDir": "pz-rules",
     "nodeDescriptionsDir": "Documentation/NodeDescriptions",

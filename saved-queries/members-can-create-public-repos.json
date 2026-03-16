@@ -1,5 +1,5 @@
 {
-  "name": "[GitHub] Members Can Create Public Repositories",
+  "name": "GitHub: Members Can Create Public Repositories",
   "query": "MATCH (org:GH_Organization {members_can_create_public_repositories: true}) RETURN org LIMIT 1000",
   "description": "Finds organizations where members can create internet-facing public repositories. This increases the risk of accidental exposure of proprietary code or secrets."
 }
