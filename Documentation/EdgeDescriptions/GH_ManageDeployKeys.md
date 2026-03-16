@@ -1,8 +1,3 @@
----
-kind: GH_ManageDeployKeys
-is_traversable: false
----
-
 # GH_ManageDeployKeys
 
 ## Edge Schema

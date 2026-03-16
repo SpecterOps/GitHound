@@ -1,7 +1,7 @@
 {
   "name": "GitHub: Tier Zero Organizations",
   "description": "GitHub organizations are the root trust boundary for all repositories, teams, users, and settings. Compromise of the organization grants full administrative control over all contained assets.",
-  "cypher": "MATCH (n:GH_Organization) RETURN n",
+  "cypher": "MATCH (n:GH_Organization)\nRETURN n",
   "enabled": true,
   "allow_disable": true
 }

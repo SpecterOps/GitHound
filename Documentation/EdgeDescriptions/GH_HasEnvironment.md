@@ -1,8 +1,3 @@
----
-kind: GH_HasEnvironment
-is_traversable: false
----
-
 # GH_HasEnvironment
 
 ## Edge Schema

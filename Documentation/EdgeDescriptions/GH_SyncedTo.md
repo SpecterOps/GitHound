@@ -1,8 +1,3 @@
----
-kind: GH_SyncedTo
-is_traversable: true
----
-
 # GH_SyncedTo
 
 ## Edge Schema

@@ -1,8 +1,3 @@
----
-kind: GH_ReopenIssue
-is_traversable: false
----
-
 # GH_ReopenIssue
 
 ## Edge Schema

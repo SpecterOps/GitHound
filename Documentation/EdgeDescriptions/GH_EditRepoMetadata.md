@@ -1,8 +1,3 @@
----
-kind: GH_EditRepoMetadata
-is_traversable: false
----
-
 # GH_EditRepoMetadata
 
 ## Edge Schema

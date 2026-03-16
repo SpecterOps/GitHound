@@ -1,4 +1,4 @@
-# <img src="../Icons/GH_PersonalAccessTokenRequest.png" width="50"/> GH_PersonalAccessTokenRequest
+# <img src="../Icons/gh_personalaccesstokenrequest.png" width="50"/> GH_PersonalAccessTokenRequest
 
 Represents a pending request from an organization member to access organization resources with a fine-grained personal access token. PAT requests are linked to their owning user and the organization. The requested permissions are captured as a JSON string in the properties.
 
@@ -26,19 +26,6 @@ Created by: `Git-HoundPersonalAccessTokenRequest`
 | created_at           | string    | ISO 8601 timestamp of when the request was submitted.                                         |
 | permissions          | string    | JSON string of the permissions being requested (e.g., `{"organization":{},"repository":{}}`). |
 
-## Edges
-
-### Outbound Edges
-
-None
-
-### Inbound Edges
-
-| Edge Kind                                                                                   | Source Node                           | Traversable | Description                                               |
-| ------------------------------------------------------------------------------------------- | ------------------------------------- | ----------- | --------------------------------------------------------- |
-| [GH_HasPersonalAccessTokenRequest](../EdgeDescriptions/GH_HasPersonalAccessTokenRequest.md) | [GH_User](GH_User.md)                 | No          | User submitted this personal access token request.        |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)                                           | [GH_Organization](GH_Organization.md) | No          | Organization contains this personal access token request. |
-
 ## Diagram
 
 ```mermaid
@@ -47,9 +34,6 @@ flowchart TD
     GH_User[fa:fa-user GH_User]
     GH_Organization[fa:fa-building GH_Organization]
 
-    style GH_PersonalAccessTokenRequest fill:#D4A017
-    style GH_User fill:#FF8E40
-    style GH_Organization fill:#5FED83
 
     GH_User -.->|GH_HasPersonalAccessTokenRequest| GH_PersonalAccessTokenRequest
     GH_Organization -.->|GH_Contains| GH_PersonalAccessTokenRequest

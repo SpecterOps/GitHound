@@ -1,4 +1,4 @@
-# <img src="../Icons/GH_RepoVariable.png" width="50"/> GH_RepoVariable
+# <img src="../Icons/gh_repovariable.png" width="50"/> GH_RepoVariable
 
 Represents a repository-level GitHub Actions variable. These are variables defined directly on a specific repository and are only accessible to workflows running in that repository. Unlike secrets, variable values are readable via the API.
 
@@ -19,19 +19,6 @@ Created by: `Git-HoundVariable`
 | created_at       | datetime  | When the variable was created.                                              |
 | updated_at       | datetime  | When the variable was last updated.                                         |
 
-## Edges
-
-### Outbound Edges
-
-None
-
-### Inbound Edges
-
-| Edge Kind                                               | Source Node                       | Traversable | Description                                                                                                               |
-| ------------------------------------------------------- | --------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------- |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)       | [GH_Repository](GH_Repository.md) | No          | Repository contains this variable.                                                                                        |
-| [GH_HasVariable](../EdgeDescriptions/GH_HasVariable.md) | [GH_Repository](GH_Repository.md) | Yes         | Repository has this variable. Traversable because write access to the repo enables variable access via workflow creation. |
-
 ## Diagram
 
 ```mermaid
@@ -39,8 +26,6 @@ flowchart TD
     GH_RepoVariable[fa:fa-lock-open GH_RepoVariable]
     GH_Repository[fa:fa-box-archive GH_Repository]
 
-    style GH_RepoVariable fill:#E89B5C
-    style GH_Repository fill:#9EECFF
 
     GH_Repository -.->|GH_Contains| GH_RepoVariable
     GH_Repository -->|GH_HasVariable| GH_RepoVariable

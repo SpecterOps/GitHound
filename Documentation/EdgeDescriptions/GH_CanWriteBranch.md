@@ -1,8 +1,3 @@
----
-kind: GH_CanWriteBranch
-is_traversable: true
----
-
 # GH_CanWriteBranch
 
 ## Edge Schema

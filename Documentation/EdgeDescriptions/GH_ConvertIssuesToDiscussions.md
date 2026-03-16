@@ -1,8 +1,3 @@
----
-kind: GH_ConvertIssuesToDiscussions
-is_traversable: false
----
-
 # GH_ConvertIssuesToDiscussions
 
 ## Edge Schema

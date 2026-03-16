@@ -1,8 +1,3 @@
----
-kind: GH_ViewDependabotAlerts
-is_traversable: false
----
-
 # GH_ViewDependabotAlerts
 
 ## Edge Schema

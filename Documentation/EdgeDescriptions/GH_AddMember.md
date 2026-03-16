@@ -1,8 +1,3 @@
----
-kind: GH_AddMember
-is_traversable: true
----
-
 # GH_AddMember
 
 ## Edge Schema

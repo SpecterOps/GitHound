@@ -1,4 +1,4 @@
-# <img src="../Icons/GH_App.png" width="50"/> GH_App
+# <img src="../Icons/gh_app.png" width="50"/> GH_App
 
 Represents a GitHub App definition — the registered application entity. The app owner holds the private key that can generate installation access tokens for **every** [GH_AppInstallation](GH_AppInstallation.md) of this app. If the private key is compromised, all installations across all organizations are affected.
 
@@ -28,18 +28,6 @@ Created by: `Git-HoundAppInstallation`
 | events              | string    | JSON string of the default webhook events the app subscribes to.        |
 | installations_count | integer   | The total number of installations of this app across all organizations. |
 
-## Edges
-
-### Outbound Edges
-
-| Edge Name                                               | Target Node                                 | Traversable | Description                                                   |
-| ------------------------------------------------------- | ------------------------------------------- | ----------- | ------------------------------------------------------------- |
-| [GH_InstalledAs](../EdgeDescriptions/GH_InstalledAs.md) | [GH_AppInstallation](GH_AppInstallation.md) | -->         | The app is installed as this installation on an organization. |
-
-### Inbound Edges
-
-None
-
 ## Diagram
 
 ```mermaid
@@ -53,8 +41,4 @@ flowchart TD
     GH_Organization -.->|GH_Contains| GH_AppInstallation
     GH_AppInstallation -.->|GH_CanAccess| GH_Repository
 
-    style GH_App fill:#7EC8E3
-    style GH_AppInstallation fill:#A8D8EA
-    style GH_Organization fill:#5FED83
-    style GH_Repository fill:#9EECFF
 ```

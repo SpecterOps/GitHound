@@ -1,8 +1,3 @@
----
-kind: GH_OrgReviewAndManageSecretScanningClosureRequests
-is_traversable: false
----
-
 # GH_OrgReviewAndManageSecretScanningClosureRequests
 
 ## Edge Schema

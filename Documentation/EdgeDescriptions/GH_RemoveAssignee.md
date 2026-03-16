@@ -1,8 +1,3 @@
----
-kind: GH_RemoveAssignee
-is_traversable: false
----
-
 # GH_RemoveAssignee
 
 ## Edge Schema

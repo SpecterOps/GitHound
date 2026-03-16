@@ -1,8 +1,3 @@
----
-kind: GH_EditDiscussionComment
-is_traversable: false
----
-
 # GH_EditDiscussionComment
 
 ## Edge Schema

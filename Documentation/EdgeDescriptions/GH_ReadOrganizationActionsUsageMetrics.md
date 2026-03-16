@@ -1,8 +1,3 @@
----
-kind: GH_ReadOrganizationActionsUsageMetrics
-is_traversable: false
----
-
 # GH_ReadOrganizationActionsUsageMetrics
 
 ## Edge Schema

@@ -1,4 +1,4 @@
-# <img src="../Icons/GH_SamlIdentityProvider.png" width="50"/> GH_SamlIdentityProvider
+# <img src="../Icons/gh_samlidentityprovider.png" width="50"/> GH_SamlIdentityProvider
 
 Represents a SAML identity provider configured for the organization. This node captures the SAML SSO configuration details and serves as the parent container for external identity mappings. Through external identities, it enables linking GitHub users to their corporate identities in the identity provider.
 
@@ -20,20 +20,6 @@ Created by: `Git-HoundGraphQlSamlProvider`
 | signature_method      | string    | The signature method used by the SAML provider.            |
 | sso_url               | string    | The SAML single sign-on URL.                               |
 
-## Edges
-
-### Outbound Edges
-
-| Edge Kind                                                               | Target Node                                   | Traversable | Description                                         |
-| ----------------------------------------------------------------------- | --------------------------------------------- | ----------- | --------------------------------------------------- |
-| [GH_HasExternalIdentity](../EdgeDescriptions/GH_HasExternalIdentity.md) | [GH_ExternalIdentity](GH_ExternalIdentity.md) | No          | Identity provider has an external identity mapping. |
-
-### Inbound Edges
-
-| Edge Kind                                                                       | Source Node                           | Traversable | Description                                   |
-| ------------------------------------------------------------------------------- | ------------------------------------- | ----------- | --------------------------------------------- |
-| [GH_HasSamlIdentityProvider](../EdgeDescriptions/GH_HasSamlIdentityProvider.md) | [GH_Organization](GH_Organization.md) | No          | Organization has this SAML identity provider. |
-
 ## Diagram
 
 ```mermaid
@@ -42,9 +28,6 @@ flowchart TD
     GH_SamlIdentityProvider[fa:fa-id-badge GH_SamlIdentityProvider]
     GH_ExternalIdentity[fa:fa-arrows-left-right GH_ExternalIdentity]
 
-    style GH_Organization fill:#5FED83
-    style GH_SamlIdentityProvider fill:#5A6C8F
-    style GH_ExternalIdentity fill:#8A8F98
 
     GH_Organization -.->|GH_HasSamlIdentityProvider| GH_SamlIdentityProvider
     GH_SamlIdentityProvider -.->|GH_HasExternalIdentity| GH_ExternalIdentity

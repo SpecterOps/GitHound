@@ -1,8 +1,3 @@
----
-kind: GH_RunOrgMigration
-is_traversable: false
----
-
 # GH_RunOrgMigration
 
 ## Edge Schema

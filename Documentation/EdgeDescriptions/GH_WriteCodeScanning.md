@@ -1,8 +1,3 @@
----
-kind: GH_WriteCodeScanning
-is_traversable: false
----
-
 # GH_WriteCodeScanning
 
 ## Edge Schema

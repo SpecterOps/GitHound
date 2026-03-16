@@ -1,8 +1,3 @@
----
-kind: GH_CloseIssue
-is_traversable: false
----
-
 # GH_CloseIssue
 
 ## Edge Schema

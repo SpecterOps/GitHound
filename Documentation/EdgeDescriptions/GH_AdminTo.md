@@ -1,8 +1,3 @@
----
-kind: GH_AdminTo
-is_traversable: false
----
-
 # GH_AdminTo
 
 ## Edge Schema

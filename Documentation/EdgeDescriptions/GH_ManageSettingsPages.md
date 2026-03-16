@@ -1,8 +1,3 @@
----
-kind: GH_ManageSettingsPages
-is_traversable: false
----
-
 # GH_ManageSettingsPages
 
 ## Edge Schema

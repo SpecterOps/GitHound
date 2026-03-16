@@ -1,4 +1,4 @@
-# <img src="../Icons/GH_EnvironmentVariable.png" width="50"/> GH_EnvironmentVariable
+# <img src="../Icons/gh_environmentvariable.png" width="50"/> GH_EnvironmentVariable
 
 Represents an environment-level GitHub Actions variable. These variables are scoped to a specific deployment environment and are only available to workflow jobs that reference that environment. Unlike secrets, variable values are readable via the API.
 
@@ -21,18 +21,6 @@ Created by: `Git-HoundEnvironment`
 | created_at                  | datetime  | When the variable was created.                                                        |
 | updated_at                  | datetime  | When the variable was last updated.                                                   |
 
-## Edges
-
-### Outbound Edges
-
-None
-
-### Inbound Edges
-
-| Edge Kind                                         | Source Node                         | Traversable | Description                         |
-| ------------------------------------------------- | ----------------------------------- | ----------- | ----------------------------------- |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md) | [GH_Environment](GH_Environment.md) | No          | Environment contains this variable. |
-
 ## Diagram
 
 ```mermaid
@@ -40,8 +28,6 @@ flowchart TD
     GH_Environment[fa:fa-leaf GH_Environment]
     GH_EnvironmentVariable[fa:fa-lock-open GH_EnvironmentVariable]
 
-    style GH_Environment fill:#D5F2C2
-    style GH_EnvironmentVariable fill:#D4A84B
 
     GH_Environment -.->|GH_Contains| GH_EnvironmentVariable
 ```

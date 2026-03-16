@@ -1,8 +1,3 @@
----
-kind: GH_CreateSoloMergeQueueEntry
-is_traversable: false
----
-
 # GH_CreateSoloMergeQueueEntry
 
 ## Edge Schema

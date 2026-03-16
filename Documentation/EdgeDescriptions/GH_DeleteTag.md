@@ -1,8 +1,3 @@
----
-kind: GH_DeleteTag
-is_traversable: false
----
-
 # GH_DeleteTag
 
 ## Edge Schema

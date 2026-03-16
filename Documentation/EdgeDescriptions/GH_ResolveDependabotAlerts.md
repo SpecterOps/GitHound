@@ -1,8 +1,3 @@
----
-kind: GH_ResolveDependabotAlerts
-is_traversable: false
----
-
 # GH_ResolveDependabotAlerts
 
 ## Edge Schema

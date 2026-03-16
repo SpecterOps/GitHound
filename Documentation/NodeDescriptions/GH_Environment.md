@@ -1,4 +1,4 @@
-# <img src="../Icons/GH_Environment.png" width="50"/> GH_Environment
+# <img src="../Icons/gh_environment.png" width="50"/> GH_Environment
 
 Represents a GitHub Actions deployment environment configured on a repository. Environments can have protection rules including required reviewers, wait timers, and deployment branch policies. When custom branch policies are configured, the environment is connected to specific branches; otherwise, it is connected directly to the repository.
 
@@ -19,24 +19,6 @@ Created by: `Git-HoundEnvironment`
 | repository_name   | string    | The full name of the containing repository.                                   |
 | repository_id     | string    | The ID of the containing repository.                                          |
 
-## Edges
-
-### Outbound Edges
-
-| Edge Kind                                                           | Target Node                                                                                                        | Traversable | Description                                                                                                |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------- | ---------------------------------------------------------------------------------------------------------- |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)                   | [GH_EnvironmentSecret](GH_EnvironmentSecret.md)                                                                    | No          | Environment contains an environment-level secret.                                                          |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)                   | [GH_EnvironmentVariable](GH_EnvironmentVariable.md)                                                                | No          | Environment contains an environment-level variable.                                                        |
-| [GH_HasSecret](../EdgeDescriptions/GH_HasSecret.md)                 | [GH_EnvironmentSecret](GH_EnvironmentSecret.md)                                                                    | Yes         | Environment has this secret. Traversable because write access enables secret access via workflow creation. |
-| [GH_CanAssumeIdentity](../EdgeDescriptions/GH_CanAssumeIdentity.md) | [AZFederatedIdentityCredential](https://bloodhound.specterops.io/resources/nodes/az-federated-identity-credential) | Yes         | Environment can assume an Azure federated identity via OIDC (subject: environment:{envName}).              |
-
-### Inbound Edges
-
-| Edge Kind                                                     | Source Node                       | Traversable | Description                                                                 |
-| ------------------------------------------------------------- | --------------------------------- | ----------- | --------------------------------------------------------------------------- |
-| [GH_HasEnvironment](../EdgeDescriptions/GH_HasEnvironment.md) | [GH_Repository](GH_Repository.md) | No          | Repository has this environment (when no custom branch policies).           |
-| [GH_HasEnvironment](../EdgeDescriptions/GH_HasEnvironment.md) | [GH_Branch](GH_Branch.md)         | No          | Branch is allowed to deploy to this environment (via custom branch policy). |
-
 ## Diagram
 
 ```mermaid
@@ -48,12 +30,6 @@ flowchart TD
     GH_EnvironmentVariable[fa:fa-lock-open GH_EnvironmentVariable]
     AZFederatedIdentityCredential[fa:fa-id-card AZFederatedIdentityCredential]
 
-    style GH_Environment fill:#D5F2C2
-    style GH_Repository fill:#9EECFF
-    style GH_Branch fill:#FF80D2
-    style GH_EnvironmentSecret fill:#6FB94A
-    style GH_EnvironmentVariable fill:#D4A84B
-    style AZFederatedIdentityCredential fill:#FF80D2
 
     GH_Repository -.->|GH_HasEnvironment| GH_Environment
     GH_Branch -.->|GH_HasEnvironment| GH_Environment

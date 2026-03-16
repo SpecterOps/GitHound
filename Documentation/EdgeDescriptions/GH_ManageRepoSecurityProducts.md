@@ -1,8 +1,3 @@
----
-kind: GH_ManageRepoSecurityProducts
-is_traversable: false
----
-
 # GH_ManageRepoSecurityProducts
 
 ## Edge Schema

@@ -1,4 +1,4 @@
-# <img src="../Icons/GH_AppInstallation.png" width="50"/> GH_AppInstallation
+# <img src="../Icons/gh_appinstallation.png" width="50"/> GH_AppInstallation
 
 Represents a GitHub App installed on an organization. App installations have specific permissions and can be scoped to all repositories or a selection of repositories. The permissions granted to the app are captured as a JSON string in the properties.
 
@@ -29,21 +29,6 @@ Created by: `Git-HoundAppInstallation`
 | permissions          | string    | JSON string of the permissions granted to the app (e.g., `{"contents": "read", "metadata": "read"}`). |
 | events               | string    | JSON string of the webhook events the app subscribes to.                                              |
 
-## Edges
-
-### Outbound Edges
-
-| Edge Name                                           | Target Node                       | Traversable | Description                                                                                 |
-| --------------------------------------------------- | --------------------------------- | ----------- | ------------------------------------------------------------------------------------------- |
-| [GH_CanAccess](../EdgeDescriptions/GH_CanAccess.md) | [GH_Repository](GH_Repository.md) | -.->        | App installation can access this repository (created when `repository_selection` is `all`). |
-
-### Inbound Edges
-
-| Edge Name                                               | Source Node                           | Traversable | Description                                                  |
-| ------------------------------------------------------- | ------------------------------------- | ----------- | ------------------------------------------------------------ |
-| [GH_InstalledAs](../EdgeDescriptions/GH_InstalledAs.md) | [GH_App](GH_App.md)                   | -->         | The parent app definition that this installation belongs to. |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)       | [GH_Organization](GH_Organization.md) | -.->        | The organization that contains this app installation.        |
-
 ## Diagram
 
 ```mermaid
@@ -57,8 +42,4 @@ flowchart TD
     GH_Organization -.->|GH_Contains| GH_AppInstallation
     GH_AppInstallation -.->|GH_CanAccess| GH_Repository
 
-    style GH_App fill:#7EC8E3
-    style GH_Organization fill:#5FED83
-    style GH_AppInstallation fill:#A8D8EA
-    style GH_Repository fill:#9EECFF
 ```

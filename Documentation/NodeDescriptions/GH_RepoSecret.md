@@ -1,4 +1,4 @@
-# <img src="../Icons/GH_RepoSecret.png" width="50"/> GH_RepoSecret
+# <img src="../Icons/gh_reposecret.png" width="50"/> GH_RepoSecret
 
 Represents a repository-level GitHub Actions secret. These are secrets defined directly on a specific repository and are only accessible to workflows running in that repository.
 
@@ -19,19 +19,6 @@ Created by: `Git-HoundSecret`
 | updated_at       | datetime  | When the secret was last updated.                                      |
 | visibility       | string    | The secret's visibility scope.                                         |
 
-## Edges
-
-### Outbound Edges
-
-None
-
-### Inbound Edges
-
-| Edge Kind                                           | Source Node                       | Traversable | Description                                                                                                                                                 |
-| --------------------------------------------------- | --------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)   | [GH_Repository](GH_Repository.md) | No          | Repository contains this secret.                                                                                                                            |
-| [GH_HasSecret](../EdgeDescriptions/GH_HasSecret.md) | [GH_Repository](GH_Repository.md) | Yes         | Repository has this secret. Traversable because any user with write access to the repository can access repo secrets by creating a GitHub Actions workflow. |
-
 ## Diagram
 
 ```mermaid
@@ -39,8 +26,6 @@ flowchart TD
     GH_RepoSecret[fa:fa-lock GH_RepoSecret]
     GH_Repository[fa:fa-box-archive GH_Repository]
 
-    style GH_RepoSecret fill:#32BEE6
-    style GH_Repository fill:#9EECFF
 
     GH_Repository -.->|GH_Contains| GH_RepoSecret
     GH_Repository -->|GH_HasSecret| GH_RepoSecret

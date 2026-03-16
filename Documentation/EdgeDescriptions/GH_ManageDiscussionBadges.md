@@ -1,8 +1,3 @@
----
-kind: GH_ManageDiscussionBadges
-is_traversable: false
----
-
 # GH_ManageDiscussionBadges
 
 ## Edge Schema

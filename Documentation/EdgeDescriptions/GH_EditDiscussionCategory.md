@@ -1,8 +1,3 @@
----
-kind: GH_EditDiscussionCategory
-is_traversable: false
----
-
 # GH_EditDiscussionCategory
 
 ## Edge Schema

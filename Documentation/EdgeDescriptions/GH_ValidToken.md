@@ -1,8 +1,3 @@
----
-kind: GH_ValidToken
-is_traversable: true
----
-
 # GH_ValidToken
 
 ## Edge Schema

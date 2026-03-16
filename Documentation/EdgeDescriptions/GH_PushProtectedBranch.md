@@ -1,8 +1,3 @@
----
-kind: GH_PushProtectedBranch
-is_traversable: false
----
-
 # GH_PushProtectedBranch
 
 ## Edge Schema

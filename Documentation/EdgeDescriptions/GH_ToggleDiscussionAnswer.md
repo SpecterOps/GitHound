@@ -1,8 +1,3 @@
----
-kind: GH_ToggleDiscussionAnswer
-is_traversable: false
----
-
 # GH_ToggleDiscussionAnswer
 
 ## Edge Schema

@@ -1,8 +1,3 @@
----
-kind: GH_DeleteAlertsCodeScanning
-is_traversable: false
----
-
 # GH_DeleteAlertsCodeScanning
 
 ## Edge Schema

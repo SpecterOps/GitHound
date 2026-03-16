@@ -1,8 +1,3 @@
----
-kind: GH_WriteOrganizationCustomRepoRole
-is_traversable: false
----
-
 # GH_WriteOrganizationCustomRepoRole
 
 ## Edge Schema

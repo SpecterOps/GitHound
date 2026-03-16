@@ -1,8 +1,3 @@
----
-kind: GH_InstalledAs
-is_traversable: true
----
-
 # GH_InstalledAs
 
 ## Edge Schema

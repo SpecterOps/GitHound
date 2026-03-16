@@ -1,8 +1,3 @@
----
-kind: GH_CloseDiscussion
-is_traversable: false
----
-
 # GH_CloseDiscussion
 
 ## Edge Schema

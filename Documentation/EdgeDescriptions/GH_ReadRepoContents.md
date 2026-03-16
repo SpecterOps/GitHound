@@ -1,8 +1,3 @@
----
-kind: GH_ReadRepoContents
-is_traversable: false
----
-
 # GH_ReadRepoContents
 
 ## Edge Schema

@@ -1,8 +1,3 @@
----
-kind: GH_WriteOrganizationActionsSecrets
-is_traversable: false
----
-
 # GH_WriteOrganizationActionsSecrets
 
 ## Edge Schema

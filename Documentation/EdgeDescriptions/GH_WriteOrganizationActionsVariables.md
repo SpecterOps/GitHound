@@ -1,8 +1,3 @@
----
-kind: GH_WriteOrganizationActionsVariables
-is_traversable: false
----
-
 # GH_WriteOrganizationActionsVariables
 
 ## Edge Schema

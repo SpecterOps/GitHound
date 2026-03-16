@@ -1,8 +1,3 @@
----
-kind: GH_HasSamlIdentityProvider
-is_traversable: false
----
-
 # GH_HasSamlIdentityProvider
 
 ## Edge Schema

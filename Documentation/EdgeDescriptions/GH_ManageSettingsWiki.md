@@ -1,8 +1,3 @@
----
-kind: GH_ManageSettingsWiki
-is_traversable: false
----
-
 # GH_ManageSettingsWiki
 
 ## Edge Schema

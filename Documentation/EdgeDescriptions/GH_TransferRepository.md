@@ -1,8 +1,3 @@
----
-kind: GH_TransferRepository
-is_traversable: false
----
-
 # GH_TransferRepository
 
 ## Edge Schema

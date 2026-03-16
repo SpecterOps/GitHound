@@ -1,4 +1,4 @@
-# <img src="../Icons/GH_OrgSecret.png" width="50"/> GH_OrgSecret
+# <img src="../Icons/gh_orgsecret.png" width="50"/> GH_OrgSecret
 
 Represents an organization-level GitHub Actions secret. Organization secrets can be scoped to all repositories, only private/internal repositories, or a specific set of selected repositories. The visibility property determines how GH_HasSecret edges are resolved to repository nodes.
 
@@ -17,19 +17,6 @@ Created by: `Git-HoundOrganizationSecret`
 | updated_at       | datetime  | When the secret was last updated.                                                                                         |
 | visibility       | string    | The secret's visibility scope: `all` (all repos), `private` (private and internal repos), or `selected` (specific repos). |
 
-## Edges
-
-### Outbound Edges
-
-None
-
-### Inbound Edges
-
-| Edge Kind                                           | Source Node                           | Traversable | Description                                                                                                                                                                                                                    |
-| --------------------------------------------------- | ------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [GH_Contains](../EdgeDescriptions/GH_Contains.md)   | [GH_Organization](GH_Organization.md) | No          | Organization contains this secret.                                                                                                                                                                                             |
-| [GH_HasSecret](../EdgeDescriptions/GH_HasSecret.md) | [GH_Repository](GH_Repository.md)     | Yes         | Repository has access to this organization secret (resolved by visibility). Traversable because any user with write access to the repository can access org secrets scoped to that repo by creating a GitHub Actions workflow. |
-
 ## Diagram
 
 ```mermaid
@@ -38,9 +25,6 @@ flowchart TD
     GH_Organization[fa:fa-building GH_Organization]
     GH_Repository[fa:fa-box-archive GH_Repository]
 
-    style GH_OrgSecret fill:#1FB65A
-    style GH_Organization fill:#5FED83
-    style GH_Repository fill:#9EECFF
 
     GH_Organization -.->|GH_Contains| GH_OrgSecret
     GH_Repository -->|GH_HasSecret| GH_OrgSecret

@@ -1,8 +1,3 @@
----
-kind: GH_ManageSecurityProducts
-is_traversable: false
----
-
 # GH_ManageSecurityProducts
 
 ## Edge Schema

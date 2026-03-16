@@ -1,8 +1,3 @@
----
-kind: GH_OrgBypassCodeScanningDismissalRequests
-is_traversable: false
----
-
 # GH_OrgBypassCodeScanningDismissalRequests
 
 ## Edge Schema

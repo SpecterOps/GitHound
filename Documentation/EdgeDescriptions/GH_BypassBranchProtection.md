@@ -1,8 +1,3 @@
----
-kind: GH_BypassBranchProtection
-is_traversable: false
----
-
 # GH_BypassBranchProtection
 
 ## Edge Schema

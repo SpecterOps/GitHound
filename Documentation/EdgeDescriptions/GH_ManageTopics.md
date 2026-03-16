@@ -1,8 +1,3 @@
----
-kind: GH_ManageTopics
-is_traversable: false
----
-
 # GH_ManageTopics
 
 ## Edge Schema

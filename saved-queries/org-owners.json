@@ -1,5 +1,5 @@
 {
-  "name": "[GitHub] Organization Owners",
-  "query": "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_OrgRole {short_name:'owners'}) RETURN p LIMIT 1000",
+  "name": "GitHub: Organization Owners",
+  "query": "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_OrgRole {short_name:'owners'})\nRETURN p\nLIMIT 1000",
   "description": "Returns all users hold the organization owners role."
 }

@@ -1,4 +1,4 @@
-# <img src="../Icons/GH_Workflow.png" width="50"/> GH_Workflow
+# <img src="../Icons/gh_workflow.png" width="50"/> GH_Workflow
 
 Represents a GitHub Actions workflow defined in a repository. Workflow nodes capture the workflow definition metadata including its file path, state, containing repository, and the full YAML contents of the workflow file. Only repositories with GitHub Actions enabled are queried for workflows.
 
@@ -23,18 +23,6 @@ Created by: `Git-HoundWorkflow`
 | branch           | string    | The branch where the workflow file was found.                                |
 | contents         | string    | The full YAML contents of the workflow file, downloaded from the repository. |
 
-## Edges
-
-### Outbound Edges
-
-None
-
-### Inbound Edges
-
-| Edge Kind                                               | Source Node                       | Traversable | Description                   |
-| ------------------------------------------------------- | --------------------------------- | ----------- | ----------------------------- |
-| [GH_HasWorkflow](../EdgeDescriptions/GH_HasWorkflow.md) | [GH_Repository](GH_Repository.md) | No          | Repository has this workflow. |
-
 ## Diagram
 
 ```mermaid
@@ -42,8 +30,6 @@ flowchart TD
     GH_Workflow[fa:fa-cogs GH_Workflow]
     GH_Repository[fa:fa-box-archive GH_Repository]
 
-    style GH_Workflow fill:#FFE4A1
-    style GH_Repository fill:#9EECFF
 
     GH_Repository -.->|GH_HasWorkflow| GH_Workflow
 ```

@@ -1,8 +1,3 @@
----
-kind: GH_OrgReviewAndManageSecretScanningBypassRequests
-is_traversable: false
----
-
 # GH_OrgReviewAndManageSecretScanningBypassRequests
 
 ## Edge Schema

@@ -1,8 +1,3 @@
----
-kind: GH_RequestPrReview
-is_traversable: false
----
-
 # GH_RequestPrReview
 
 ## Edge Schema

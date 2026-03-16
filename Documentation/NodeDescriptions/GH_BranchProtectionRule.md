@@ -1,4 +1,4 @@
-# <img src="../Icons/GH_BranchProtectionRule.png" width="50"/> GH_BranchProtectionRule
+# <img src="../Icons/gh_branchprotectionrule.png" width="50"/> GH_BranchProtectionRule
 
 Represents a branch protection rule configured on a GitHub repository. Protection rules define requirements that must be met before changes can be merged to matching branches, such as required reviews, status checks, and restrictions on who can push.
 
@@ -30,21 +30,6 @@ Created by: `Git-HoundBranch`
 | allows_force_pushes             | boolean   | Whether force pushes are allowed to matching branches.                                                                                                        |
 | allows_deletions                | boolean   | Whether matching branches can be deleted.                                                                                                                     |
 
-## Edges
-
-### Outbound Edges
-
-| Edge Kind                                               | Target Node               | Traversable | Description                                  |
-| ------------------------------------------------------- | ------------------------- | ----------- | -------------------------------------------- |
-| [GH_ProtectedBy](../EdgeDescriptions/GH_ProtectedBy.md) | [GH_Branch](GH_Branch.md) | No          | Branch protection rule protects this branch. |
-
-### Inbound Edges
-
-| Edge Kind                                                                               | Source Node                                    | Traversable | Description                                                         |
-| --------------------------------------------------------------------------------------- | ---------------------------------------------- | ----------- | ------------------------------------------------------------------- |
-| [GH_BypassPullRequestAllowances](../EdgeDescriptions/GH_BypassPullRequestAllowances.md) | [GH_User](GH_User.md) or [GH_Team](GH_Team.md) | No          | User or team can bypass pull request requirements on this rule.     |
-| [GH_RestrictionsCanPush](../EdgeDescriptions/GH_RestrictionsCanPush.md)                 | [GH_User](GH_User.md) or [GH_Team](GH_Team.md) | No          | User or team is allowed to push to branches protected by this rule. |
-
 ## Diagram
 
 ```mermaid
@@ -54,10 +39,6 @@ flowchart TD
     GH_User[fa:fa-user GH_User]
     GH_Team[fa:fa-user-group GH_Team]
 
-    style GH_BranchProtectionRule fill:#FFB347
-    style GH_Branch fill:#FF80D2
-    style GH_User fill:#FF8E40
-    style GH_Team fill:#C06EFF
 
     GH_User -.->|GH_BypassPullRequestAllowances| GH_BranchProtectionRule
     GH_Team -.->|GH_BypassPullRequestAllowances| GH_BranchProtectionRule
@@ -83,7 +64,7 @@ Branch protection rules are critical security controls. Key settings to review:
 
 The only branch protection configuration that blocks the write-access → workflow → secrets exfiltration attack path is `push_restrictions` + `blocks_creations` on a `*` pattern rule. However, users with [GH_PushProtectedBranch](../EdgeDescriptions/GH_PushProtectedBranch.md), [GH_AdminTo](../EdgeDescriptions/GH_AdminTo.md), [GH_RestrictionsCanPush](../EdgeDescriptions/GH_RestrictionsCanPush.md), or [GH_EditRepoProtections](../EdgeDescriptions/GH_EditRepoProtections.md) can bypass this control.
 
-For complete analysis, see [MITIGATING_CONTROLS.md](../MITIGATING_CONTROLS.md).
+For complete analysis, see [BloodHound Docs: GitHound - Mitigating Controls](https://bloodhound.specterops.io/opengraph/extensions/githound/reference/mitigating-controls).
 
 ### Identifying Bypass Actors
 

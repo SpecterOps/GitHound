@@ -1,8 +1,3 @@
----
-kind: GH_HasBranch
-is_traversable: false
----
-
 # GH_HasBranch
 
 ## Edge Schema

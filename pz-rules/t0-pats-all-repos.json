@@ -1,7 +1,7 @@
 {
   "name": "GitHub: Tier Zero PATs (All Repositories)",
-  "description": "Fine-grained personal access tokens scoped to all repositories in the organization that have at least one write permission. A single compromised token grants write access to every repository. PATs with only read permissions are excluded — they pose a data exfiltration risk but do not grant control over the organization.",
-  "cypher": "MATCH (n:GH_PersonalAccessToken {repository_selection:'all'}) WHERE n.permissions CONTAINS '\"write\"' RETURN n",
+  "description": "Fine-grained personal access tokens scoped to all repositories in the organization that have at least one write permission. A single compromised token grants write access to every repository. PATs with only read permissions are excluded \u2014 they pose a data exfiltration risk but do not grant control over the organization.",
+  "cypher": "MATCH (n:GH_PersonalAccessToken {repository_selection:'all'})\nWHERE n.permissions CONTAINS '\"write\"'\nRETURN n",
   "enabled": true,
   "allow_disable": true
 }
