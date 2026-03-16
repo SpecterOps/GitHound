@@ -138,22 +138,9 @@ flowchart TD
     GH_RepoRole[fa:fa-user-tie GH_RepoRole]
     AZFederatedIdentityCredential[fa:fa-id-card AZFederatedIdentityCredential]
 
-    style GH_Repository fill:#9EECFF
-    style GH_Organization fill:#5FED83
-    style GH_Branch fill:#FF80D2
-    style GH_Workflow fill:#FFE4A1
-    style GH_Environment fill:#D5F2C2
-    style GH_OrgSecret fill:#1FB65A
-    style GH_RepoSecret fill:#32BEE6
-    style GH_OrgVariable fill:#E8B84D
-    style GH_RepoVariable fill:#E89B5C
-    style GH_SecretScanningAlert fill:#3C7A6E
-    style GH_RepoRole fill:#DEFEFA
-    style AZFederatedIdentityCredential fill:#FF80D2
 
     GH_PersonalAccessToken[fa:fa-key GH_PersonalAccessToken]
 
-    style GH_PersonalAccessToken fill:#F5A623
 
     GH_Organization -->|GH_Owns| GH_Repository
     GH_Repository -.->|GH_HasBranch| GH_Branch

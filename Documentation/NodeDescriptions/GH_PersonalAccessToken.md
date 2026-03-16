@@ -49,10 +49,6 @@ flowchart TD
     GH_Organization[fa:fa-building GH_Organization]
     GH_Repository[fa:fa-box-archive GH_Repository]
 
-    style GH_PersonalAccessToken fill:#F5A623
-    style GH_User fill:#FF8E40
-    style GH_Organization fill:#5FED83
-    style GH_Repository fill:#9EECFF
 
     GH_User -.->|GH_HasPersonalAccessToken| GH_PersonalAccessToken
     GH_Organization -.->|GH_Contains| GH_PersonalAccessToken

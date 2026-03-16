@@ -37,8 +37,6 @@ flowchart TD
     GH_Environment[fa:fa-leaf GH_Environment]
     GH_EnvironmentSecret[fa:fa-lock GH_EnvironmentSecret]
 
-    style GH_Environment fill:#D5F2C2
-    style GH_EnvironmentSecret fill:#6FB94A
 
     GH_Environment -.->|GH_Contains| GH_EnvironmentSecret
 ```

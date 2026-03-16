@@ -47,9 +47,6 @@ flowchart TD
     GH_User[fa:fa-user GH_User]
     GH_Organization[fa:fa-building GH_Organization]
 
-    style GH_PersonalAccessTokenRequest fill:#D4A017
-    style GH_User fill:#FF8E40
-    style GH_Organization fill:#5FED83
 
     GH_User -.->|GH_HasPersonalAccessTokenRequest| GH_PersonalAccessTokenRequest
     GH_Organization -.->|GH_Contains| GH_PersonalAccessTokenRequest

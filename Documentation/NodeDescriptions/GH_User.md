@@ -60,27 +60,14 @@ flowchart TD
     Okta_User[fa:fa-user Okta_User]
     PingOneUser[fa:fa-user PingOneUser]
 
-    style GH_User fill:#FF8E40
-    style GH_OrgRole fill:#BFFFD1
-    style GH_RepoRole fill:#DEFEFA
-    style GH_TeamRole fill:#D0B0FF
-    style GH_Branch fill:#FF80D2
-    style GH_ExternalIdentity fill:#8A8F98
-    style AZUser fill:#FF80D2
-    style Okta_User fill:#FFE4A1
-    style PingOneUser fill:#FFE4A1
 
     GH_PersonalAccessToken[fa:fa-key GH_PersonalAccessToken]
     GH_PersonalAccessTokenRequest[fa:fa-key GH_PersonalAccessTokenRequest]
 
-    style GH_PersonalAccessToken fill:#F5A623
-    style GH_PersonalAccessTokenRequest fill:#D4A017
 
     GH_BranchProtectionRule[fa:fa-shield GH_BranchProtectionRule]
     GH_Repository[fa:fa-box-archive GH_Repository]
 
-    style GH_BranchProtectionRule fill:#FFB347
-    style GH_Repository fill:#9EECFF
 
     GH_User -->|GH_HasRole| GH_OrgRole
     GH_User -->|GH_HasRole| GH_TeamRole

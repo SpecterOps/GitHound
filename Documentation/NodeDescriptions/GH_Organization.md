@@ -114,18 +114,11 @@ flowchart TD
     GH_SamlIdentityProvider[fa:fa-id-badge GH_SamlIdentityProvider]
     GH_OrgRole[fa:fa-user-tie GH_OrgRole]
 
-    style GH_Organization fill:#5FED83
-    style GH_Repository fill:#9EECFF
-    style GH_OrgSecret fill:#1FB65A
-    style GH_SamlIdentityProvider fill:#5A6C8F
-    style GH_OrgRole fill:#BFFFD1
 
     GH_Organization -.->|GH_Owns| GH_Repository
     GH_PersonalAccessToken[fa:fa-key GH_PersonalAccessToken]
     GH_PersonalAccessTokenRequest[fa:fa-key GH_PersonalAccessTokenRequest]
 
-    style GH_PersonalAccessToken fill:#F5A623
-    style GH_PersonalAccessTokenRequest fill:#D4A017
 
     GH_Organization -.->|GH_Contains| GH_OrgSecret
     GH_Organization -.->|GH_HasSamlIdentityProvider| GH_SamlIdentityProvider

@@ -42,8 +42,6 @@ flowchart TD
     GH_Workflow[fa:fa-cogs GH_Workflow]
     GH_Repository[fa:fa-box-archive GH_Repository]
 
-    style GH_Workflow fill:#FFE4A1
-    style GH_Repository fill:#9EECFF
 
     GH_Repository -.->|GH_HasWorkflow| GH_Workflow
 ```

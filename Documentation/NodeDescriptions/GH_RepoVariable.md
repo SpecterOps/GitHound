@@ -39,8 +39,6 @@ flowchart TD
     GH_RepoVariable[fa:fa-lock-open GH_RepoVariable]
     GH_Repository[fa:fa-box-archive GH_Repository]
 
-    style GH_RepoVariable fill:#E89B5C
-    style GH_Repository fill:#9EECFF
 
     GH_Repository -.->|GH_Contains| GH_RepoVariable
     GH_Repository -->|GH_HasVariable| GH_RepoVariable

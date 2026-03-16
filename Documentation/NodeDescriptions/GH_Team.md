@@ -52,13 +52,6 @@ flowchart TD
     GH_BranchProtectionRule[fa:fa-shield GH_BranchProtectionRule]
     GH_Repository[fa:fa-box-archive GH_Repository]
 
-    style GH_Team fill:#C06EFF
-    style GH_OrgRole fill:#BFFFD1
-    style GH_RepoRole fill:#DEFEFA
-    style GH_TeamRole fill:#D0B0FF
-    style GH_Branch fill:#FF80D2
-    style GH_BranchProtectionRule fill:#FFB347
-    style GH_Repository fill:#9EECFF
 
     GH_Team -->|GH_MemberOf| GH_Team
     GH_Team -->|GH_HasRole| GH_OrgRole

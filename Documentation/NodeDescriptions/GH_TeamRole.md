@@ -39,9 +39,6 @@ flowchart TD
     GH_User[fa:fa-user GH_User]
     GH_Team[fa:fa-user-group GH_Team]
 
-    style GH_TeamRole fill:#D0B0FF
-    style GH_User fill:#FF8E40
-    style GH_Team fill:#C06EFF
 
     GH_User -->|GH_HasRole| GH_TeamRole
     GH_TeamRole -->|GH_MemberOf| GH_Team

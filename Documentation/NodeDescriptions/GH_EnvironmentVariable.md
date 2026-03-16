@@ -40,8 +40,6 @@ flowchart TD
     GH_Environment[fa:fa-leaf GH_Environment]
     GH_EnvironmentVariable[fa:fa-lock-open GH_EnvironmentVariable]
 
-    style GH_Environment fill:#D5F2C2
-    style GH_EnvironmentVariable fill:#D4A84B
 
     GH_Environment -.->|GH_Contains| GH_EnvironmentVariable
 ```

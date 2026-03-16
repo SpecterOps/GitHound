@@ -57,8 +57,4 @@ flowchart TD
     GH_Organization -.->|GH_Contains| GH_AppInstallation
     GH_AppInstallation -.->|GH_CanAccess| GH_Repository
 
-    style GH_App fill:#7EC8E3
-    style GH_Organization fill:#5FED83
-    style GH_AppInstallation fill:#A8D8EA
-    style GH_Repository fill:#9EECFF
 ```

@@ -39,8 +39,6 @@ flowchart TD
     GH_RepoSecret[fa:fa-lock GH_RepoSecret]
     GH_Repository[fa:fa-box-archive GH_Repository]
 
-    style GH_RepoSecret fill:#32BEE6
-    style GH_Repository fill:#9EECFF
 
     GH_Repository -.->|GH_Contains| GH_RepoSecret
     GH_Repository -->|GH_HasSecret| GH_RepoSecret

@@ -109,12 +109,6 @@ flowchart TD
     GH_OrgRole[fa:fa-user-tie GH_OrgRole]
     GH_SecretScanningAlert[fa:fa-key GH_SecretScanningAlert]
 
-    style GH_RepoRole fill:#DEFEFA
-    style GH_Repository fill:#9EECFF
-    style GH_User fill:#FF8E40
-    style GH_Team fill:#C06EFF
-    style GH_OrgRole fill:#BFFFD1
-    style GH_SecretScanningAlert fill:#3C7A6E
 
     GH_RepoRole -.->|GH_ReadRepoContents| GH_Repository
     GH_RepoRole -.->|GH_WriteRepoContents| GH_Repository

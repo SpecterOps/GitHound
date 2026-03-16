@@ -39,9 +39,6 @@ flowchart TD
     GH_Organization[fa:fa-building GH_Organization]
     GH_Repository[fa:fa-box-archive GH_Repository]
 
-    style GH_OrgVariable fill:#E8B84D
-    style GH_Organization fill:#5FED83
-    style GH_Repository fill:#9EECFF
 
     GH_Organization -.->|GH_Contains| GH_OrgVariable
     GH_Repository -->|GH_HasVariable| GH_OrgVariable

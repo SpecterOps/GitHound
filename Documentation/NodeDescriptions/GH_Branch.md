@@ -48,14 +48,6 @@ flowchart TD
     GH_Team[fa:fa-user-group GH_Team]
     AZFederatedIdentityCredential[fa:fa-id-card AZFederatedIdentityCredential]
 
-    style GH_Branch fill:#FF80D2
-    style GH_Repository fill:#9EECFF
-    style GH_RepoRole fill:#DEFEFA
-    style GH_BranchProtectionRule fill:#FFB347
-    style GH_Environment fill:#D5F2C2
-    style GH_User fill:#FF8E40
-    style GH_Team fill:#C06EFF
-    style AZFederatedIdentityCredential fill:#FF80D2
 
     GH_Repository -.->|GH_HasBranch| GH_Branch
     GH_BranchProtectionRule -.->|GH_ProtectedBy| GH_Branch

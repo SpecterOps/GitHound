@@ -54,10 +54,6 @@ flowchart TD
     GH_User[fa:fa-user GH_User]
     GH_Team[fa:fa-user-group GH_Team]
 
-    style GH_BranchProtectionRule fill:#FFB347
-    style GH_Branch fill:#FF80D2
-    style GH_User fill:#FF8E40
-    style GH_Team fill:#C06EFF
 
     GH_User -.->|GH_BypassPullRequestAllowances| GH_BranchProtectionRule
     GH_Team -.->|GH_BypassPullRequestAllowances| GH_BranchProtectionRule

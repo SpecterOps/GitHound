@@ -42,9 +42,6 @@ flowchart TD
     GH_SamlIdentityProvider[fa:fa-id-badge GH_SamlIdentityProvider]
     GH_ExternalIdentity[fa:fa-arrows-left-right GH_ExternalIdentity]
 
-    style GH_Organization fill:#5FED83
-    style GH_SamlIdentityProvider fill:#5A6C8F
-    style GH_ExternalIdentity fill:#8A8F98
 
     GH_Organization -.->|GH_HasSamlIdentityProvider| GH_SamlIdentityProvider
     GH_SamlIdentityProvider -.->|GH_HasExternalIdentity| GH_ExternalIdentity

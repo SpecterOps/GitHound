@@ -64,12 +64,6 @@ flowchart TD
     GH_RepoRole[fa:fa-user-tie GH_RepoRole]
     GH_SecretScanningAlert[fa:fa-key GH_SecretScanningAlert]
 
-    style GH_OrgRole fill:#BFFFD1
-    style GH_User fill:#FF8E40
-    style GH_Team fill:#C06EFF
-    style GH_Organization fill:#5FED83
-    style GH_RepoRole fill:#DEFEFA
-    style GH_SecretScanningAlert fill:#3C7A6E
 
     GH_User -->|GH_HasRole| GH_OrgRole
     GH_Team -->|GH_HasRole| GH_OrgRole
