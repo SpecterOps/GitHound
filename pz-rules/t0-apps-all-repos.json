@@ -1,7 +1,7 @@
 {
   "name": "GitHub: Tier Zero Apps (All-Repository Installations)",
   "description": "GitHub App definitions whose installations have write access to all repositories. The app owner controls the private key that can generate tokens for any installation. Compromise of the app's private key grants write access to every repository in organizations where it is installed. Apps whose installations have only read permissions are excluded.",
-  "cypher": "MATCH (n:GH_App)-[:GH_InstalledAs]->(i:GH_AppInstallation {repository_selection:'all'}) WHERE i.permissions CONTAINS '\"write\"' RETURN n",
+  "cypher": "MATCH (n:GH_App)-[:GH_InstalledAs]->(i:GH_AppInstallation {repository_selection:'all'})\nWHERE i.permissions CONTAINS '\"write\"'\nRETURN n",
   "enabled": true,
   "allow_disable": true
 }

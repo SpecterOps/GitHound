@@ -1,7 +1,7 @@
 {
   "name": "GitHub: Tier Zero SAML Identity Providers",
   "description": "SAML identity providers control authentication for all organization members via SSO. Compromise of the identity provider grants the ability to impersonate any user, including organization owners, by manipulating SAML assertions or resetting credentials.",
-  "cypher": "MATCH (n:GH_SamlIdentityProvider) RETURN n",
+  "cypher": "MATCH (n:GH_SamlIdentityProvider)\nRETURN n",
   "enabled": true,
   "allow_disable": true
 }

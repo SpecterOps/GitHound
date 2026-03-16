@@ -1,7 +1,7 @@
 {
   "name": "GitHub: Tier Zero Privilege Escalation Roles",
-  "description": "Custom organization roles with write_organization_custom_org_role permission can modify organization role definitions, including setting the base_role to inherit all_repo_admin. Since this permission only exists on custom organization roles, the holder can escalate the role they already hold — a guaranteed self-escalation path to full organizational control.",
-  "cypher": "MATCH (n:GH_OrgRole)-[:GH_WriteOrganizationCustomOrgRole]->(:GH_Organization) RETURN n",
+  "description": "Custom organization roles with write_organization_custom_org_role permission can modify organization role definitions, including setting the base_role to inherit all_repo_admin. Since this permission only exists on custom organization roles, the holder can escalate the role they already hold \u2014 a guaranteed self-escalation path to full organizational control.",
+  "cypher": "MATCH (n:GH_OrgRole)-[:GH_WriteOrganizationCustomOrgRole]->(:GH_Organization)\nRETURN n",
   "enabled": true,
   "allow_disable": true
 }

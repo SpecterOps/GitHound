@@ -10,7 +10,9 @@ Each query is defined in a JSON file located in the [Queries](../saved-queries) 
 Finds organizations that do not require SHA pinning for GitHub Actions. Without pinning, actions referenced by tag can be silently replaced with malicious versions.
 
 ```cypher
-MATCH (org:GH_Organization {actions_sha_pinning_required: false}) RETURN org LIMIT 1000
+MATCH (org:GH_Organization {actions_sha_pinning_required: false})
+RETURN org
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [actions-sha-pinning-not-required.json](../saved-queries/actions-sha-pinning-not-required.json) file.
@@ -20,7 +22,9 @@ This query can be imported into BloodHound from the [actions-sha-pinning-not-req
 Finds secret scanning alerts that are both unresolved and confirmed active. These are valid, usable credentials committed to source code and represent an immediate compromise risk.
 
 ```cypher
-MATCH p=(:GH_Repository)-[:GH_Contains]->(alert:GH_SecretScanningAlert {state: 'open', validity: 'active'}) RETURN p LIMIT 1000
+MATCH p=(:GH_Repository)-[:GH_Contains]->(alert:GH_SecretScanningAlert {state: 'open', validity: 'active'})
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [active-leaked-secrets.json](../saved-queries/active-leaked-secrets.json) file.
@@ -30,7 +34,9 @@ This query can be imported into BloodHound from the [active-leaked-secrets.json]
 Finds organizations where GitHub Advanced Security is not automatically enabled for new repositories. New repositories will lack code scanning, secret scanning, and other GHAS features.
 
 ```cypher
-MATCH (org:GH_Organization {advanced_security_enabled_for_new_repositories: false}) RETURN org LIMIT 1000
+MATCH (org:GH_Organization {advanced_security_enabled_for_new_repositories: false})
+RETURN org
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [advanced-security-disabled-new-repos.json](../saved-queries/advanced-security-disabled-new-repos.json) file.
@@ -40,7 +46,9 @@ This query can be imported into BloodHound from the [advanced-security-disabled-
 Finds organizations that allow all GitHub Actions to run, including third-party actions from the marketplace. This creates supply chain risk if a malicious or compromised action is used.
 
 ```cypher
-MATCH (org:GH_Organization {actions_allowed_actions: 'all'}) RETURN org LIMIT 1000
+MATCH (org:GH_Organization {actions_allowed_actions: 'all'})
+RETURN org
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [all-actions-allowed.json](../saved-queries/all-actions-allowed.json) file.
@@ -50,7 +58,9 @@ This query can be imported into BloodHound from the [all-actions-allowed.json](.
 Finds GitHub App installations that have access to every repository in the organization. A compromised app credential would affect all repositories.
 
 ```cypher
-MATCH (app:GH_AppInstallation {repository_selection: 'all'}) RETURN app LIMIT 1000
+MATCH (app:GH_AppInstallation {repository_selection: 'all'})
+RETURN app
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [app-installations-all-repos.json](../saved-queries/app-installations-all-repos.json) file.
@@ -60,7 +70,9 @@ This query can be imported into BloodHound from the [app-installations-all-repos
 Finds branch protection rules where administrators can bypass all protections. Admins can push directly, skip reviews, and override status checks on these branches.
 
 ```cypher
-MATCH p=(:GH_BranchProtectionRule {enforce_admins: false})-[:GH_ProtectedBy]->(:GH_Branch) RETURN p LIMIT 1000
+MATCH p=(:GH_BranchProtectionRule {enforce_admins: false})-[:GH_ProtectedBy]->(:GH_Branch)
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [branch-protection-admins-not-enforced.json](../saved-queries/branch-protection-admins-not-enforced.json) file.
@@ -70,7 +82,9 @@ This query can be imported into BloodHound from the [branch-protection-admins-no
 Finds protected branches that can be deleted. Branch deletion can result in loss of code and removal of audit history.
 
 ```cypher
-MATCH p=(:GH_BranchProtectionRule {allows_deletions: true})-[:GH_ProtectedBy]->(:GH_Branch) RETURN p LIMIT 1000
+MATCH p=(:GH_BranchProtectionRule {allows_deletions: true})-[:GH_ProtectedBy]->(:GH_Branch)
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [branch-protection-deletions-allowed.json](../saved-queries/branch-protection-deletions-allowed.json) file.
@@ -80,7 +94,9 @@ This query can be imported into BloodHound from the [branch-protection-deletions
 Finds branches where force pushes are allowed. Force pushes can rewrite commit history, potentially hiding malicious changes or destroying audit trails.
 
 ```cypher
-MATCH p=(:GH_BranchProtectionRule {allows_force_pushes: true})-[:GH_ProtectedBy]->(:GH_Branch) RETURN p LIMIT 1000
+MATCH p=(:GH_BranchProtectionRule {allows_force_pushes: true})-[:GH_ProtectedBy]->(:GH_Branch)
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [branch-protection-force-pushes.json](../saved-queries/branch-protection-force-pushes.json) file.
@@ -90,7 +106,9 @@ This query can be imported into BloodHound from the [branch-protection-force-pus
 Finds branches where code owner reviews are not required. Changes to security-critical paths can be merged without authorization from the designated code owners.
 
 ```cypher
-MATCH p=(:GH_BranchProtectionRule {require_code_owner_reviews: false})-[:GH_ProtectedBy]->(:GH_Branch) RETURN p LIMIT 1000
+MATCH p=(:GH_BranchProtectionRule {require_code_owner_reviews: false})-[:GH_ProtectedBy]->(:GH_Branch)
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [branch-protection-no-code-owner-reviews.json](../saved-queries/branch-protection-no-code-owner-reviews.json) file.
@@ -100,7 +118,9 @@ This query can be imported into BloodHound from the [branch-protection-no-code-o
 Finds branches where pull request reviews are not required. Code can be merged directly without peer review, increasing the risk of undetected vulnerabilities or malicious changes.
 
 ```cypher
-MATCH p=(:GH_BranchProtectionRule {required_pull_request_reviews: false})-[:GH_ProtectedBy]->(:GH_Branch) RETURN p LIMIT 1000
+MATCH p=(:GH_BranchProtectionRule {required_pull_request_reviews: false})-[:GH_ProtectedBy]->(:GH_Branch)
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [branch-protection-no-pr-reviews.json](../saved-queries/branch-protection-no-pr-reviews.json) file.
@@ -110,7 +130,9 @@ This query can be imported into BloodHound from the [branch-protection-no-pr-rev
 Finds branches where CI/CD status checks are not required before merging. Code with failing tests or security scans can be merged into protected branches.
 
 ```cypher
-MATCH p=(:GH_BranchProtectionRule {requires_status_checks: false})-[:GH_ProtectedBy]->(:GH_Branch) RETURN p LIMIT 1000
+MATCH p=(:GH_BranchProtectionRule {requires_status_checks: false})-[:GH_ProtectedBy]->(:GH_Branch)
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [branch-protection-no-status-checks.json](../saved-queries/branch-protection-no-status-checks.json) file.
@@ -120,7 +142,9 @@ This query can be imported into BloodHound from the [branch-protection-no-status
 Finds branches where the author of the last push can approve their own pull request. This allows a single person to both write and approve code changes.
 
 ```cypher
-MATCH p=(:GH_BranchProtectionRule {require_last_push_approval: false})-[:GH_ProtectedBy]->(:GH_Branch) RETURN p LIMIT 1000
+MATCH p=(:GH_BranchProtectionRule {require_last_push_approval: false})-[:GH_ProtectedBy]->(:GH_Branch)
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [branch-protection-self-approval.json](../saved-queries/branch-protection-self-approval.json) file.
@@ -130,7 +154,9 @@ This query can be imported into BloodHound from the [branch-protection-self-appr
 Finds branches where stale reviews are not dismissed when new commits are pushed. An attacker could get a review approved, then push additional malicious commits that inherit the stale approval.
 
 ```cypher
-MATCH p=(:GH_BranchProtectionRule {dismisses_stale_reviews: false})-[:GH_ProtectedBy]->(:GH_Branch) RETURN p LIMIT 1000
+MATCH p=(:GH_BranchProtectionRule {dismisses_stale_reviews: false})-[:GH_ProtectedBy]->(:GH_Branch)
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [branch-protection-stale-reviews.json](../saved-queries/branch-protection-stale-reviews.json) file.
@@ -140,7 +166,9 @@ This query can be imported into BloodHound from the [branch-protection-stale-rev
 Finds users and teams that can bypass pull request review requirements on protected branches. These actors can merge code without any reviews.
 
 ```cypher
-MATCH p=(actor)-[:GH_BypassPullRequestAllowances]->(rule:GH_BranchProtectionRule)-[:GH_ProtectedBy]->(branch:GH_Branch) RETURN p LIMIT 1000
+MATCH p=(actor)-[:GH_BypassPullRequestAllowances]->(rule:GH_BranchProtectionRule)-[:GH_ProtectedBy]->(branch:GH_Branch)
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [bypass-pr-requirements.json](../saved-queries/bypass-pr-requirements.json) file.
@@ -150,7 +178,10 @@ This query can be imported into BloodHound from the [bypass-pr-requirements.json
 Identifies users with dangerous branch permissions in a GitHub organization, including bypass allowances on protection rules.
 
 ```cypher
-MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_PushProtectedBranch|GH_BypassBranchProtection]-(r:GH_Repository) MATCH p1=(:GH_User)-[:GH_BypassPullRequestAllowances|GH_RestrictionsCanPush]->(rule:GH_BranchProtectionRule)-[:GH_ProtectedBy]->(b:GH_Branch) RETURN p,p1 LIMIT 1000
+MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_PushProtectedBranch|GH_BypassBranchProtection]-(r:GH_Repository)
+MATCH p1=(:GH_User)-[:GH_BypassPullRequestAllowances|GH_RestrictionsCanPush]->(rule:GH_BranchProtectionRule)-[:GH_ProtectedBy]->(b:GH_Branch)
+RETURN p,p1
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [dangerous-branch-perms.json](../saved-queries/dangerous-branch-perms.json) file.
@@ -160,7 +191,10 @@ This query can be imported into BloodHound from the [dangerous-branch-perms.json
 Returns organizations that have a default repository permission other than 'none'.
 
 ```cypher
-MATCH (o:GH_Organization) WHERE o.default_repository_permission <> 'none' RETURN o LIMIT 1000
+MATCH (o:GH_Organization)
+WHERE o.default_repository_permission <> 'none'
+RETURN o
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [default-repository-permissions.json](../saved-queries/default-repository-permissions.json) file.
@@ -170,7 +204,10 @@ This query can be imported into BloodHound from the [default-repository-permissi
 The cloud-to-cloud pivot through GitHub: a compromised Azure or Okta identity syncs to a GitHub user via SSO. That GitHub user has write access to repositories configured with OIDC federation to Azure workload identities. The attacker pivots from one cloud identity through GitHub into a completely different Azure identity — crossing cloud boundaries twice in a single attack chain.
 
 ```cypher
-MATCH p1=(extUser)-[:SyncedToGHUser]->(ghUser:GH_User) MATCH p2=(ghUser)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_WriteRepoContents]->(:GH_Repository)-[:GH_CanAssumeIdentity]->(cred:AZFederatedIdentityCredential) RETURN p1, p2 LIMIT 1000
+MATCH p1=(extUser)-[:SyncedToGHUser]->(ghUser:GH_User)
+MATCH p2=(ghUser)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_WriteRepoContents]->(:GH_Repository)-[:GH_CanAssumeIdentity]->(cred:AZFederatedIdentityCredential)
+RETURN p1, p2
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [demo-sso-to-cloud-round-trip.json](../saved-queries/demo-sso-to-cloud-round-trip.json) file.
@@ -180,7 +217,9 @@ This query can be imported into BloodHound from the [demo-sso-to-cloud-round-tri
 Finds organizations where Dependabot alerts are not enabled for new repositories. Vulnerable dependencies in new repositories will go undetected.
 
 ```cypher
-MATCH (org:GH_Organization {dependabot_alerts_enabled_for_new_repositories: false}) RETURN org LIMIT 1000
+MATCH (org:GH_Organization {dependabot_alerts_enabled_for_new_repositories: false})
+RETURN org
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [dependabot-alerts-disabled-new-repos.json](../saved-queries/dependabot-alerts-disabled-new-repos.json) file.
@@ -190,7 +229,9 @@ This query can be imported into BloodHound from the [dependabot-alerts-disabled-
 Finds organizations where Dependabot security update PRs are not enabled for new repositories. Known vulnerable dependencies will not receive automated fix PRs.
 
 ```cypher
-MATCH (org:GH_Organization {dependabot_security_updates_enabled_for_new_repositories: false}) RETURN org LIMIT 1000
+MATCH (org:GH_Organization {dependabot_security_updates_enabled_for_new_repositories: false})
+RETURN org
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [dependabot-updates-disabled-new-repos.json](../saved-queries/dependabot-updates-disabled-new-repos.json) file.
@@ -200,7 +241,9 @@ This query can be imported into BloodHound from the [dependabot-updates-disabled
 Finds organizations where the dependency graph is not enabled for new repositories. Without the dependency graph, transitive dependency vulnerabilities cannot be tracked.
 
 ```cypher
-MATCH (org:GH_Organization {dependency_graph_enabled_for_new_repositories: false}) RETURN org LIMIT 1000
+MATCH (org:GH_Organization {dependency_graph_enabled_for_new_repositories: false})
+RETURN org
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [dependency-graph-disabled-new-repos.json](../saved-queries/dependency-graph-disabled-new-repos.json) file.
@@ -210,7 +253,9 @@ This query can be imported into BloodHound from the [dependency-graph-disabled-n
 Finds deployment environments where administrators can bypass protection rules such as required reviewers and wait timers. Admins can deploy to these environments without any approval.
 
 ```cypher
-MATCH p=(:GH_Repository)-[:GH_HasEnvironment]->(env:GH_Environment {can_admins_bypass: true}) RETURN p LIMIT 1000
+MATCH p=(:GH_Repository)-[:GH_HasEnvironment]->(env:GH_Environment {can_admins_bypass: true})
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [environments-admin-bypass.json](../saved-queries/environments-admin-bypass.json) file.
@@ -220,7 +265,9 @@ This query can be imported into BloodHound from the [environments-admin-bypass.j
 Finds expired personal access tokens that still exist. Expired tokens should be cleaned up to reduce credential inventory and audit noise.
 
 ```cypher
-MATCH p=(:GH_User)-[:GH_HasPersonalAccessToken]->(token:GH_PersonalAccessToken {token_expired: true}) RETURN p LIMIT 1000
+MATCH p=(:GH_User)-[:GH_HasPersonalAccessToken]->(token:GH_PersonalAccessToken {token_expired: true})
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [expired-pats.json](../saved-queries/expired-pats.json) file.
@@ -230,7 +277,10 @@ This query can be imported into BloodHound from the [expired-pats.json](../saved
 Finds external identities that lack SCIM synchronization. Without SCIM, user deprovisioning in the identity provider will not automatically revoke GitHub access.
 
 ```cypher
-MATCH (ei:GH_ExternalIdentity) WHERE ei.scim_identity_username = '' RETURN ei LIMIT 1000
+MATCH (ei:GH_ExternalIdentity)
+WHERE ei.scim_identity_username = ''
+RETURN ei
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [external-identities-without-scim.json](../saved-queries/external-identities-without-scim.json) file.
@@ -240,7 +290,9 @@ This query can be imported into BloodHound from the [external-identities-without
 Finds GitHub entities (repositories, branches, environments) that can assume Azure identities via OIDC federation. Verify that each trust relationship is intentional and scoped appropriately.
 
 ```cypher
-MATCH p=(src)-[:GH_CanAssumeIdentity]->(cred:AZFederatedIdentityCredential) RETURN p LIMIT 1000
+MATCH p=(src)-[:GH_CanAssumeIdentity]->(cred:AZFederatedIdentityCredential)
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [github-to-azure-identity.json](../saved-queries/github-to-azure-identity.json) file.
@@ -250,7 +302,10 @@ This query can be imported into BloodHound from the [github-to-azure-identity.js
 Returns all users who hold a global repository permission role (i.e., roles that are not default).
 
 ```cypher
-MATCH p=(:GH_User)-[:GH_HasBaseRole|GH_HasRole|GH_MemberOf*1..3]->(role:GH_OrgRole) WHERE role.short_name CONTAINS 'all_repo_' RETURN p LIMIT 1000
+MATCH p=(:GH_User)-[:GH_HasBaseRole|GH_HasRole|GH_MemberOf*1..3]->(role:GH_OrgRole)
+WHERE role.short_name CONTAINS 'all_repo_'
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [global-repo-perms.json](../saved-queries/global-repo-perms.json) file.
@@ -260,7 +315,11 @@ This query can be imported into BloodHound from the [global-repo-perms.json](../
 Returns all external identities (e.g., Azure or Okta users) that are associated with GitHub users.
 
 ```cypher
-MATCH p=(s)-[]->(d:GH_User) WHERE s:AZUser OR s:Okta_User RETURN p LIMIT 1000
+MATCH p=(s)-[]->(d:GH_User)
+WHERE s:AZUser
+OR s:Okta_User
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [hybrid-identities.json](../saved-queries/hybrid-identities.json) file.
@@ -270,7 +329,9 @@ This query can be imported into BloodHound from the [hybrid-identities.json](../
 Finds organizations where members can change repository visibility. This allows any member to make a private repository public, potentially exposing source code and secrets.
 
 ```cypher
-MATCH (org:GH_Organization {members_can_change_repo_visibility: true}) RETURN org LIMIT 1000
+MATCH (org:GH_Organization {members_can_change_repo_visibility: true})
+RETURN org
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [members-can-change-repo-visibility.json](../saved-queries/members-can-change-repo-visibility.json) file.
@@ -280,7 +341,9 @@ This query can be imported into BloodHound from the [members-can-change-repo-vis
 Finds organizations where members can create GitHub Pages sites. Pages can be used to host phishing content, data exfiltration endpoints, or other malicious resources.
 
 ```cypher
-MATCH (org:GH_Organization {members_can_create_pages: true}) RETURN org LIMIT 1000
+MATCH (org:GH_Organization {members_can_create_pages: true})
+RETURN org
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [members-can-create-pages.json](../saved-queries/members-can-create-pages.json) file.
@@ -290,7 +353,9 @@ This query can be imported into BloodHound from the [members-can-create-pages.js
 Finds organizations where members can create internet-facing public repositories. This increases the risk of accidental exposure of proprietary code or secrets.
 
 ```cypher
-MATCH (org:GH_Organization {members_can_create_public_repositories: true}) RETURN org LIMIT 1000
+MATCH (org:GH_Organization {members_can_create_public_repositories: true})
+RETURN org
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [members-can-create-public-repos.json](../saved-queries/members-can-create-public-repos.json) file.
@@ -300,7 +365,9 @@ This query can be imported into BloodHound from the [members-can-create-public-r
 Finds organizations where members can delete repositories. This poses a risk of accidental or malicious destruction of code and audit history.
 
 ```cypher
-MATCH (org:GH_Organization {members_can_delete_repositories: true}) RETURN org LIMIT 1000
+MATCH (org:GH_Organization {members_can_delete_repositories: true})
+RETURN org
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [members-can-delete-repos.json](../saved-queries/members-can-delete-repos.json) file.
@@ -310,7 +377,9 @@ This query can be imported into BloodHound from the [members-can-delete-repos.js
 Finds organizations where members can fork private repositories to personal accounts. Forked copies leave organizational control and oversight.
 
 ```cypher
-MATCH (org:GH_Organization {members_can_fork_private_repositories: true}) RETURN org LIMIT 1000
+MATCH (org:GH_Organization {members_can_fork_private_repositories: true})
+RETURN org
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [members-can-fork-private-repos.json](../saved-queries/members-can-fork-private-repos.json) file.
@@ -320,7 +389,9 @@ This query can be imported into BloodHound from the [members-can-fork-private-re
 Finds organizations where any member can invite external users. This can lead to unauthorized third-party access to repositories without centralized oversight.
 
 ```cypher
-MATCH (org:GH_Organization {members_can_invite_outside_collaborators: true}) RETURN org LIMIT 1000
+MATCH (org:GH_Organization {members_can_invite_outside_collaborators: true})
+RETURN org
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [members-can-invite-outside-collaborators.json](../saved-queries/members-can-invite-outside-collaborators.json) file.
@@ -330,7 +401,9 @@ This query can be imported into BloodHound from the [members-can-invite-outside-
 Returns all users hold the organization owners role.
 
 ```cypher
-MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_OrgRole {short_name:'owners'}) RETURN p LIMIT 1000
+MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_OrgRole {short_name:'owners'})
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [org-owners.json](../saved-queries/org-owners.json) file.
@@ -340,7 +413,10 @@ This query can be imported into BloodHound from the [org-owners.json](../saved-q
 Returns organizations that do not require two-factor authentication.
 
 ```cypher
-MATCH (o:GH_Organization) WHERE o.two_factor_requirement_enabled = false RETURN o LIMIT 1000
+MATCH (o:GH_Organization)
+WHERE o.two_factor_requirement_enabled = false
+RETURN o
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [orgs-without-2fa.json](../saved-queries/orgs-without-2fa.json) file.
@@ -350,7 +426,9 @@ This query can be imported into BloodHound from the [orgs-without-2fa.json](../s
 Finds fine-grained personal access tokens scoped to all repositories. A single compromised token grants access to every repository in the organization.
 
 ```cypher
-MATCH p=(:GH_User)-[:GH_HasPersonalAccessToken]->(token:GH_PersonalAccessToken {repository_selection: 'all'}) RETURN p LIMIT 1000
+MATCH p=(:GH_User)-[:GH_HasPersonalAccessToken]->(token:GH_PersonalAccessToken {repository_selection: 'all'})
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [pats-all-repo-access.json](../saved-queries/pats-all-repo-access.json) file.
@@ -360,7 +438,9 @@ This query can be imported into BloodHound from the [pats-all-repo-access.json](
 Finds pending fine-grained personal access token requests awaiting approval. Review these to ensure requested permissions are appropriate before granting access.
 
 ```cypher
-MATCH p=(:GH_User)-[:GH_HasPersonalAccessTokenRequest]->(req:GH_PersonalAccessTokenRequest) RETURN p LIMIT 1000
+MATCH p=(:GH_User)-[:GH_HasPersonalAccessTokenRequest]->(req:GH_PersonalAccessTokenRequest)
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [pending-pat-requests.json](../saved-queries/pending-pat-requests.json) file.
@@ -370,7 +450,9 @@ This query can be imported into BloodHound from the [pending-pat-requests.json](
 Finds private repositories that allow forking. Forked copies of private repositories can leave organizational governance and visibility.
 
 ```cypher
-MATCH (repo:GH_Repository {visibility: 'private', allow_forking: true}) RETURN repo LIMIT 1000
+MATCH (repo:GH_Repository {visibility: 'private', allow_forking: true})
+RETURN repo
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [private-repos-forking-allowed.json](../saved-queries/private-repos-forking-allowed.json) file.
@@ -380,7 +462,11 @@ This query can be imported into BloodHound from the [private-repos-forking-allow
 Returns all custom organization roles that are privileged (i.e., have permissions that are not default)
 
 ```cypher
-MATCH p=(role:GH_OrgRole {type:'custom'})-[r]->(dest) WHERE dest:GH_Organization OR dest:GH_OrgRole RETURN p LIMIT 1000
+MATCH p=(role:GH_OrgRole {type:'custom'})-[r]->(dest)
+WHERE dest:GH_Organization
+OR dest:GH_OrgRole
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [privileged-custom-org-roles.json](../saved-queries/privileged-custom-org-roles.json) file.
@@ -390,7 +476,9 @@ This query can be imported into BloodHound from the [privileged-custom-org-roles
 Returns all hybrid identities (e.g., Azure or Okta users) that are associated with GitHub users who hold the organization owners role.
 
 ```cypher
-MATCH p=()-[:GH_SyncedTo]->(:GH_User)-[:GH_HasRole]->(:GH_OrgRole {short_name:'owners'}) RETURN p LIMIT 1000
+MATCH p=()-[:GH_SyncedTo]->(:GH_User)-[:GH_HasRole]->(:GH_OrgRole {short_name:'owners'})
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [privileged-hybrid-identities.json](../saved-queries/privileged-hybrid-identities.json) file.
@@ -400,7 +488,9 @@ This query can be imported into BloodHound from the [privileged-hybrid-identitie
 Returns all public repositories.
 
 ```cypher
-MATCH (repo:GH_Repository {private: false}) RETURN repo LIMIT 1000
+MATCH (repo:GH_Repository {private: false})
+RETURN repo
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [public-repos.json](../saved-queries/public-repos.json) file.
@@ -410,7 +500,9 @@ This query can be imported into BloodHound from the [public-repos.json](../saved
 Finds organizations where push protection is not enabled for new repositories. Without push protection, secrets can be committed without being blocked before they reach the repository.
 
 ```cypher
-MATCH (org:GH_Organization {secret_scanning_push_protection_enabled_for_new_repositories: false}) RETURN org LIMIT 1000
+MATCH (org:GH_Organization {secret_scanning_push_protection_enabled_for_new_repositories: false})
+RETURN org
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [push-protection-disabled-new-repos.json](../saved-queries/push-protection-disabled-new-repos.json) file.
@@ -420,7 +512,9 @@ This query can be imported into BloodHound from the [push-protection-disabled-ne
 Finds users and teams that are allowed to push directly to protected branches when push restrictions are enabled. These actors bypass the normal pull request workflow.
 
 ```cypher
-MATCH p=(actor)-[:GH_RestrictionsCanPush]->(rule:GH_BranchProtectionRule)-[:GH_ProtectedBy]->(branch:GH_Branch) RETURN p LIMIT 1000
+MATCH p=(actor)-[:GH_RestrictionsCanPush]->(rule:GH_BranchProtectionRule)-[:GH_ProtectedBy]->(branch:GH_Branch)
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [push-to-protected-branches.json](../saved-queries/push-to-protected-branches.json) file.
@@ -430,7 +524,9 @@ This query can be imported into BloodHound from the [push-to-protected-branches.
 Finds repositories where secret scanning is disabled. Committed credentials in these repositories will not be detected by GitHub.
 
 ```cypher
-MATCH (repo:GH_Repository {secret_scanning: 'disabled'}) RETURN repo LIMIT 1000
+MATCH (repo:GH_Repository {secret_scanning: 'disabled'})
+RETURN repo
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [repos-secret-scanning-disabled.json](../saved-queries/repos-secret-scanning-disabled.json) file.
@@ -440,7 +536,13 @@ This query can be imported into BloodHound from the [repos-secret-scanning-disab
 Secrets reachable by users who can create new branches (computed by Compute-GitHoundBranchAccess). The GH_CanCreateBranch edge accounts for branch protection rules, push restrictions, blocks_creations settings, and all bypass mechanisms (admin, push_protected_branch, pushAllowances). Edges emit from RepoRole in the common case; per-actor edges from User/Team are only present when per-rule allowances grant additional access beyond the role.
 
 ```cypher
-MATCH p1=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_CanCreateBranch]->(repo:GH_Repository)-[:GH_HasSecret]->(s) WHERE (s:GH_RepoSecret OR s:GH_OrgSecret) OPTIONAL MATCH p2=(repo)<-[:GH_CanCreateBranch]-(:GH_User) OPTIONAL MATCH p3=(repo)<-[:GH_CanCreateBranch]-(:GH_Team)<-[:GH_HasRole|GH_MemberOf|GH_AddMember*1..]-(:GH_User) RETURN p1, p2, p3 LIMIT 1000
+MATCH p1=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_CanCreateBranch]->(repo:GH_Repository)-[:GH_HasSecret]->(s)
+WHERE (s:GH_RepoSecret
+OR s:GH_OrgSecret)
+OPTIONAL MATCH p2=(repo)<-[:GH_CanCreateBranch]-(:GH_User)
+OPTIONAL MATCH p3=(repo)<-[:GH_CanCreateBranch]-(:GH_Team)<-[:GH_HasRole|GH_MemberOf|GH_AddMember*1..]-(:GH_User)
+RETURN p1, p2, p3
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [repos-vulnerable-to-workflow-secret-exfil.json](../saved-queries/repos-vulnerable-to-workflow-secret-exfil.json) file.
@@ -450,7 +552,9 @@ This query can be imported into BloodHound from the [repos-vulnerable-to-workflo
 Returns all repository workflows
 
 ```cypher
-MATCH p=(:GH_Repository)-[:GH_HasWorkflow]->(:GH_Workflow) RETURN p LIMIT 1000
+MATCH p=(:GH_Repository)-[:GH_HasWorkflow]->(:GH_Workflow)
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [repository-workflows.json](../saved-queries/repository-workflows.json) file.
@@ -460,7 +564,11 @@ This query can be imported into BloodHound from the [repository-workflows.json](
 Finds SAML Identity Providers, their external identities, and mapped users.
 
 ```cypher
-MATCH p=(OIP:GH_SamlIdentityProvider)-[:GH_HasExternalIdentity]->(EI:GH_ExternalIdentity) MATCH p1=(OIP)<-[:GH_HasSamlIdentityProvider]-(:GH_Organization) MATCH p2=(EI)-[:GH_MapsToUser]->() RETURN p,p1,p2 LIMIT 1000
+MATCH p=(OIP:GH_SamlIdentityProvider)-[:GH_HasExternalIdentity]->(EI:GH_ExternalIdentity)
+MATCH p1=(OIP)<-[:GH_HasSamlIdentityProvider]-(:GH_Organization)
+MATCH p2=(EI)-[:GH_MapsToUser]->()
+RETURN p,p1,p2
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [saml-configuration.json](../saved-queries/saml-configuration.json) file.
@@ -470,7 +578,9 @@ This query can be imported into BloodHound from the [saml-configuration.json](..
 Returns all repositories that have secret scanning alerts.
 
 ```cypher
-MATCH p=(repo:GH_Repository)-[:GH_Contains]->(:GH_SecretScanningAlert {state:'open'}) RETURN p LIMIT 1000
+MATCH p=(repo:GH_Repository)-[:GH_Contains]->(:GH_SecretScanningAlert {state:'open'})
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [secret-scanning-alerts.json](../saved-queries/secret-scanning-alerts.json) file.
@@ -480,7 +590,9 @@ This query can be imported into BloodHound from the [secret-scanning-alerts.json
 Finds organizations where secret scanning is not automatically enabled for new repositories. New repositories will not detect committed credentials until manually enabled.
 
 ```cypher
-MATCH (org:GH_Organization {secret_scanning_enabled_for_new_repositories: false}) RETURN org LIMIT 1000
+MATCH (org:GH_Organization {secret_scanning_enabled_for_new_repositories: false})
+RETURN org
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [secret-scanning-disabled-new-repos.json](../saved-queries/secret-scanning-disabled-new-repos.json) file.
@@ -490,7 +602,11 @@ This query can be imported into BloodHound from the [secret-scanning-disabled-ne
 Returns all repo and org secrets reachable by users through write access. Users with write access can create GitHub Actions workflows to access secrets.
 
 ```cypher
-MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_WriteRepoContents]->(:GH_Repository)-[:GH_HasSecret]->(s) WHERE s:GH_RepoSecret OR s:GH_OrgSecret RETURN p LIMIT 1000
+MATCH p=(:GH_User)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_WriteRepoContents]->(:GH_Repository)-[:GH_HasSecret]->(s)
+WHERE s:GH_RepoSecret
+OR s:GH_OrgSecret
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [secrets-reachable-by-user.json](../saved-queries/secrets-reachable-by-user.json) file.
@@ -500,7 +616,10 @@ This query can be imported into BloodHound from the [secrets-reachable-by-user.j
 Returns all users who hold the maintainer role over a team, this also represents team nesting.
 
 ```cypher
-MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_TeamRole)-[:GH_AddMember]->(team:GH_Team) MATCH p1=(team)<-[:GH_MemberOf]-(:GH_Team)<-[:GH_AddMember]-(:GH_TeamRole)<-[:GH_HasRole]-(:GH_User) RETURN p,p1 LIMIT 1000
+MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_TeamRole)-[:GH_AddMember]->(team:GH_Team)
+MATCH p1=(team)<-[:GH_MemberOf]-(:GH_Team)<-[:GH_AddMember]-(:GH_TeamRole)<-[:GH_HasRole]-(:GH_User)
+RETURN p,p1
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [team-membership-admin.json](../saved-queries/team-membership-admin.json) file.
@@ -510,7 +629,9 @@ This query can be imported into BloodHound from the [team-membership-admin.json]
 Returns the structure of teams within organizations, including team roles and their members.
 
 ```cypher
-MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_TeamRole)-[:GH_MemberOf*1..]->(:GH_Team) RETURN p LIMIT 1000
+MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_TeamRole)-[:GH_MemberOf*1..]->(:GH_Team)
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [team-structure.json](../saved-queries/team-structure.json) file.
@@ -520,7 +641,9 @@ This query can be imported into BloodHound from the [team-structure.json](../sav
 Returns all unprotected branches in repositories.
 
 ```cypher
-MATCH p=(repo:GH_Repository)-[:GH_HasBranch]-(:GH_Branch {protected: false}) RETURN p LIMIT 1000
+MATCH p=(repo:GH_Repository)-[:GH_HasBranch]-(:GH_Branch {protected: false})
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [unprotected-branches.json](../saved-queries/unprotected-branches.json) file.
@@ -530,7 +653,11 @@ This query can be imported into BloodHound from the [unprotected-branches.json](
 Returns all repositories that have GitHub Actions workflows and an unprotected default branch. This means that users with GH_WriteRepoContents to the Repository can overwrite or change the workflow.
 
 ```cypher
-MATCH p=(repo:GH_Repository)-[:GH_HasWorkflow]->(:GH_Workflow) MATCH p1=(repo)-[:GH_HasBranch]->(branch:GH_Branch) WHERE repo.default_branch = branch.short_name RETURN p1 LIMIT 1000
+MATCH p=(repo:GH_Repository)-[:GH_HasWorkflow]->(:GH_Workflow)
+MATCH p1=(repo)-[:GH_HasBranch]->(branch:GH_Branch)
+WHERE repo.default_branch = branch.short_name
+RETURN p1
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [unprotected-default-branch-with-workflow.json](../saved-queries/unprotected-default-branch-with-workflow.json) file.
@@ -540,7 +667,10 @@ This query can be imported into BloodHound from the [unprotected-default-branch-
 Returns all default branches in repositories that are not protected.
 
 ```cypher
-MATCH p=(repo:GH_Repository)-[:GH_HasBranch]-(branch:GH_Branch {protected: false}) WHERE repo.default_branch = branch.short_name RETURN p LIMIT 1000
+MATCH p=(repo:GH_Repository)-[:GH_HasBranch]-(branch:GH_Branch {protected: false})
+WHERE repo.default_branch = branch.short_name
+RETURN p
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [unprotected-default-branches.json](../saved-queries/unprotected-default-branches.json) file.
@@ -550,7 +680,9 @@ This query can be imported into BloodHound from the [unprotected-default-branche
 Finds organizations that do not require sign-off for web-based commits. Without signoff, commit attribution cannot be verified.
 
 ```cypher
-MATCH (org:GH_Organization {web_commit_signoff_required: false}) RETURN org LIMIT 1000
+MATCH (org:GH_Organization {web_commit_signoff_required: false})
+RETURN org
+LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [web-commit-signoff-not-required.json](../saved-queries/web-commit-signoff-not-required.json) file.
