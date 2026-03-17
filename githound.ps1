@@ -321,6 +321,10 @@ function Invoke-GitHubGraphQL
         variables = $Variables
     } | ConvertTo-Json -Depth 100 -Compress
 
+    if (-not $Headers) {
+        $Headers = $Session.Headers
+    }
+
     $fparams = @{
         Uri = $Uri
         Method = 'Post'
@@ -802,6 +806,161 @@ function ConvertTo-PascalCase
     $pascalCaseString = (Get-Culture).TextInfo.ToTitleCase($cleanedString).Replace(' ', '')
 
     return $pascalCaseString
+}
+
+function Git-HoundEnterprise
+{
+    <#
+    .SYNOPSIS
+        Fetches and processes a GitHub Enterprise node.
+
+    .DESCRIPTION
+        This function retrieves enterprise details using the enterprise session. It creates
+        a GH_Enterprise node with profile information, Actions permissions, workflow permissions,
+        and code security/analysis settings.
+
+        API Reference:
+        - Get GitHub Actions permissions for an enterprise: https://docs.github.com/en/rest/actions/permissions?apiVersion=2022-11-28#get-github-actions-permissions-for-an-enterprise
+        - Get default workflow permissions for an enterprise: https://docs.github.com/en/rest/actions/permissions?apiVersion=2022-11-28#get-default-workflow-permissions-for-an-enterprise
+        - Get code security and analysis features for an enterprise: https://docs.github.com/en/rest/enterprise-admin/code-security-and-analysis?apiVersion=2022-11-28#get-code-security-and-analysis-features-for-an-enterprise
+
+        Fine Grained Permissions Reference:
+        - "Enterprise organizations" enterprise permissions (read)
+
+    .PARAMETER Session
+        A GitHound.Session object with EnterpriseName set, used for authentication and API requests.
+
+    .EXAMPLE
+        $enterprise = Git-HoundEnterprise -Session $enterpriseSession
+    #>
+
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session
+    )
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+
+    $enterpriseSlug = $Session.EnterpriseName
+
+    Write-Host "[*] Git-HoundEnterprise: Collecting enterprise data for $enterpriseSlug"
+
+    # Collect enterprise profile and organizations via GraphQL
+    # Note: enterprise.ownerInfo is not accessible via GitHub App tokens.
+    # REST endpoints for Actions permissions, workflow permissions, and code security settings
+    # (enterprises/{slug}/actions/permissions, etc.) require enterprise-level app permissions
+    # that do not currently exist. These can be added here in the future if GitHub expands
+    # the available enterprise app permissions.
+    $enterprise = $null
+    $allOrgs = New-Object System.Collections.ArrayList
+    $cursor = $null
+
+    try {
+        do {
+            $afterClause = if ($cursor) { ", after: `"$cursor`"" } else { "" }
+            $query = @"
+query {
+    enterprise(slug: "$enterpriseSlug") {
+        id
+        databaseId
+        name
+        slug
+        description
+        location
+        url
+        websiteUrl
+        createdAt
+        updatedAt
+        billingEmail
+        securityContactEmail
+        viewerIsAdmin
+        billingInfo {
+            allLicensableUsersCount
+            totalLicenses
+            totalAvailableLicenses
+            storageQuota
+            storageUsage
+            storageUsagePercentage
+            bandwidthQuota
+            bandwidthUsage
+            bandwidthUsagePercentage
+            assetPacks
+        }
+        organizations(first: 100$afterClause) {
+            nodes { login id }
+            pageInfo { hasNextPage endCursor }
+        }
+    }
+}
+"@
+            $result = Invoke-GitHubGraphQL -Session $Session -Query $query
+            $ent = $result.data.enterprise
+
+            if (-not $enterprise) {
+                $enterprise = $ent
+            }
+
+            foreach ($org in $ent.organizations.nodes) {
+                $null = $allOrgs.Add($org)
+            }
+
+            $cursor = if ($ent.organizations.pageInfo.hasNextPage) { $ent.organizations.pageInfo.endCursor } else { $null }
+        } while ($cursor)
+
+        Write-Host "[*] Git-HoundEnterprise: Found $($allOrgs.Count) organizations"
+    } catch {
+        Write-Warning "Git-HoundEnterprise: Failed to query enterprise via GraphQL: $_"
+    }
+
+    $billing = $enterprise.billingInfo
+
+    $properties = [pscustomobject]@{
+        # Common Properties
+        name                          = Normalize-Null $enterprise.name
+        node_id                       = Normalize-Null $enterprise.id
+        # Node Specific Properties
+        slug                          = Normalize-Null $enterprise.slug
+        database_id                   = Normalize-Null $enterprise.databaseId
+        description                   = Normalize-Null $enterprise.description
+        location                      = Normalize-Null $enterprise.location
+        url                           = Normalize-Null $enterprise.url
+        website_url                   = Normalize-Null $enterprise.websiteUrl
+        created_at                    = Normalize-Null $enterprise.createdAt
+        updated_at                    = Normalize-Null $enterprise.updatedAt
+        billing_email                 = Normalize-Null $enterprise.billingEmail
+        security_contact_email        = Normalize-Null $enterprise.securityContactEmail
+        viewer_is_admin               = Normalize-Null $enterprise.viewerIsAdmin
+        # Billing Info
+        all_licensable_users_count    = Normalize-Null $billing.allLicensableUsersCount
+        total_licenses                = Normalize-Null $billing.totalLicenses
+        total_available_licenses      = Normalize-Null $billing.totalAvailableLicenses
+        storage_quota                 = Normalize-Null $billing.storageQuota
+        storage_usage                 = Normalize-Null $billing.storageUsage
+        storage_usage_percentage      = Normalize-Null $billing.storageUsagePercentage
+        bandwidth_quota               = Normalize-Null $billing.bandwidthQuota
+        bandwidth_usage               = Normalize-Null $billing.bandwidthUsage
+        bandwidth_usage_percentage    = Normalize-Null $billing.bandwidthUsagePercentage
+        asset_packs                   = Normalize-Null $billing.assetPacks
+        # Accordion Panel Queries
+        query_organizations           = "MATCH p=(:GH_Enterprise {slug: '$enterpriseSlug'})-[:GH_Contains]->(:GH_Organization) RETURN p"
+    }
+
+    $enterpriseNode = New-GitHoundNode -Id $enterprise.id -Kind 'GH_Enterprise' -Properties $properties
+    $null = $nodes.Add($enterpriseNode)
+
+    # Create GH_Contains edges to each organization
+    foreach ($org in $allOrgs) {
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $enterprise.id -EndId $org.id -Properties @{ traversable = $false }))
+    }
+
+    Write-Host "[+] Git-HoundEnterprise complete. $($nodes.Count) nodes, $($edges.Count) edges."
+
+    Write-Output ([PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    })
 }
 
 function Git-HoundOrganization
