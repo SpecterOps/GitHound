@@ -186,6 +186,42 @@ function New-GitHubJwtSession
     New-GitHubAppSession -ClientId $ClientId -PrivateKeyPath $PrivateKeyPath -InstallationId $AppId -OrganizationName $OrganizationName
 }
 
+function Get-GitHubAppInstallation
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]
+        $ClientId,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $PrivateKeyPath
+    )
+
+    $jwt = New-GitHubJwt -ClientId $ClientId -PrivateKeyPath $PrivateKeyPath
+    $jwtsession = New-GithubSession -Token $jwt
+    $installations = Invoke-GithubRestMethod -Session $jwtsession -Path "app/installations"
+
+    foreach ($inst in $installations) {
+        # Orgs have account.login; enterprises have account.slug/name
+        $login = if ($inst.account.login) { $inst.account.login } else { $inst.account.slug }
+        $name  = if ($inst.account.name)  { $inst.account.name }  else { $inst.account.login }
+
+        [PSCustomObject]@{
+            InstallationId = $inst.id
+            ClientId       = $inst.client_id
+            TargetType     = $inst.target_type
+            Login          = $login
+            Name           = $name
+            NodeId         = $inst.account.node_id
+            AppSlug        = $inst.app_slug
+            Permissions    = $inst.permissions
+            SuspendedAt    = $inst.suspended_at
+        }
+    }
+}
+
 function Invoke-GithubRestMethod {
     [CmdletBinding()]
     Param(
