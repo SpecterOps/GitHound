@@ -1,8 +1,8 @@
 # <img src="../Icons/gh_user.png" width="50"/> GH_User
 
-Represents a GitHub user who is a member of the organization. Users are associated with organization roles (Owner or Member) and can be assigned to repository roles and team roles.
+Represents a GitHub user who is a member of an enterprise or organization. Users are associated with organization roles (Owner or Member) and can be assigned to repository roles and team roles.
 
-Created by: `Git-HoundUser`
+Created by: `Git-HoundUser`, `Git-HoundEnterpriseUser`
 
 ## Properties
 
@@ -38,10 +38,13 @@ flowchart TD
     GH_PersonalAccessTokenRequest[fa:fa-key GH_PersonalAccessTokenRequest]
 
 
+    GH_Enterprise[fa:fa-city GH_Enterprise]
+    GH_Organization[fa:fa-building GH_Organization]
     GH_BranchProtectionRule[fa:fa-shield GH_BranchProtectionRule]
     GH_Repository[fa:fa-box-archive GH_Repository]
 
-
+    GH_Enterprise -.->|GH_HasMember| GH_User
+    GH_Organization -.->|GH_HasMember| GH_User
     GH_User -->|GH_HasRole| GH_OrgRole
     GH_User -->|GH_HasRole| GH_TeamRole
     GH_User -->|GH_HasRole| GH_RepoRole

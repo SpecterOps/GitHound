@@ -209,6 +209,11 @@
   ],
   "relationship_kinds": [
     {
+      "name": "GH_HasMember",
+      "description": "Enterprise or organization has this user as a member",
+      "is_traversable": false
+    },
+    {
       "name": "GH_Contains",
       "description": "Container relationship for organizational hierarchy (enterprise contains orgs, org contains secrets/variables, repo contains secrets/variables, environment contains secrets/variables)",
       "is_traversable": false
