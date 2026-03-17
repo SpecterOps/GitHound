@@ -10,8 +10,7 @@ Created by: `Git-HoundAppInstallation`
 
 | Property Name        | Data Type | Description                                                                                           |
 | -------------------- | --------- | ----------------------------------------------------------------------------------------------------- |
-| objectid             | string    | Composite identifier: `Iv23liPgjiu18oXLM2q7`.                                                         |
-| id                   | integer   | The GitHub installation ID.                                                                           |
+| objectid             | integer   | The GitHub installation ID (e.g., `12345678`). Unique per installation.                               |
 | name                 | string    | The app's slug identifier.                                                                            |
 | environment_name     | string    | The name of the environment (GitHub organization) where the app is installed.                         |
 | environmentid        | string    | The node_id of the environment (GitHub organization).                                                 |

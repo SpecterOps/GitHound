@@ -26,12 +26,16 @@ function Get-GitHoundFunctionBundle {
 }
 
 function New-GithubSession {
-    [OutputType('GitHound.Session')] 
+    [OutputType('GitHound.Session')]
     [CmdletBinding()]
     Param(
-        [Parameter(Position=0, Mandatory = $true)]
+        [Parameter(Position=0, Mandatory = $false)]
         [string]
         $OrganizationName,
+
+        [Parameter(Mandatory = $false)]
+        [string]
+        $EnterpriseName,
 
         [Parameter(Position=1, Mandatory = $false)]
         [string]
@@ -83,29 +87,22 @@ function New-GithubSession {
         Uri = $ApiUri
         Headers = $Headers
         OrganizationName = $OrganizationName
+        EnterpriseName = $EnterpriseName
     }
 }
 
 # Reference: https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-json-web-token-jwt-for-a-github-app#example-using-powershell-to-generate-a-jwt
-function New-GitHubJwtSession
+function New-GitHubJwt
 {
     [CmdletBinding()]
     Param(
-        [Parameter(Position=0, Mandatory = $true)]
-        [string]
-        $OrganizationName,
-        
-        [Parameter(Position=1, Mandatory = $true)]
+        [Parameter(Mandatory = $true)]
         [string]
         $ClientId,
 
-        [Parameter(Position=2, Mandatory = $true)]
+        [Parameter(Mandatory = $true)]
         [string]
-        $PrivateKeyPath,
-
-        [Parameter(Position=3, Mandatory = $true)]
-        [string]
-        $AppId
+        $PrivateKeyPath
     )
 
     $header = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject @{
@@ -123,16 +120,70 @@ function New-GitHubJwtSession
     $rsa.ImportFromPem((Get-Content $PrivateKeyPath -Raw))
 
     $signature = [Convert]::ToBase64String($rsa.SignData([System.Text.Encoding]::UTF8.GetBytes("$header.$payload"), [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
-    
-    $jwt = "$header.$payload.$signature"
-    
-    $jwtsession = New-GithubSession -OrganizationName $OrganizationName -Token $jwt
 
-    $result = Invoke-GithubrestMethod -Session $jwtsession -Path "app/installations/$($AppId)/access_tokens" -Method POST 
+    Write-Output "$header.$payload.$signature"
+}
 
-    $session = New-GitHubSession -OrganizationName $OrganizationName -Token $result.token
-    
+function New-GitHubAppSession
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]
+        $ClientId,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $PrivateKeyPath,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $InstallationId,
+
+        [Parameter(Mandatory = $false)]
+        [string]
+        $OrganizationName,
+
+        [Parameter(Mandatory = $false)]
+        [string]
+        $EnterpriseName
+    )
+
+    $jwt = New-GitHubJwt -ClientId $ClientId -PrivateKeyPath $PrivateKeyPath
+
+    $jwtsession = New-GithubSession -Token $jwt
+
+    $result = Invoke-GithubRestMethod -Session $jwtsession -Path "app/installations/$($InstallationId)/access_tokens" -Method POST
+
+    $session = New-GitHubSession -OrganizationName $OrganizationName -EnterpriseName $EnterpriseName -Token $result.token
+
     Write-Output $session
+}
+
+# Kept for backward compatibility
+function New-GitHubJwtSession
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position=0, Mandatory = $true)]
+        [string]
+        $OrganizationName,
+
+        [Parameter(Position=1, Mandatory = $true)]
+        [string]
+        $ClientId,
+
+        [Parameter(Position=2, Mandatory = $true)]
+        [string]
+        $PrivateKeyPath,
+
+        [Parameter(Position=3, Mandatory = $true)]
+        [string]
+        $AppId
+    )
+
+    Write-Warning "New-GitHubJwtSession is deprecated. Use New-GitHubAppSession instead."
+    New-GitHubAppSession -ClientId $ClientId -PrivateKeyPath $PrivateKeyPath -InstallationId $AppId -OrganizationName $OrganizationName
 }
 
 function Invoke-GithubRestMethod {
@@ -4961,7 +5012,7 @@ function Git-HoundAppInstallation
             $properties = @{
                 # Common Properties
                 name                 = Normalize-Null $app.app_slug
-                node_id              = Normalize-Null $app.client_id
+                node_id              = Normalize-Null $app.id
                 # Relational Properties
                 environment_name     = Normalize-Null $app.account.login
                 environmentid       = Normalize-Null $app.account.node_id
@@ -4981,20 +5032,20 @@ function Git-HoundAppInstallation
                 permissions          = Normalize-Null ($app.permissions | ConvertTo-Json -Depth 10)
                 events               = Normalize-Null ($app.events | ConvertTo-Json -Depth 10)
                 # Accordion Panel Queries
-                query_repositories   = "MATCH p=(:GH_AppInstallation {node_id: $($app.client_id)})-[:GH_CanAccess]->(:GH_Repository) RETURN p LIMIT 1000"
-                query_app            = "MATCH p=(:GH_App)-[:GH_InstalledAs]->(:GH_AppInstallation {node_id: $($app.client_id)}) RETURN p"
+                query_repositories   = "MATCH p=(:GH_AppInstallation {node_id: $($app.id)})-[:GH_CanAccess]->(:GH_Repository) RETURN p LIMIT 1000"
+                query_app            = "MATCH p=(:GH_App)-[:GH_InstalledAs]->(:GH_AppInstallation {node_id: $($app.id)}) RETURN p"
             }
 
-            $null = $nodes.Add((New-GitHoundNode -Id $app.client_id -Kind 'GH_AppInstallation' -Properties $properties))
+            $null = $nodes.Add((New-GitHoundNode -Id $app.id -Kind 'GH_AppInstallation' -Properties $properties))
 
             # Edge: Organization contains the installation
-            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $orgNodeId -EndId $app.client_id -Properties @{ traversable = $false }))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $orgNodeId -EndId $app.id -Properties @{ traversable = $false }))
 
             # Repository access edges
             if ($app.repository_selection -eq 'all') {
                 $allCount++
                 foreach ($repoNodeId in $allRepoNodeIds) {
-                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanAccess' -StartId $app.client_id -EndId $repoNodeId -Properties @{ traversable = $false }))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanAccess' -StartId $app.id -EndId $repoNodeId -Properties @{ traversable = $false }))
                 }
             } else {
                 $selectedCount++
@@ -5007,7 +5058,7 @@ function Git-HoundAppInstallation
                 $appSlugInstallation[$app.app_slug] = $app
             }
             if ($app.app_slug) {
-                $null = $seenAppSlugs[$app.app_slug].Add($installationId)
+                $null = $seenAppSlugs[$app.app_slug].Add($app.id)
             }
         }
 
@@ -5040,11 +5091,11 @@ function Git-HoundAppInstallation
                     query_installations  = "MATCH p=(:GH_App {slug: '$slug'})-[:GH_InstalledAs]->(:GH_AppInstallation) RETURN p"
                 }
 
-                $null = $nodes.Add((New-GitHoundNode -Id $appDef.node_id -Kind 'GH_App' -Properties $appProperties))
+                $null = $nodes.Add((New-GitHoundNode -Id $appDef.client_id -Kind 'GH_App' -Properties $appProperties))
 
                 # Edges: App -> each installation of this app
                 foreach ($instId in $seenAppSlugs[$slug]) {
-                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_InstalledAs' -StartId $appDef.node_id -EndId $instId -Properties @{ traversable = $true }))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_InstalledAs' -StartId $appDef.client_id -EndId $instId -Properties @{ traversable = $true }))
                 }
             }
             catch {

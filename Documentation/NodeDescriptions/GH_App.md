@@ -10,11 +10,10 @@ Created by: `Git-HoundAppInstallation`
 
 | Property Name       | Data Type | Description                                                             |
 | ------------------- | --------- | ----------------------------------------------------------------------- |
-| objectid            | string    | Composite identifier: `A_kwHOABLL_s4ABJ8V`.                             |
+| objectid            | string    | The app's client ID (e.g., `Iv23liPgjiu18oXLM2q7`). Unique per app.     |
 | id                  | integer   | The GitHub App's numeric ID.                                            |
 | name                | string    | The display name of the app.                                            |
 | slug                | string    | The app's URL-friendly slug identifier.                                 |
-| client_id           | string    | The app's OAuth client ID.                                              |
 | node_id             | string    | The app's GraphQL node ID.                                              |
 | description         | string    | The app's description.                                                  |
 | external_url        | string    | The app's external homepage URL.                                        |
