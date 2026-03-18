@@ -1108,6 +1108,162 @@ query EnterpriseMembers($slug: String!, $count: Int = 100, $after: String = null
     })
 }
 
+function Git-HoundEnterpriseScimUser
+{
+    <#
+    .SYNOPSIS
+        Retrieves SCIM-provisioned users for a GitHub enterprise.
+
+    .DESCRIPTION
+        This function queries the enterprise SCIM Users endpoint to enumerate all users
+        provisioned via SCIM (typically from an IdP like Okta or Entra ID). For each user,
+        it creates a SCIM_User node with identity attributes including externalId, email,
+        display name, and active status.
+
+        The enterprise SCIM endpoint returns richer data than the organization-level endpoint,
+        including displayName and group memberships. Group membership edges are handled
+        separately by Git-HoundEnterpriseScimGroup.
+
+        API Reference:
+        - Enterprise SCIM Users: GET /scim/v2/enterprises/{enterprise}/Users
+
+    .PARAMETER Session
+        A GitHound session object with EnterpriseName set.
+
+    .OUTPUTS
+        A PSObject containing two properties: Nodes and Edges.
+
+    .EXAMPLE
+        $scimUsers = Git-HoundEnterpriseScimUser -Session $session
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session
+    )
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+
+    $enterpriseSlug = $Session.EnterpriseName
+    $startIndex = 1
+
+    Write-Host "[*] Git-HoundEnterpriseScimUser: Collecting SCIM users for enterprise '$enterpriseSlug'"
+
+    do
+    {
+        $result = [System.Text.Encoding]::ASCII.GetString((Invoke-GithubRestMethod -Session $Session -Path "scim/v2/enterprises/$enterpriseSlug/Users?startIndex=$($startIndex)")) | ConvertFrom-Json
+
+        foreach ($scimUser in $result.Resources)
+        {
+            $props = @{
+                # Common Properties
+                name                = Normalize-Null $scimUser.externalId
+                id                  = Normalize-Null $scimUser.id
+                # Node Specific Properties
+                externalId          = Normalize-Null $scimUser.externalId
+                userName            = Normalize-Null $scimUser.userName
+                displayName         = Normalize-Null $scimUser.displayName
+                enabled             = Normalize-Null $scimUser.active
+                givenName           = Normalize-Null $scimUser.name.givenName
+                familyName          = Normalize-Null $scimUser.name.familyName
+                mail                = Normalize-Null ($scimUser.emails | Where-Object { $_.primary -eq $true }).value
+                profileUrl          = Normalize-Null $scimUser.meta.location
+                enterprise          = $enterpriseSlug
+            }
+
+            $null = $nodes.Add((New-GitHoundNode -Kind SCIM_User -Id $scimUser.id -Properties $props))
+        }
+
+        $startIndex = $result.startIndex + $result.itemsPerPage
+    } while ($startIndex -lt $result.totalResults)
+
+    Write-Host "[+] Git-HoundEnterpriseScimUser complete. $($nodes.Count) SCIM users."
+
+    Write-Output ([PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    })
+}
+
+function Git-HoundEnterpriseScimGroup
+{
+    <#
+    .SYNOPSIS
+        Retrieves SCIM-provisioned groups for a GitHub enterprise.
+
+    .DESCRIPTION
+        This function queries the enterprise SCIM Groups endpoint to enumerate all groups
+        provisioned via SCIM (typically from an IdP like Okta or Entra ID). For each group,
+        it creates a SCIM_Group node and SCIM_MemberOf edges from each member (SCIM_User)
+        to the group.
+
+        This function should be run after Git-HoundEnterpriseScimUser so that the SCIM_User
+        nodes already exist when the SCIM_MemberOf edges are created.
+
+        API Reference:
+        - Enterprise SCIM Groups: GET /scim/v2/enterprises/{enterprise}/Groups
+
+    .PARAMETER Session
+        A GitHound session object with EnterpriseName set.
+
+    .OUTPUTS
+        A PSObject containing two properties: Nodes and Edges.
+
+    .EXAMPLE
+        $scimGroups = Git-HoundEnterpriseScimGroup -Session $session
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session
+    )
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+
+    $enterpriseSlug = $Session.EnterpriseName
+    $startIndex = 1
+
+    Write-Host "[*] Git-HoundEnterpriseScimGroup: Collecting SCIM groups for enterprise '$enterpriseSlug'"
+
+    do
+    {
+        $result = [System.Text.Encoding]::ASCII.GetString((Invoke-GithubRestMethod -Session $Session -Path "scim/v2/enterprises/$enterpriseSlug/Groups?startIndex=$($startIndex)")) | ConvertFrom-Json
+
+        foreach ($scimGroup in $result.Resources)
+        {
+            $props = @{
+                # Common Properties
+                name                = Normalize-Null $scimGroup.displayName
+                id                  = Normalize-Null $scimGroup.id
+                # Node Specific Properties
+                externalId          = Normalize-Null $scimGroup.externalId
+                displayName         = Normalize-Null $scimGroup.displayName
+                enterprise          = $enterpriseSlug
+            }
+
+            $null = $nodes.Add((New-GitHoundNode -Kind SCIM_Group -Id $scimGroup.id -Properties $props))
+
+            # Create SCIM_MemberOf edges from each member user to this group
+            foreach ($member in $scimGroup.members) {
+                $null = $edges.Add((New-GitHoundEdge -Kind SCIM_MemberOf -StartId $member.value -EndId $scimGroup.id -Properties @{ traversable = $true }))
+            }
+        }
+
+        $startIndex = $result.startIndex + $result.itemsPerPage
+    } while ($startIndex -lt $result.totalResults)
+
+    Write-Host "[+] Git-HoundEnterpriseScimGroup complete. $($nodes.Count) groups, $($edges.Count) memberships."
+
+    Write-Output ([PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    })
+}
+
 function Git-HoundOrganization
 {
     <#
