@@ -1,8 +1,10 @@
 # <img src="../Icons/gh_samlidentityprovider.png" width="50"/> GH_SamlIdentityProvider
 
-Represents a SAML identity provider configured for the organization. This node captures the SAML SSO configuration details and serves as the parent container for external identity mappings. Through external identities, it enables linking GitHub users to their corporate identities in the identity provider.
+Represents a SAML identity provider configured for an organization or enterprise. This node captures the SAML SSO configuration details and serves as the parent container for external identity mappings. Through external identities, it enables linking GitHub users to their corporate identities in the identity provider.
 
-Created by: `Git-HoundGraphQlSamlProvider`
+At the enterprise level, the SAML identity provider is accessed via `enterprise.ownerInfo.samlIdentityProvider`, which requires a PAT with enterprise admin access (not available to GitHub App tokens).
+
+Created by: `Git-HoundGraphQlSamlProvider`, `Git-HoundEnterpriseSamlProvider`
 
 ## Properties
 
@@ -24,11 +26,12 @@ Created by: `Git-HoundGraphQlSamlProvider`
 
 ```mermaid
 flowchart TD
+    GH_Enterprise[fa:fa-city GH_Enterprise]
     GH_Organization[fa:fa-building GH_Organization]
     GH_SamlIdentityProvider[fa:fa-id-badge GH_SamlIdentityProvider]
     GH_ExternalIdentity[fa:fa-arrows-left-right GH_ExternalIdentity]
 
-
+    GH_Enterprise -.->|GH_HasSamlIdentityProvider| GH_SamlIdentityProvider
     GH_Organization -.->|GH_HasSamlIdentityProvider| GH_SamlIdentityProvider
     GH_SamlIdentityProvider -.->|GH_HasExternalIdentity| GH_ExternalIdentity
 ```

@@ -40,6 +40,10 @@ Created by: `Git-HoundEnterprise`
 flowchart TD
     GH_Enterprise[fa:fa-city GH_Enterprise]
     GH_Organization[fa:fa-building GH_Organization]
+    GH_User[fa:fa-user GH_User]
+    GH_EnterpriseTeam[fa:fa-users-between-lines GH_EnterpriseTeam]
 
     GH_Enterprise -.->|GH_Contains| GH_Organization
+    GH_Enterprise -.->|GH_Contains| GH_EnterpriseTeam
+    GH_Enterprise -.->|GH_HasMember| GH_User
 ```

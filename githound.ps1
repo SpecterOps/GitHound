@@ -1366,6 +1366,241 @@ function Git-HoundEnterpriseTeam
     })
 }
 
+function Git-HoundEnterpriseSamlProvider
+{
+    <#
+    .SYNOPSIS
+        Retrieves the enterprise SAML identity provider and external identities.
+
+    .DESCRIPTION
+        This function queries the enterprise ownerInfo.samlIdentityProvider via GraphQL
+        to collect external identity mappings. It creates GH_SamlIdentityProvider and
+        GH_ExternalIdentity nodes, and draws edges linking external identities to both
+        the IdP user and the GitHub user.
+
+        IMPORTANT: This function requires a PAT (Personal Access Token) with enterprise
+        admin access. The ownerInfo field is not accessible with GitHub App tokens.
+
+        When SCIM user data has been collected (Git-HoundEnterpriseScimUser), this function
+        also draws SCIM_Provisioned edges from SCIM_User to GH_ExternalIdentity using the
+        shared guid/SCIM ID.
+
+        API Reference:
+        - GitHub GraphQL: enterprise.ownerInfo.samlIdentityProvider
+        - Requires: enterprise admin PAT (not available to GitHub App tokens)
+
+    .PARAMETER Token
+        A GitHub PAT string with enterprise admin access.
+
+    .PARAMETER EnterpriseName
+        The enterprise slug name.
+
+    .OUTPUTS
+        A PSObject containing two properties: Nodes and Edges.
+
+    .EXAMPLE
+        $saml = Git-HoundEnterpriseSamlProvider -Token $pat -EnterpriseName "k-nexus-global"
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [string]
+        $Token,
+
+        [Parameter(Position = 1, Mandatory = $true)]
+        [string]
+        $EnterpriseName
+    )
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+
+    $Headers = @{ Authorization = "Bearer $Token" }
+
+    $Query = @'
+query EnterpriseSAML($slug: String!, $count: Int = 100, $after: String = null) {
+    enterprise(slug: $slug) {
+        slug
+        ownerInfo {
+            samlIdentityProvider {
+                id
+                issuer
+                ssoUrl
+                digestMethod
+                signatureMethod
+                idpCertificate
+                externalIdentities(first: $count, after: $after) {
+                    totalCount
+                    nodes {
+                        guid
+                        id
+                        samlIdentity {
+                            familyName
+                            givenName
+                            nameId
+                            username
+                        }
+                        scimIdentity {
+                            username
+                            givenName
+                            familyName
+                            emails {
+                                value
+                                primary
+                                type
+                            }
+                        }
+                        user {
+                            id
+                            login
+                        }
+                    }
+                    pageInfo {
+                        endCursor
+                        hasNextPage
+                    }
+                }
+            }
+        }
+    }
+}
+'@
+
+    $Variables = @{
+        slug  = $EnterpriseName
+        count = 100
+        after = $null
+    }
+
+    Write-Host "[*] Git-HoundEnterpriseSamlProvider: Collecting enterprise SAML for '$EnterpriseName'"
+
+    $firstPage = $true
+
+    do {
+        $body = @{ query = $Query; variables = $Variables } | ConvertTo-Json -Depth 5
+        $result = Invoke-RestMethod -Uri "https://api.github.com/graphql" -Method Post -Headers $Headers -Body $body -ContentType "application/json"
+
+        $samlProvider = $result.data.enterprise.ownerInfo.samlIdentityProvider
+
+        if ($null -eq $samlProvider) {
+            Write-Host "[-] Git-HoundEnterpriseSamlProvider: No SAML identity provider found."
+            Write-Output ([PSCustomObject]@{ Nodes = $nodes; Edges = $edges })
+            return
+        }
+
+        # On first page, create the SAML identity provider node and detect IdP type
+        if ($firstPage) {
+            $firstPage = $false
+
+            Write-Host "[*]   Issuer: $($samlProvider.issuer)"
+            Write-Host "[*]   External identities: $($samlProvider.externalIdentities.totalCount)"
+
+            # Detect IdP type from issuer
+            $ForeignUserNodeKind = $null
+            switch -Wildcard ($samlProvider.issuer) {
+                'https://auth.pingone.com/*' {
+                    $ForeignUserNodeKind = 'PingOneUser'
+                    $ForeignEnvironmentId = $samlProvider.issuer.Split('/')[3]
+                }
+                'https://sts.windows.net/*' {
+                    $ForeignUserNodeKind = 'AZUser'
+                    $ForeignEnvironmentId = $samlProvider.issuer.Split('/')[3]
+                }
+                'http://www.okta.com/*' {
+                    $ForeignUserNodeKind = 'Okta_User'
+                    $ForeignEnvironmentId = $samlProvider.ssoUrl.Split('/')[2]
+                }
+                default {
+                    Write-Warning "Git-HoundEnterpriseSamlProvider: Unknown IdP issuer: $($samlProvider.issuer)"
+                }
+            }
+
+            # Create the SAML identity provider node
+            $providerProps = @{
+                # Common Properties
+                name                = Normalize-Null $samlProvider.id
+                node_id             = Normalize-Null $samlProvider.id
+                # Relational Properties
+                environment_name    = Normalize-Null $EnterpriseName
+                foreign_environmentid = Normalize-Null $ForeignEnvironmentId
+                # Node Specific Properties
+                digest_method       = Normalize-Null $samlProvider.digestMethod
+                idp_certificate     = Normalize-Null $samlProvider.idpCertificate
+                issuer              = Normalize-Null $samlProvider.issuer
+                signature_method    = Normalize-Null $samlProvider.signatureMethod
+                sso_url             = Normalize-Null $samlProvider.ssoUrl
+            }
+
+            $null = $nodes.Add((New-GitHoundNode -Id $samlProvider.id -Kind 'GH_SamlIdentityProvider' -Properties $providerProps))
+        }
+
+        # Create GH_ExternalIdentity nodes and edges for each identity
+        foreach ($identity in $samlProvider.externalIdentities.nodes) {
+            $EIprops = @{
+                # Common Properties
+                node_id                   = Normalize-Null $identity.id
+                name                      = Normalize-Null $identity.guid
+                guid                      = Normalize-Null $identity.guid
+                # Relational Properties
+                environment_name          = Normalize-Null $EnterpriseName
+                # Node Specific Properties
+                saml_identity_family_name = Normalize-Null $identity.samlIdentity.familyName
+                saml_identity_given_name  = Normalize-Null $identity.samlIdentity.givenName
+                saml_identity_name_id     = Normalize-Null $identity.samlIdentity.nameId
+                saml_identity_username    = Normalize-Null $identity.samlIdentity.username
+                scim_identity_family_name = Normalize-Null $identity.scimIdentity.familyName
+                scim_identity_given_name  = Normalize-Null $identity.scimIdentity.givenName
+                scim_identity_username    = Normalize-Null $identity.scimIdentity.username
+                github_username           = Normalize-Null $(if ($identity.user) { $identity.user.login } else { $null })
+                github_user_id            = Normalize-Null $(if ($identity.user) { $identity.user.id } else { $null })
+            }
+
+            $null = $nodes.Add((New-GitHoundNode -Id $identity.id -Kind 'GH_ExternalIdentity' -Properties $EIprops))
+
+            # Edge: SAML provider has this external identity
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasExternalIdentity' -StartId $samlProvider.id -EndId $identity.id -Properties @{ traversable = $false }))
+
+            # Edge: External identity maps to GH_User
+            if ($identity.user -and $identity.user.id) {
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MapsToUser' -StartId $identity.id -EndId $identity.user.id -Properties @{ traversable = $false }))
+
+                # Edge: GH_SyncedTo composition edge (IdP user → GH_User)
+                if ($ForeignUserNodeKind) {
+                    $matchUsername = if ($identity.samlIdentity.username) { $identity.samlIdentity.username } elseif ($identity.scimIdentity.username) { $identity.scimIdentity.username } else { $null }
+                    if ($matchUsername) {
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_SyncedTo' -StartId $matchUsername -StartKind $ForeignUserNodeKind -StartMatchBy 'name' -EndId $identity.user.id -Properties @{ traversable = $true }))
+                    }
+                }
+            }
+
+            # Edge: External identity maps to IdP user (via SAML or SCIM username)
+            if ($ForeignUserNodeKind) {
+                if ($identity.samlIdentity.username) {
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MapsToUser' -StartId $identity.id -EndId $identity.samlIdentity.username -EndKind $ForeignUserNodeKind -EndMatchBy 'name' -Properties @{ traversable = $false }))
+                }
+                elseif ($identity.scimIdentity.username) {
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MapsToUser' -StartId $identity.id -EndId $identity.scimIdentity.username -EndKind $ForeignUserNodeKind -EndMatchBy 'name' -Properties @{ traversable = $false }))
+                }
+            }
+
+            # Edge: SCIM_User provisioned to this external identity (guid = SCIM user objectid)
+            if ($identity.guid) {
+                $null = $edges.Add((New-GitHoundEdge -Kind 'SCIM_Provisioned' -StartId $identity.guid -EndId $identity.id -Properties @{ traversable = $true }))
+            }
+        }
+
+        $Variables['after'] = $samlProvider.externalIdentities.pageInfo.endCursor
+    }
+    while ($samlProvider.externalIdentities.pageInfo.hasNextPage)
+
+    Write-Host "[+] Git-HoundEnterpriseSamlProvider complete. $($nodes.Count) nodes, $($edges.Count) edges."
+
+    Write-Output ([PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    })
+}
+
 function Git-HoundOrganization
 {
     <#
