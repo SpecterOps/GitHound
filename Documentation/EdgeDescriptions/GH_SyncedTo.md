@@ -2,7 +2,7 @@
 
 ## Edge Schema
 
-- Source: [AZUser](https://bloodhound.specterops.io/resources/nodes/az-user), [Okta_User](https://bloodhound.specterops.io/opengraph/extensions/oktahound/references/schema), [PingOneUser](https://github.com/andyrobbins/PingOneHound?tab=readme-ov-file#schema)
+- Source: [AZUser](https://bloodhound.specterops.io/resources/nodes/az-user), [Okta_User](https://bloodhound.specterops.io/opengraph/extensions/oktahound/reference/nodes/okta_user), [PingOneUser](https://github.com/andyrobbins/PingOneHound?tab=readme-ov-file#schema)
 - Destination: [GH_User](../NodeDescriptions/GH_User.md)
 
 ## General Information
