@@ -10,8 +10,8 @@
     "GH_AppInstallation": {
       "icon": {
         "type": "font-awesome",
-        "name": "window-restore",
-        "color": "#EFC41D"
+        "name": "plug",
+        "color": "#A8D8EA"
       }
     },
     "GH_Branch": {
