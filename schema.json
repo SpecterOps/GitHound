@@ -31,6 +31,14 @@
       "color": "#FF8E40"
     },
     {
+      "name": "GH_EnterpriseTeam",
+      "display_name": "GitHub Enterprise Team",
+      "description": "An enterprise-level team that can span multiple organizations, optionally linked to an IdP group via SCIM",
+      "is_display_kind": true,
+      "icon": "users-between-lines",
+      "color": "#7C3AED"
+    },
+    {
       "name": "GH_Team",
       "display_name": "GitHub Team",
       "description": "A team within an organization, grouping users for shared access and collaboration",

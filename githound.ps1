@@ -1264,6 +1264,108 @@ function Git-HoundEnterpriseScimGroup
     })
 }
 
+function Git-HoundEnterpriseTeam
+{
+    <#
+    .SYNOPSIS
+        Retrieves enterprise-level teams for a GitHub enterprise.
+
+    .DESCRIPTION
+        This function queries the enterprise teams REST endpoint to enumerate all enterprise
+        teams. For each team, it creates a GH_EnterpriseTeam node and a GH_Contains edge
+        from the enterprise. When a team is linked to an IdP group via SCIM (group_id is
+        present), it creates a SCIM_Provisioned edge from the SCIM_Group to the enterprise team.
+
+        Enterprise teams differ from organization teams — they span multiple organizations
+        and their membership is typically managed via IdP group provisioning rather than
+        direct assignment. The organization_selection_type property indicates whether the
+        team applies to "all" orgs or "selected" orgs, but the API does not expose which
+        specific orgs are selected.
+
+        API Reference:
+        - List enterprise teams: GET /enterprises/{enterprise}/teams
+
+    .PARAMETER Session
+        A GitHound session object with EnterpriseName set.
+
+    .PARAMETER Enterprise
+        The GH_Enterprise node object (from Git-HoundEnterprise output).
+
+    .OUTPUTS
+        A PSObject containing two properties: Nodes and Edges.
+
+    .EXAMPLE
+        $teams = Git-HoundEnterpriseTeam -Session $session -Enterprise $enterprise.Nodes[0]
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session,
+
+        [Parameter(Position = 1, Mandatory = $true)]
+        [PSObject]
+        $Enterprise
+    )
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+
+    $enterpriseSlug = $Session.EnterpriseName
+    $enterpriseNodeId = $Enterprise.properties.node_id
+
+    Write-Host "[*] Git-HoundEnterpriseTeam: Collecting enterprise teams for '$enterpriseSlug'"
+
+    $teams = @(Invoke-GithubRestMethod -Session $Session -Path "enterprises/$enterpriseSlug/teams")
+
+    foreach ($team in $teams) {
+        $teamId = "GH_EntTeam_$($team.id)"
+
+        $properties = @{
+            # Common Properties
+            name                        = Normalize-Null $team.name
+            id                          = Normalize-Null $team.id
+            # Relational Properties
+            environment_name            = Normalize-Null $enterpriseSlug
+            environmentid               = Normalize-Null $enterpriseNodeId
+            # Node Specific Properties
+            slug                        = Normalize-Null $team.slug
+            description                 = Normalize-Null $team.description
+            group_id                    = Normalize-Null $team.group_id
+            organization_selection_type  = Normalize-Null $team.organization_selection_type
+            created_at                  = Normalize-Null $team.created_at
+            updated_at                  = Normalize-Null $team.updated_at
+        }
+
+        $null = $nodes.Add((New-GitHoundNode -Id $teamId -Kind 'GH_EnterpriseTeam' -Properties $properties))
+
+        # Edge: Enterprise contains this team
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $enterpriseNodeId -EndId $teamId -Properties @{ traversable = $true }))
+
+        # Edge: SCIM_Group provisioned to this team (when linked to an IdP group)
+        if ($team.group_id) {
+            $null = $edges.Add((New-GitHoundEdge -Kind 'SCIM_Provisioned' -StartId $team.group_id -EndId $teamId -Properties @{ traversable = $true }))
+        }
+
+        # Enumerate team members and create GH_HasMember edges
+        $members = @(Invoke-GithubRestMethod -Session $Session -Path "enterprises/$enterpriseSlug/teams/$($team.id)/memberships")
+        Write-Host "[*]   Team '$($team.name)': $($members.Count) members"
+
+        foreach ($member in $members) {
+            if ($member.node_id) {
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasMember' -StartId $teamId -EndId $member.node_id -Properties @{ traversable = $false }))
+            }
+        }
+    }
+
+    Write-Host "[+] Git-HoundEnterpriseTeam complete. $($nodes.Count) teams, $($edges.Count) edges."
+
+    Write-Output ([PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    })
+}
+
 function Git-HoundOrganization
 {
     <#
