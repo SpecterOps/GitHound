@@ -680,6 +680,163 @@ function Normalize-Null
     
 }
 
+function ConvertTo-HexObjectId
+{
+    <#
+    .SYNOPSIS
+        Converts an ASCII string to its hexadecimal representation.
+
+    .DESCRIPTION
+        Temporary workaround for BloodHound uppercasing objectids on ingestion.
+        GitHub GraphQL IDs are base64-encoded and case-sensitive (e.g., ...W6c vs ...W6C),
+        but BloodHound normalizes them to uppercase, causing distinct IDs to collide.
+
+        Hex encoding preserves the case distinction: 'c' (0x63) and 'C' (0x43) produce
+        different hex digits, so they remain unique after uppercasing.
+
+        Remove this function (and Convert-GitHoundOutputIds) once BloodHound supports
+        case-sensitive objectids.
+
+    .PARAMETER Value
+        The string to convert.
+
+    .EXAMPLE
+        ConvertTo-HexObjectId "EI_W6c"  # Returns "45495F573663"
+        ConvertTo-HexObjectId "EI_W6C"  # Returns "45495F573643"
+    #>
+    param([string]$Value)
+
+    if ([string]::IsNullOrEmpty($Value)) { return $Value }
+
+    $sb = [System.Text.StringBuilder]::new($Value.Length * 2)
+    foreach ($c in $Value.ToCharArray()) {
+        [void]$sb.Append(([int]$c).ToString('X2'))
+    }
+    return $sb.ToString()
+}
+
+function Convert-GitHoundOutputIds
+{
+    <#
+    .SYNOPSIS
+        Hex-encodes all objectids in GitHound output to avoid BloodHound case collisions.
+
+    .DESCRIPTION
+        Temporary workaround. Walks the nodes and edges arrays (in place) and converts
+        all objectid values to hexadecimal using ConvertTo-HexObjectId.
+
+        Encodes:
+          - Node id field
+          - Known ID properties (node_id, environmentid, github_user_id, etc.)
+          - Edge start/end values (when matched by id, not name)
+          - ID references inside query_* Cypher strings
+
+        To remove this workaround: delete the call to this function in the orchestrator
+        functions (Invoke-GitHound, Invoke-GitHoundEnterprise).
+
+    .PARAMETER Nodes
+        The nodes ArrayList to transform in place.
+
+    .PARAMETER Edges
+        The edges ArrayList to transform in place.
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [System.Collections.ArrayList]$Nodes,
+
+        [Parameter(Mandatory)]
+        [System.Collections.ArrayList]$Edges
+    )
+
+    # Properties known to contain objectids (node IDs, environment IDs, foreign keys)
+    $idProperties = @('node_id', 'objectid', 'environmentid', 'github_user_id',
+                      'foreign_environmentid', 'group_id', 'owner_id', 'guid', 'id')
+
+    # ── Build comprehensive raw→hex mapping ────────────────────────────────
+    # MUST be case-sensitive — GitHub GraphQL IDs are base64 and case-sensitive.
+    # PowerShell's default @{} hashtable is case-insensitive, which would collapse
+    # IDs like EI_...Wxa and EI_...WxA into the same entry.
+    $idMap = [System.Collections.Generic.Dictionary[string,string]]::new()
+
+    # Collect all node IDs
+    foreach ($node in $Nodes) {
+        if ($node.id -and -not $idMap.ContainsKey($node.id)) {
+            $idMap[$node.id] = ConvertTo-HexObjectId $node.id
+        }
+    }
+
+    # Collect all known ID property values (may include cross-file references like environmentid)
+    foreach ($node in $Nodes) {
+        if (-not $node.properties) { continue }
+        foreach ($prop in $idProperties) {
+            $val = $node.properties.$prop
+            if ($val -and $val -is [string] -and $val -ne '' -and -not $idMap.ContainsKey($val)) {
+                $idMap[$val] = ConvertTo-HexObjectId $val
+            }
+        }
+    }
+
+    # ── Transform node IDs ─────────────────────────────────────────────────
+    foreach ($node in $Nodes) {
+        if ($idMap.ContainsKey($node.id)) {
+            $node.id = $idMap[$node.id]
+        }
+    }
+
+    # ── Transform node properties ──────────────────────────────────────────
+    foreach ($node in $Nodes) {
+        if (-not $node.properties) { continue }
+        $keys = if ($node.properties -is [hashtable]) { @($node.properties.Keys) } else { @($node.properties.PSObject.Properties.Name) }
+        foreach ($key in $keys) {
+            $val = $node.properties.$key
+            if ($val -isnot [string] -or $val -eq '') { continue }
+
+            if ($key -in $idProperties) {
+                # Known ID property — encode directly
+                if ($idMap.ContainsKey($val)) {
+                    $node.properties.$key = $idMap[$val]
+                }
+            }
+            elseif ($key -like 'query_*') {
+                # Cypher query string — find-replace all known IDs
+                foreach ($raw in $idMap.Keys) {
+                    if ($val.Contains($raw)) {
+                        $val = $val.Replace($raw, $idMap[$raw])
+                    }
+                    # BloodHound may also uppercase IDs in stored queries
+                    $rawUpper = $raw.ToUpper()
+                    if ($val.Contains($rawUpper)) {
+                        $val = $val.Replace($rawUpper, $idMap[$raw])
+                    }
+                }
+                $node.properties.$key = $val
+            }
+        }
+    }
+
+    # ── Transform edges ────────────────────────────────────────────────────
+    # Only encode edge values that exist in our idMap (i.e., reference nodes in this output).
+    # Edge values referencing external nodes (Okta_User, AZUser, etc.) must stay as-is
+    # so they match the un-encoded objectids from those foreign collectors.
+    foreach ($edge in $Edges) {
+        # Encode start value (only if in idMap; skip name-matched edges)
+        if (-not $edge.start.ContainsKey('match_by') -or $edge.start['match_by'] -eq 'id') {
+            $startVal = $edge.start['value']
+            if ($idMap.ContainsKey($startVal)) {
+                $edge.start['value'] = $idMap[$startVal]
+            }
+        }
+
+        # Encode end value (only if in idMap; skip name-matched edges)
+        if (-not $edge.end.ContainsKey('match_by') -or $edge.end['match_by'] -eq 'id') {
+            $endVal = $edge.end['value']
+            if ($idMap.ContainsKey($endVal)) {
+                $edge.end['value'] = $idMap[$endVal]
+            }
+        }
+    }
+}
+
 function Import-GitHoundStepOutput
 {
     <#
@@ -1159,7 +1316,7 @@ function Git-HoundEnterpriseScimUser
         {
             $props = @{
                 # Common Properties
-                name                = Normalize-Null $scimUser.externalId
+                name                = Normalize-Null $scimUser.id
                 id                  = Normalize-Null $scimUser.id
                 # Node Specific Properties
                 externalId          = Normalize-Null $scimUser.externalId
@@ -1174,12 +1331,17 @@ function Git-HoundEnterpriseScimUser
             }
 
             $null = $nodes.Add((New-GitHoundNode -Kind SCIM_User -Id $scimUser.id -Properties $props))
+
+            # Edge: Okta_User provisioned as this SCIM_User (externalId = Okta user objectid)
+            if ($scimUser.externalId) {
+                $null = $edges.Add((New-GitHoundEdge -Kind 'SCIM_Provisioned' -StartId $scimUser.externalId -EndId $scimUser.id -Properties @{ traversable = $true }))
+            }
         }
 
         $startIndex = $result.startIndex + $result.itemsPerPage
     } while ($startIndex -lt $result.totalResults)
 
-    Write-Host "[+] Git-HoundEnterpriseScimUser complete. $($nodes.Count) SCIM users."
+    Write-Host "[+] Git-HoundEnterpriseScimUser complete. $($nodes.Count) SCIM users, $($edges.Count) edges."
 
     Write-Output ([PSCustomObject]@{
         Nodes = $nodes
@@ -1246,6 +1408,11 @@ function Git-HoundEnterpriseScimGroup
             }
 
             $null = $nodes.Add((New-GitHoundNode -Kind SCIM_Group -Id $scimGroup.id -Properties $props))
+
+            # Edge: Okta_Group provisioned as this SCIM_Group (match by name/displayName)
+            if ($scimGroup.externalId) {
+                $null = $edges.Add((New-GitHoundEdge -Kind 'SCIM_Provisioned' -StartId $scimGroup.externalId -StartKind 'Okta_Group' -StartMatchBy 'name' -EndId $scimGroup.id -Properties @{ traversable = $true }))
+            }
 
             # Create SCIM_MemberOf edges from each member user to this group
             foreach ($member in $scimGroup.members) {
@@ -1574,6 +1741,7 @@ query EnterpriseSAML($slug: String!, $count: Int = 100, $after: String = null) {
             }
 
             # Edge: External identity maps to IdP user (via SAML or SCIM username)
+            # Kept even when SCIM chain exists — needed for SAML-only environments without SCIM.
             if ($ForeignUserNodeKind) {
                 if ($identity.samlIdentity.username) {
                     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MapsToUser' -StartId $identity.id -EndId $identity.samlIdentity.username -EndKind $ForeignUserNodeKind -EndMatchBy 'name' -Properties @{ traversable = $false }))
@@ -6989,13 +7157,17 @@ function Invoke-GitHound
     # ── Final Consolidation ───────────────────────────────────────────────
     Write-Host "[*] Consolidating to OpenGraph JSON Payload"
     # Filter out any null entries that may have been introduced by thread-safety issues or API errors
-    $filteredNodes = @($nodes | Where-Object { $_ -ne $null })
-    $filteredEdges = @($edges | Where-Object { $_ -ne $null })
+    $filteredNodes = [System.Collections.ArrayList]@($nodes | Where-Object { $_ -ne $null })
+    $filteredEdges = [System.Collections.ArrayList]@($edges | Where-Object { $_ -ne $null })
     $nullNodes = $nodes.Count - $filteredNodes.Count
     $nullEdges = $edges.Count - $filteredEdges.Count
     if ($nullNodes -gt 0 -or $nullEdges -gt 0) {
         Write-Warning "Filtered out $nullNodes null node(s) and $nullEdges null edge(s) from payload"
     }
+
+    # Workaround: hex-encode objectids to avoid BloodHound case collisions (remove when BH supports case-sensitive IDs)
+    Convert-GitHoundOutputIds -Nodes $filteredNodes -Edges $filteredEdges
+
     $consolidatedFile = Join-Path $CheckpointPath "githound_$orgId.json"
     $payload = [PSCustomObject]@{
         '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
@@ -7054,11 +7226,17 @@ function Invoke-GitHound
     if($saml.nodes) { $samlNodes.AddRange(@($saml.nodes)) }
     if($saml.edges) { $samlEdges.AddRange(@($saml.edges)) }
 
+    $samlFilteredNodes = [System.Collections.ArrayList]@($samlNodes | Where-Object { $_ -ne $null })
+    $samlFilteredEdges = [System.Collections.ArrayList]@($samlEdges | Where-Object { $_ -ne $null })
+
+    # Workaround: hex-encode objectids to avoid BloodHound case collisions (remove when BH supports case-sensitive IDs)
+    Convert-GitHoundOutputIds -Nodes $samlFilteredNodes -Edges $samlFilteredEdges
+
     $payload = [PSCustomObject]@{
         '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
         graph = [PSCustomObject]@{
-            nodes = @($samlNodes | Where-Object { $_ -ne $null })
-            edges = @($samlEdges | Where-Object { $_ -ne $null })
+            nodes = $samlFilteredNodes
+            edges = $samlFilteredEdges
         }
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_saml_$orgId.json")
 
@@ -7071,14 +7249,20 @@ function Invoke-GitHound
         if($scim.nodes) { $scimNodes.AddRange(@($scim.nodes)) }
         if($scim.edges) { $scimEdges.AddRange(@($scim.edges)) }
 
+        $orgScimFilteredNodes = [System.Collections.ArrayList]@($scimNodes | Where-Object { $_ -ne $null })
+        $orgScimFilteredEdges = [System.Collections.ArrayList]@($scimEdges | Where-Object { $_ -ne $null })
+
+        # Workaround: hex-encode objectids to avoid BloodHound case collisions (remove when BH supports case-sensitive IDs)
+        Convert-GitHoundOutputIds -Nodes $orgScimFilteredNodes -Edges $orgScimFilteredEdges
+
         $payload = [PSCustomObject]@{
             '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
             graph = [PSCustomObject]@{
-                nodes = @($scimNodes | Where-Object { $_ -ne $null })
-                edges = @($scimEdges | Where-Object { $_ -ne $null })
+                nodes = $orgScimFilteredNodes
+                edges = $orgScimFilteredEdges
             }
         } | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_scim_$orgId.json")
-        Write-Host "[+] SCIM payload: githound_scim_$orgId.json ($($scimNodes.Count) nodes, $($scimEdges.Count) edges)"
+        Write-Host "[+] SCIM payload: githound_scim_$orgId.json ($($orgScimFilteredNodes.Count) nodes, $($orgScimFilteredEdges.Count) edges)"
     } else {
         Write-Host "[*] Skipping SCIM Users (use -CollectAll to include)"
     }
@@ -7095,11 +7279,17 @@ function Invoke-GitHound
             $oidc = Parse-GitHoundOIDCSubject -FederatedIdentityCredentials $fidcNodes
             if($oidc.edges.Count -gt 0)
             {
+                $oidcNodes = [System.Collections.ArrayList]@()
+                $oidcEdges = [System.Collections.ArrayList]@($oidc.Edges | Where-Object { $_ -ne $null })
+
+                # Workaround: hex-encode objectids to avoid BloodHound case collisions (remove when BH supports case-sensitive IDs)
+                Convert-GitHoundOutputIds -Nodes $oidcNodes -Edges $oidcEdges
+
                 $payload = [PSCustomObject]@{
                     '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
                     graph = [PSCustomObject]@{
-                        nodes = @()
-                        edges = @($oidc.Edges | Where-Object { $_ -ne $null })
+                        nodes = $oidcNodes
+                        edges = $oidcEdges
                     }
                 } | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_oidc_$orgId.json")
             }
@@ -7112,4 +7302,263 @@ function Invoke-GitHound
     }
 
     Write-Host "[+] GitHound collection complete for $($Session.OrganizationName)."
+}
+
+function Invoke-GitHoundEnterprise
+{
+    <#
+    .SYNOPSIS
+        Orchestrates a full GitHound enterprise collection.
+
+    .DESCRIPTION
+        Runs all enterprise-level collection functions sequentially, writing per-step output
+        files to disk after each step. Supports crash recovery via the -Resume switch.
+
+        Collection steps:
+          1. Enterprise profile and org containment (Git-HoundEnterprise)
+          2. Enterprise members (Git-HoundEnterpriseUser)
+          3. Enterprise teams (Git-HoundEnterpriseTeam)
+          4. Enterprise SCIM users (Git-HoundEnterpriseScimUser) — separate output file
+          5. Enterprise SCIM groups (Git-HoundEnterpriseScimGroup) — separate output file
+          6. Enterprise SAML provider (Git-HoundEnterpriseSamlProvider) — requires PAT, separate output file
+
+        The SAML step requires a PAT with enterprise admin access since the ownerInfo
+        field is not accessible with GitHub App tokens. If no PAT is provided, SAML
+        collection is skipped.
+
+    .PARAMETER Session
+        A GitHound session object with EnterpriseName set (from New-GitHubAppSession).
+
+    .PARAMETER Token
+        Optional. A GitHub PAT with enterprise admin access for SAML collection.
+
+    .PARAMETER CheckpointPath
+        Directory for per-step output files. Defaults to the current directory.
+
+    .PARAMETER Resume
+        When set, detects existing per-step output files and skips completed steps.
+
+    .EXAMPLE
+        Invoke-GitHoundEnterprise -Session $session
+
+    .EXAMPLE
+        # With SAML collection
+        Invoke-GitHoundEnterprise -Session $session -Token $pat
+
+    .EXAMPLE
+        # Resume after a crash
+        Invoke-GitHoundEnterprise -Session $session -Resume
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session,
+
+        [Parameter()]
+        [string]
+        $Token,
+
+        [Parameter()]
+        [string]
+        $CheckpointPath = ".",
+
+        [Parameter()]
+        [switch]
+        $Resume
+    )
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+
+    $enterpriseSlug = $Session.EnterpriseName
+
+    if (-not $enterpriseSlug) {
+        Write-Error "Session does not have an EnterpriseName set. Use New-GitHubAppSession with -EnterpriseName."
+        return
+    }
+
+    Write-Host "[*] Starting GitHound Enterprise collection for '$enterpriseSlug'"
+
+    # ── Step 1: Enterprise ─────────────────────────────────────────────────
+    $entId = $null
+    if ($Resume) {
+        $entFiles = @(Get-ChildItem -Path $CheckpointPath -Filter "step_Enterprise_*.json" -ErrorAction SilentlyContinue)
+        if ($entFiles.Count -eq 1) {
+            $enterprise = Import-GitHoundStepOutput -FilePath $entFiles[0].FullName
+            if ($enterprise) {
+                $entId = $enterprise.nodes[0].id
+                Write-Host "[*] Resuming: Loaded Enterprise from $($entFiles[0].Name)"
+            }
+        }
+    }
+
+    if (-not $entId) {
+        Write-Host "[*] Enumerating Enterprise"
+        $enterprise = Git-HoundEnterprise -Session $Session
+        $entId = $enterprise.nodes[0].id
+        Export-GitHoundStepOutput -StepResult $enterprise -FilePath (Join-Path $CheckpointPath "step_Enterprise_$entId.json")
+        Write-Host "[+] Saved: step_Enterprise_$entId.json"
+    }
+
+    if ($enterprise.nodes) { $nodes.AddRange(@($enterprise.nodes)) }
+    if ($enterprise.edges) { $edges.AddRange(@($enterprise.edges)) }
+
+    # ── Step 2: Enterprise Members ─────────────────────────────────────────
+    $stepFile = Join-Path $CheckpointPath "step_EnterpriseUser_$entId.json"
+    if ($Resume -and (Test-Path $stepFile)) {
+        Write-Host "[*] Resuming: Loaded Enterprise Users from step_EnterpriseUser_$entId.json"
+        $entUsers = Import-GitHoundStepOutput -FilePath $stepFile
+    } else {
+        Write-Host "[*] Enumerating Enterprise Members"
+        $entUsers = Git-HoundEnterpriseUser -Session $Session -Enterprise $enterprise.Nodes[0]
+        Export-GitHoundStepOutput -StepResult $entUsers -FilePath $stepFile
+        Write-Host "[+] Saved: step_EnterpriseUser_$entId.json"
+    }
+    if ($entUsers.nodes) { $nodes.AddRange(@($entUsers.nodes)) }
+    if ($entUsers.edges) { $edges.AddRange(@($entUsers.edges)) }
+
+    # ── Step 3: Enterprise Teams ───────────────────────────────────────────
+    $stepFile = Join-Path $CheckpointPath "step_EnterpriseTeam_$entId.json"
+    if ($Resume -and (Test-Path $stepFile)) {
+        Write-Host "[*] Resuming: Loaded Enterprise Teams from step_EnterpriseTeam_$entId.json"
+        $entTeams = Import-GitHoundStepOutput -FilePath $stepFile
+    } else {
+        Write-Host "[*] Enumerating Enterprise Teams"
+        $entTeams = Git-HoundEnterpriseTeam -Session $Session -Enterprise $enterprise.Nodes[0]
+        Export-GitHoundStepOutput -StepResult $entTeams -FilePath $stepFile
+        Write-Host "[+] Saved: step_EnterpriseTeam_$entId.json"
+    }
+    if ($entTeams.nodes) { $nodes.AddRange(@($entTeams.nodes)) }
+    if ($entTeams.edges) { $edges.AddRange(@($entTeams.edges)) }
+
+    # ── Final Consolidation ────────────────────────────────────────────────
+    Write-Host "[*] Consolidating to OpenGraph JSON Payload"
+    $filteredNodes = [System.Collections.ArrayList]@($nodes | Where-Object { $_ -ne $null })
+    $filteredEdges = [System.Collections.ArrayList]@($edges | Where-Object { $_ -ne $null })
+    $nullNodes = $nodes.Count - $filteredNodes.Count
+    $nullEdges = $edges.Count - $filteredEdges.Count
+    if ($nullNodes -gt 0 -or $nullEdges -gt 0) {
+        Write-Warning "Filtered out $nullNodes null node(s) and $nullEdges null edge(s) from payload"
+    }
+
+    # Workaround: hex-encode objectids to avoid BloodHound case collisions (remove when BH supports case-sensitive IDs)
+    Convert-GitHoundOutputIds -Nodes $filteredNodes -Edges $filteredEdges
+
+    $consolidatedFile = Join-Path $CheckpointPath "githound_enterprise_$entId.json"
+    $payload = [PSCustomObject]@{
+        '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $filteredNodes
+            edges = $filteredEdges
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath $consolidatedFile
+    Write-Host "[+] Consolidated payload: $consolidatedFile ($($filteredNodes.Count) nodes, $($filteredEdges.Count) edges)"
+
+    # ── SCIM (separate output file) ────────────────────────────────────────
+    $scimNodes = New-Object System.Collections.ArrayList
+    $scimEdges = New-Object System.Collections.ArrayList
+
+    $stepFile = Join-Path $CheckpointPath "step_EnterpriseScimUser_$entId.json"
+    if ($Resume -and (Test-Path $stepFile)) {
+        Write-Host "[*] Resuming: Loaded Enterprise SCIM Users from step_EnterpriseScimUser_$entId.json"
+        $scimUsers = Import-GitHoundStepOutput -FilePath $stepFile
+    } else {
+        Write-Host "[*] Enumerating Enterprise SCIM Users"
+        $scimUsers = Git-HoundEnterpriseScimUser -Session $Session
+        Export-GitHoundStepOutput -StepResult $scimUsers -FilePath $stepFile
+        Write-Host "[+] Saved: step_EnterpriseScimUser_$entId.json"
+    }
+    if ($scimUsers.nodes) { $scimNodes.AddRange(@($scimUsers.nodes)) }
+    if ($scimUsers.edges) { $scimEdges.AddRange(@($scimUsers.edges)) }
+
+    $stepFile = Join-Path $CheckpointPath "step_EnterpriseScimGroup_$entId.json"
+    if ($Resume -and (Test-Path $stepFile)) {
+        Write-Host "[*] Resuming: Loaded Enterprise SCIM Groups from step_EnterpriseScimGroup_$entId.json"
+        $scimGroups = Import-GitHoundStepOutput -FilePath $stepFile
+    } else {
+        Write-Host "[*] Enumerating Enterprise SCIM Groups"
+        $scimGroups = Git-HoundEnterpriseScimGroup -Session $Session
+        Export-GitHoundStepOutput -StepResult $scimGroups -FilePath $stepFile
+        Write-Host "[+] Saved: step_EnterpriseScimGroup_$entId.json"
+    }
+    if ($scimGroups.nodes) { $scimNodes.AddRange(@($scimGroups.nodes)) }
+    if ($scimGroups.edges) { $scimEdges.AddRange(@($scimGroups.edges)) }
+
+    $scimFilteredNodes = [System.Collections.ArrayList]@($scimNodes | Where-Object { $_ -ne $null })
+    $scimFilteredEdges = [System.Collections.ArrayList]@($scimEdges | Where-Object { $_ -ne $null })
+
+    # Workaround: hex-encode objectids to avoid BloodHound case collisions (remove when BH supports case-sensitive IDs)
+    Convert-GitHoundOutputIds -Nodes $scimFilteredNodes -Edges $scimFilteredEdges
+
+    $scimFile = Join-Path $CheckpointPath "githound_enterprise_scim_$entId.json"
+    $payload = [PSCustomObject]@{
+        '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
+        metadata = [PSCustomObject]@{
+            source_kind = "SCIM"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $scimFilteredNodes
+            edges = $scimFilteredEdges
+        }
+    } | ConvertTo-Json -Depth 10 | Out-File -FilePath $scimFile
+    Write-Host "[+] SCIM payload: $scimFile ($($scimFilteredNodes.Count) nodes, $($scimFilteredEdges.Count) edges)"
+
+    # ── SAML (separate output file, requires PAT) ──────────────────────────
+    if ($Token) {
+        $stepFile = Join-Path $CheckpointPath "step_EnterpriseSaml_$entId.json"
+        if ($Resume -and (Test-Path $stepFile)) {
+            Write-Host "[*] Resuming: Loaded Enterprise SAML from step_EnterpriseSaml_$entId.json"
+            $saml = Import-GitHoundStepOutput -FilePath $stepFile
+        } else {
+            Write-Host "[*] Enumerating Enterprise SAML Identity Provider"
+            $saml = Git-HoundEnterpriseSamlProvider -Token $Token -EnterpriseName $enterpriseSlug
+            Export-GitHoundStepOutput -StepResult $saml -FilePath $stepFile
+            Write-Host "[+] Saved: step_EnterpriseSaml_$entId.json"
+        }
+
+        $samlFilteredNodes = [System.Collections.ArrayList]@($saml.nodes | Where-Object { $_ -ne $null })
+        $samlFilteredEdges = [System.Collections.ArrayList]@($saml.edges | Where-Object { $_ -ne $null })
+
+        # Workaround: hex-encode objectids to avoid BloodHound case collisions (remove when BH supports case-sensitive IDs)
+        Convert-GitHoundOutputIds -Nodes $samlFilteredNodes -Edges $samlFilteredEdges
+
+        $samlFile = Join-Path $CheckpointPath "githound_enterprise_saml_$entId.json"
+        $payload = [PSCustomObject]@{
+            '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
+            graph = [PSCustomObject]@{
+                nodes = $samlFilteredNodes
+                edges = $samlFilteredEdges
+            }
+        } | ConvertTo-Json -Depth 10 | Out-File -FilePath $samlFile
+        Write-Host "[+] SAML payload: $samlFile ($($samlFilteredNodes.Count) nodes, $($samlFilteredEdges.Count) edges)"
+    } else {
+        Write-Host "[*] Skipping Enterprise SAML (provide -Token for SAML collection)"
+    }
+
+    # ── Cleanup Intermediates ──────────────────────────────────────────────
+    $stepFileNames = @(
+        "step_Enterprise_$entId.json",
+        "step_EnterpriseUser_$entId.json",
+        "step_EnterpriseTeam_$entId.json",
+        "step_EnterpriseScimUser_$entId.json",
+        "step_EnterpriseScimGroup_$entId.json",
+        "step_EnterpriseSaml_$entId.json"
+    )
+    $cleanedCount = 0
+    foreach ($fileName in $stepFileNames) {
+        $filePath = Join-Path $CheckpointPath $fileName
+        if (Test-Path $filePath) {
+            Remove-Item $filePath -Force
+            $cleanedCount++
+        }
+    }
+    if ($cleanedCount -gt 0) {
+        Write-Host "[+] Cleaned up $cleanedCount intermediate file(s)."
+    }
+
+    Write-Host "[+] GitHound Enterprise collection complete for '$enterpriseSlug'."
 }
