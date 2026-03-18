@@ -46,12 +46,6 @@ If collection is interrupted, resume from where you left off:
 Invoke-GitHound -Session $session -Resume
 ```
 
-For detailed setup instructions, see:
-
-- [Personal Access Token Collection](./Documentation/COLLECTION.md) — Standard collection using PATs
-- [App Installation Collection](./Documentation/APP-COLLECTION.md) — Higher rate limits via GitHub App
-- [Troubleshooting](./Documentation/TROUBLESHOOTING.md) — Common issues and solutions
-
 ## Schema
 
 ![Mermaid Schema](./Documentation/images/GitHound-Mermaid.png)
