@@ -1709,13 +1709,30 @@ function Git-HoundEnterpriseTeam
             $null = $edges.Add((New-GitHoundEdge -Kind 'SCIM_Provisioned' -StartId $team.group_id -EndId $teamId -Properties @{ traversable = $true }))
         }
 
-        # Enumerate team members and create GH_MemberOf edges (user → team)
+        # Team Role: members
+        $membersRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("${teamId}_members"))
+        $membersRoleProps = [pscustomobject]@{
+            name             = Normalize-Null "$enterpriseSlug/$($team.slug)/members"
+            node_id          = Normalize-Null $membersRoleId
+            environment_name = Normalize-Null $enterpriseSlug
+            environmentid    = Normalize-Null $enterpriseNodeId
+            team_name        = Normalize-Null $team.name
+            team_id          = Normalize-Null $teamId
+            short_name       = Normalize-Null 'members'
+            type             = Normalize-Null 'team'
+            query_team       = "MATCH p=(:GH_TeamRole {node_id:'$membersRoleId'})-[:GH_MemberOf]->(:GH_EnterpriseTeam) RETURN p"
+            query_members    = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_TeamRole {node_id:'$membersRoleId'}) RETURN p"
+        }
+        $null = $nodes.Add((New-GitHoundNode -Id $membersRoleId -Kind 'GH_TeamRole', 'GH_Role' -Properties $membersRoleProps))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MemberOf' -StartId $membersRoleId -EndId $teamId -Properties @{ traversable = $true }))
+
+        # Enumerate team members and create GH_HasRole edges (user → team role)
         $members = @(Invoke-GithubRestMethod -Session $Session -Path "enterprises/$enterpriseSlug/teams/$($team.id)/memberships")
         Write-Host "[*]   Team '$($team.name)': $($members.Count) members"
 
         foreach ($member in $members) {
             if ($member.node_id) {
-                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MemberOf' -StartId $member.node_id -EndId $teamId -Properties @{ traversable = $true }))
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartId $member.node_id -EndId $membersRoleId -Properties @{ traversable = $true }))
             }
         }
     }
@@ -2617,6 +2634,41 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
             $overflowVars['after'] = $overflowResult.data.organization.team.members.pageInfo.endCursor
         }
         while($overflowResult.data.organization.team.members.pageInfo.hasNextPage)
+    }
+
+    # Phase 3: Enterprise teams visible at the org level (not returned by GraphQL)
+    # These have slug prefixed with "ent:" and type = "enterprise". We create GH_Team
+    # nodes so they participate in repo role edges, and link them back to the
+    # GH_EnterpriseTeam node via GH_MemberOf.
+    $orgLogin = $Organization.properties.login
+    $orgNodeId = $Organization.properties.node_id
+    $restTeams = @(Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/teams")
+    $enterpriseTeams = @($restTeams | Where-Object { $_.slug -like 'ent:*' })
+
+    if ($enterpriseTeams.Count -gt 0) {
+        Write-Host "[*] Git-HoundTeam: Found $($enterpriseTeams.Count) enterprise team(s) in $orgLogin"
+
+        foreach ($entTeam in $enterpriseTeams) {
+            $teamNodeId = $entTeam.node_id
+            $entTeamId = "GH_EntTeam_$($entTeam.id)"
+
+            $properties = [pscustomobject]@{
+                name             = Normalize-Null $entTeam.name
+                node_id          = Normalize-Null $teamNodeId
+                environment_name = Normalize-Null $orgLogin
+                environmentid    = Normalize-Null $orgNodeId
+                slug             = Normalize-Null $entTeam.slug
+                description      = Normalize-Null $entTeam.description
+                privacy          = Normalize-Null $entTeam.privacy
+                type             = Normalize-Null 'enterprise'
+                query_repositories = "MATCH p=(:GH_Team {node_id:'$teamNodeId'})-[:GH_HasRole]->(:GH_RepoRole)-[]->(:GH_Repository) RETURN p"
+            }
+
+            $null = $nodes.Add((New-GitHoundNode -Id $teamNodeId -Kind 'GH_Team' -Properties $properties))
+
+            # Link enterprise team to this org-level team node
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MemberOf' -StartId $entTeamId -EndId $teamNodeId -Properties @{ traversable = $true }))
+        }
     }
 
     $output = [PSCustomObject]@{
