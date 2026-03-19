@@ -1232,11 +1232,16 @@ function Git-HoundEnterpriseUser
 
     .DESCRIPTION
         This function retrieves enterprise members using the GitHub GraphQL API's enterprise.members
-        connection. It creates GH_User nodes (identical to those created by Git-HoundUser) and
-        GH_HasMember edges linking the enterprise to each user.
+        connection. It creates GH_User nodes (identical to those created by Git-HoundUser),
+        GH_HasMember edges linking the enterprise to each user, and GH_EnterpriseRole nodes
+        for "owners" and "members" with GH_HasRole edges assigning each user to the members role.
+
+        When a PAT is provided, enterprise admins are enumerated from ownerInfo.admins and
+        assigned to the owners role via GH_HasRole.
 
         API Reference:
         - GitHub GraphQL API: Enterprise.members connection
+        - GitHub GraphQL API: Enterprise.ownerInfo.admins connection (requires PAT)
 
         Fine Grained Permissions Reference:
         - "Enterprise people" enterprise permissions (read)
@@ -1247,8 +1252,15 @@ function Git-HoundEnterpriseUser
     .PARAMETER Enterprise
         A GH_Enterprise node object from Git-HoundEnterprise.
 
+    .PARAMETER Token
+        Optional. A GitHub PAT with enterprise admin access. When provided, enumerates
+        enterprise admins from ownerInfo.admins and assigns them to the owners role.
+
     .EXAMPLE
         $enterpriseUsers = Git-HoundEnterpriseUser -Session $session -Enterprise $enterprise.nodes[0]
+
+    .EXAMPLE
+        $enterpriseUsers = Git-HoundEnterpriseUser -Session $session -Enterprise $enterprise.nodes[0] -Token $pat
     #>
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
@@ -1257,7 +1269,11 @@ function Git-HoundEnterpriseUser
 
         [Parameter(Position = 1, Mandatory = $true)]
         [PSObject]
-        $Enterprise
+        $Enterprise,
+
+        [Parameter()]
+        [string]
+        $Token
     )
 
     $nodes = New-Object System.Collections.ArrayList
@@ -1361,7 +1377,82 @@ query EnterpriseMembers($slug: String!, $count: Int = 100, $after: String = null
     }
     while ($result.data.enterprise.members.pageInfo.hasNextPage)
 
-    Write-Host "[+] Git-HoundEnterpriseUser complete. $($nodes.Count) users."
+    # ── Enterprise Role Nodes ─────────────────────────────────────────────
+    # Owners role
+    $ownersRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("${enterpriseNodeId}_owners"))
+    $ownersRoleProps = [pscustomobject]@{
+        name             = Normalize-Null "$enterpriseSlug/owners"
+        node_id          = Normalize-Null $ownersRoleId
+        environment_name = Normalize-Null $enterpriseSlug
+        environmentid    = Normalize-Null $enterpriseNodeId
+        short_name       = Normalize-Null 'owners'
+        type             = Normalize-Null 'default'
+        query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_EnterpriseRole {node_id:'$ownersRoleId'}) RETURN p"
+    }
+    $null = $nodes.Add((New-GitHoundNode -Id $ownersRoleId -Kind 'GH_EnterpriseRole', 'GH_Role' -Properties $ownersRoleProps))
+    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $enterpriseNodeId -EndId $ownersRoleId -Properties @{ traversable = $false }))
+
+    # Members role
+    $membersRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("${enterpriseNodeId}_members"))
+    $membersRoleProps = [pscustomobject]@{
+        name             = Normalize-Null "$enterpriseSlug/members"
+        node_id          = Normalize-Null $membersRoleId
+        environment_name = Normalize-Null $enterpriseSlug
+        environmentid    = Normalize-Null $enterpriseNodeId
+        short_name       = Normalize-Null 'members'
+        type             = Normalize-Null 'default'
+        query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_EnterpriseRole {node_id:'$membersRoleId'}) RETURN p"
+    }
+    $null = $nodes.Add((New-GitHoundNode -Id $membersRoleId -Kind 'GH_EnterpriseRole', 'GH_Role' -Properties $membersRoleProps))
+    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $enterpriseNodeId -EndId $membersRoleId -Properties @{ traversable = $false }))
+
+    # Assign all members to the members role
+    foreach ($node in $nodes) {
+        if ($node.kinds -contains 'GH_User') {
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartId $node.id -EndId $membersRoleId -Properties @{ traversable = $true }))
+        }
+    }
+
+    # ── Enterprise Owners (requires PAT) ──────────────────────────────────
+    if ($Token) {
+        try {
+            Write-Host "[*] Git-HoundEnterpriseUser: Collecting enterprise admins (ownerInfo.admins)"
+            $patSession = New-GithubSession -Token $Token -EnterpriseName $enterpriseSlug
+
+            $AdminsQuery = @'
+query EnterpriseAdmins($slug: String!, $count: Int = 100, $after: String = null) {
+    enterprise(slug: $slug) {
+        ownerInfo {
+            admins(first: $count, after: $after) {
+                nodes { id login }
+                pageInfo { endCursor hasNextPage }
+            }
+        }
+    }
+}
+'@
+            $adminVars = @{ slug = $enterpriseSlug; count = 100; after = $null }
+            $adminCount = 0
+
+            do {
+                $adminResult = Invoke-GitHubGraphQL -Session $patSession -Query $AdminsQuery -Variables $adminVars
+                $adminsPage = $adminResult.data.enterprise.ownerInfo.admins
+
+                foreach ($admin in $adminsPage.nodes) {
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartId $admin.id -EndId $ownersRoleId -Properties @{ traversable = $true }))
+                    $adminCount++
+                }
+
+                $adminVars['after'] = $adminsPage.pageInfo.endCursor
+            } while ($adminsPage.pageInfo.hasNextPage)
+
+            Write-Host "[+] Git-HoundEnterpriseUser: Found $adminCount enterprise owner(s)"
+        } catch {
+            Write-Warning "Git-HoundEnterpriseUser: Failed to collect enterprise admins: $_"
+        }
+    }
+
+    Write-Host "[+] Git-HoundEnterpriseUser complete. $($nodes.Count) nodes, $($edges.Count) edges."
 
     Write-Output ([PSCustomObject]@{
         Nodes = $nodes
@@ -1618,18 +1709,140 @@ function Git-HoundEnterpriseTeam
             $null = $edges.Add((New-GitHoundEdge -Kind 'SCIM_Provisioned' -StartId $team.group_id -EndId $teamId -Properties @{ traversable = $true }))
         }
 
-        # Enumerate team members and create GH_HasMember edges
+        # Enumerate team members and create GH_MemberOf edges (user → team)
         $members = @(Invoke-GithubRestMethod -Session $Session -Path "enterprises/$enterpriseSlug/teams/$($team.id)/memberships")
         Write-Host "[*]   Team '$($team.name)': $($members.Count) members"
 
         foreach ($member in $members) {
             if ($member.node_id) {
-                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasMember' -StartId $teamId -EndId $member.node_id -Properties @{ traversable = $false }))
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MemberOf' -StartId $member.node_id -EndId $teamId -Properties @{ traversable = $true }))
             }
         }
     }
 
     Write-Host "[+] Git-HoundEnterpriseTeam complete. $($nodes.Count) teams, $($edges.Count) edges."
+
+    Write-Output ([PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    })
+}
+
+function Git-HoundEnterpriseRole
+{
+    <#
+    .SYNOPSIS
+        Retrieves enterprise roles and their user/team assignments.
+
+    .DESCRIPTION
+        This function queries the enterprise roles REST API to enumerate all enterprise roles
+        (both predefined and custom). For each role, it creates a GH_EnterpriseRole node and
+        edges for user and team assignments.
+
+        Direct user assignments create GH_HasRole edges from the user to the role. Team
+        assignments create GH_HasRole edges from the enterprise team to the role — the
+        user-to-team relationship is already captured via GH_MemberOf edges from
+        Git-HoundEnterpriseTeam.
+
+        API Reference:
+        - List enterprise roles: GET /enterprises/{enterprise}/enterprise-roles
+        - List users assigned to role: GET /enterprises/{enterprise}/enterprise-roles/{role_id}/users
+        - List teams assigned to role: GET /enterprises/{enterprise}/enterprise-roles/{role_id}/teams
+
+    .PARAMETER Session
+        A GitHound session object with EnterpriseName set.
+
+    .PARAMETER Enterprise
+        The GH_Enterprise node object (from Git-HoundEnterprise output).
+
+    .OUTPUTS
+        A PSObject containing two properties: Nodes and Edges.
+
+    .EXAMPLE
+        $roles = Git-HoundEnterpriseRole -Session $session -Enterprise $enterprise.Nodes[0]
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session,
+
+        [Parameter(Position = 1, Mandatory = $true)]
+        [PSObject]
+        $Enterprise
+    )
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+
+    $enterpriseSlug = $Session.EnterpriseName
+    $enterpriseNodeId = $Enterprise.properties.node_id
+
+    Write-Host "[*] Git-HoundEnterpriseRole: Collecting enterprise roles for '$enterpriseSlug'"
+
+    try {
+        $rolesResult = Invoke-GithubRestMethod -Session $Session -Path "enterprises/$enterpriseSlug/enterprise-roles"
+    } catch {
+        Write-Warning "Git-HoundEnterpriseRole: Failed to enumerate enterprise roles: $_"
+        return ([PSCustomObject]@{ Nodes = $nodes; Edges = $edges })
+    }
+
+    $roles = $rolesResult.roles
+    if (-not $roles) {
+        Write-Host "[*] Git-HoundEnterpriseRole: No enterprise roles found"
+        return ([PSCustomObject]@{ Nodes = $nodes; Edges = $edges })
+    }
+
+    foreach ($role in $roles) {
+        $roleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("${enterpriseNodeId}_role_$($role.id)"))
+
+        $properties = [pscustomobject]@{
+            name             = Normalize-Null "$enterpriseSlug/$($role.name)"
+            node_id          = Normalize-Null $roleId
+            environment_name = Normalize-Null $enterpriseSlug
+            environmentid    = Normalize-Null $enterpriseNodeId
+            short_name       = Normalize-Null $role.name
+            description      = Normalize-Null $role.description
+            source           = Normalize-Null $role.source
+            type             = Normalize-Null $(if ($role.source -eq 'Predefined') { 'default' } else { 'custom' })
+            created_at       = Normalize-Null $role.created_at
+            updated_at       = Normalize-Null $role.updated_at
+            query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_EnterpriseRole {node_id:'$roleId'}) RETURN p"
+            query_team_members     = "MATCH p=(:GH_User)-[:GH_MemberOf]->(:GH_EnterpriseTeam)-[:GH_HasRole]->(:GH_EnterpriseRole {node_id:'$roleId'}) RETURN p"
+        }
+
+        $null = $nodes.Add((New-GitHoundNode -Id $roleId -Kind 'GH_EnterpriseRole', 'GH_Role' -Properties $properties))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $enterpriseNodeId -EndId $roleId -Properties @{ traversable = $false }))
+
+        # Direct user assignments
+        try {
+            $roleUsers = @(Invoke-GithubRestMethod -Session $Session -Path "enterprises/$enterpriseSlug/enterprise-roles/$($role.id)/users")
+            foreach ($user in $roleUsers) {
+                if ($user.assignment -eq 'direct' -and $user.node_id) {
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartId $user.node_id -EndId $roleId -Properties @{ traversable = $true }))
+                }
+            }
+        } catch {
+            Write-Warning "Git-HoundEnterpriseRole: Failed to enumerate users for role '$($role.name)': $_"
+        }
+
+        # Team assignments
+        try {
+            $roleTeams = @(Invoke-GithubRestMethod -Session $Session -Path "enterprises/$enterpriseSlug/enterprise-roles/$($role.id)/teams")
+            foreach ($team in $roleTeams) {
+                $teamId = "GH_EntTeam_$($team.id)"
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartId $teamId -EndId $roleId -Properties @{ traversable = $true }))
+            }
+        } catch {
+            Write-Warning "Git-HoundEnterpriseRole: Failed to enumerate teams for role '$($role.name)': $_"
+        }
+
+        $directCount = @($roleUsers | Where-Object { $_.assignment -eq 'direct' }).Count
+        $teamCount = @($roleTeams).Count
+        Write-Host "[*]   Role '$($role.name)': $directCount direct user(s), $teamCount team(s)"
+    }
+
+    Write-Host "[+] Git-HoundEnterpriseRole complete. $($nodes.Count) roles, $($edges.Count) edges."
 
     Write-Output ([PSCustomObject]@{
         Nodes = $nodes
@@ -7422,10 +7635,11 @@ function Invoke-GitHoundEnterprise
           1. Enterprise profile and org containment (Git-HoundEnterprise)
           2. Enterprise members (Git-HoundEnterpriseUser)
           3. Enterprise teams (Git-HoundEnterpriseTeam)
-          4. Enterprise SCIM users (Git-HoundEnterpriseScimUser) — separate output file
-          5. Enterprise SCIM groups (Git-HoundEnterpriseScimGroup) — separate output file
-          6. Enterprise SAML provider (Git-HoundEnterpriseSamlProvider) — requires PAT, separate output file
-          7. Organization-level collection (Invoke-GitHound per org) — requires ClientId and PrivateKeyPath
+          4. Enterprise roles (Git-HoundEnterpriseRole) — predefined and custom roles with user/team assignments
+          5. Enterprise SCIM users (Git-HoundEnterpriseScimUser) — separate output file
+          6. Enterprise SCIM groups (Git-HoundEnterpriseScimGroup) — separate output file
+          7. Enterprise SAML provider (Git-HoundEnterpriseSamlProvider) — requires PAT, separate output file
+          8. Organization-level collection (Invoke-GitHound per org) — requires ClientId and PrivateKeyPath
 
         The SAML step requires a PAT with enterprise admin access since the ownerInfo
         field is not accessible with GitHub App tokens. If no PAT is provided, SAML
@@ -7563,7 +7777,9 @@ function Invoke-GitHoundEnterprise
         $entUsers = Import-GitHoundStepOutput -FilePath $stepFile
     } else {
         Write-Host "[*] Enumerating Enterprise Members"
-        $entUsers = Git-HoundEnterpriseUser -Session $Session -Enterprise $enterprise.Nodes[0]
+        $entUserParams = @{ Session = $Session; Enterprise = $enterprise.Nodes[0] }
+        if ($Token) { $entUserParams['Token'] = $Token }
+        $entUsers = Git-HoundEnterpriseUser @entUserParams
         Export-GitHoundStepOutput -StepResult $entUsers -FilePath $stepFile
         Write-Host "[+] Saved: step_EnterpriseUser_$entId.json"
     }
@@ -7583,6 +7799,20 @@ function Invoke-GitHoundEnterprise
     }
     if ($entTeams.nodes) { $nodes.AddRange(@($entTeams.nodes)) }
     if ($entTeams.edges) { $edges.AddRange(@($entTeams.edges)) }
+
+    # ── Step 4: Enterprise Roles ──────────────────────────────────────────
+    $stepFile = Join-Path $CheckpointPath "step_EnterpriseRole_$entId.json"
+    if ($Resume -and (Test-Path $stepFile)) {
+        Write-Host "[*] Resuming: Loaded Enterprise Roles from step_EnterpriseRole_$entId.json"
+        $entRoles = Import-GitHoundStepOutput -FilePath $stepFile
+    } else {
+        Write-Host "[*] Enumerating Enterprise Roles"
+        $entRoles = Git-HoundEnterpriseRole -Session $Session -Enterprise $enterprise.Nodes[0]
+        Export-GitHoundStepOutput -StepResult $entRoles -FilePath $stepFile
+        Write-Host "[+] Saved: step_EnterpriseRole_$entId.json"
+    }
+    if ($entRoles.nodes) { $nodes.AddRange(@($entRoles.nodes)) }
+    if ($entRoles.edges) { $edges.AddRange(@($entRoles.edges)) }
 
     # ── Final Consolidation ────────────────────────────────────────────────
     Write-Host "[*] Consolidating to OpenGraph JSON Payload"
@@ -7737,6 +7967,7 @@ function Invoke-GitHoundEnterprise
             "step_Enterprise_$entId.json",
             "step_EnterpriseUser_$entId.json",
             "step_EnterpriseTeam_$entId.json",
+            "step_EnterpriseRole_$entId.json",
             "step_EnterpriseScimUser_$entId.json",
             "step_EnterpriseScimGroup_$entId.json",
             "step_EnterpriseSaml_$entId.json"
