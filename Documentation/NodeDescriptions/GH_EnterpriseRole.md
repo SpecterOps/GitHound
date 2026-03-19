@@ -4,6 +4,8 @@ Represents an enterprise-level role that defines permissions within a GitHub ent
 
 The `type` property distinguishes between `default` (built-in and predefined) roles and `custom` roles. The `source` property indicates the origin of the role (e.g., `Predefined` for GitHub-defined roles). Users and enterprise teams can be assigned to roles via `GH_HasRole` edges -- direct user assignments and team assignments are both supported.
 
+Custom enterprise roles have their permissions modeled as edges from the role to the `GH_Enterprise` node. Each permission string from the API (e.g., `manage_enterprise_admins`) is converted to PascalCase and prefixed with `GH_` (e.g., `GH_ManageEnterpriseAdmins`). Predefined roles return empty permission arrays from the API, so no permission edges are created for them.
+
 Created by: `Git-HoundEnterpriseRole`, `Git-HoundEnterpriseUser`
 
 ## Properties
@@ -34,4 +36,7 @@ flowchart TD
     GH_Enterprise -.->|GH_Contains| GH_EnterpriseRole
     GH_User -->|GH_HasRole| GH_EnterpriseRole
     GH_EnterpriseTeam -->|GH_HasRole| GH_EnterpriseRole
+    GH_EnterpriseRole -->|GH_ManageEnterpriseAdmins| GH_Enterprise
+    GH_EnterpriseRole -->|GH_WriteEnterpriseSso| GH_Enterprise
+    GH_EnterpriseRole -->|GH_...| GH_Enterprise
 ```

@@ -91,4 +91,7 @@ flowchart TD
     GH_Enterprise -.->|GH_Contains| GH_EnterpriseTeam
     GH_Enterprise -.->|GH_Contains| GH_EnterpriseRole
     GH_Enterprise -.->|GH_HasMember| GH_User
+    GH_EnterpriseRole -->|GH_ManageEnterpriseAdmins| GH_Enterprise
+    GH_EnterpriseRole -->|GH_WriteEnterpriseSso| GH_Enterprise
+    GH_EnterpriseRole -->|GH_...| GH_Enterprise
 ```

@@ -1824,12 +1824,42 @@ function Git-HoundEnterpriseRole
             type             = Normalize-Null $(if ($role.source -eq 'Predefined') { 'default' } else { 'custom' })
             created_at       = Normalize-Null $role.created_at
             updated_at       = Normalize-Null $role.updated_at
-            query_explicit_members = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_EnterpriseRole {node_id:'$roleId'}) RETURN p"
-            query_team_members     = "MATCH p=(:GH_User)-[:GH_MemberOf]->(:GH_EnterpriseTeam)-[:GH_HasRole]->(:GH_EnterpriseRole {node_id:'$roleId'}) RETURN p"
+            query_explicit_members      = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_EnterpriseRole {node_id:'$roleId'}) RETURN p"
+            query_team_members          = "MATCH p=(:GH_User)-[:GH_MemberOf]->(:GH_EnterpriseTeam)-[:GH_HasRole]->(:GH_EnterpriseRole {node_id:'$roleId'}) RETURN p"
+            query_enterprise_permissions = "MATCH p=(:GH_EnterpriseRole {node_id:'$roleId'})-[]->(:GH_Enterprise) RETURN p"
         }
 
         $null = $nodes.Add((New-GitHoundNode -Id $roleId -Kind 'GH_EnterpriseRole', 'GH_Role' -Properties $properties))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $enterpriseNodeId -EndId $roleId -Properties @{ traversable = $false }))
+
+        # Permission edges (custom roles only — predefined roles return empty permissions)
+        foreach ($permission in $role.permissions) {
+            switch ($permission) {
+                'create_enterprise_organizations'                    { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CreateEnterpriseOrganizations' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'edit_enterprise_custom_properties_for_organizations' { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_EditEnterpriseCustomPropertiesForOrganizations' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'manage_enterprise_admins'                           { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageEnterpriseAdmins' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $true })) }
+                'manage_enterprise_identity_provider'                { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageEnterpriseIdentityProvider' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'manage_enterprise_members'                          { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageEnterpriseMembers' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $true })) }
+                'manage_enterprise_organization_admins'              { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageEnterpriseOrganizationAdmins' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $true })) }
+                'manage_enterprise_organizations'                    { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageEnterpriseOrganizations' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'manage_enterprise_referrals'                        { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageEnterpriseReferrals' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'manage_enterprise_teams'                            { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ManageEnterpriseTeams' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'read_enterprise_audit_log'                          { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadEnterpriseAuditLog' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'read_enterprise_domain_verification'                { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadEnterpriseDomainVerification' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'read_enterprise_members'                            { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadEnterpriseMembers' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'read_enterprise_org_projects'                       { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadEnterpriseOrgProjects' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'read_enterprise_organization_admin'                 { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ReadEnterpriseOrganizationAdmin' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'set_enterprise_interaction_limits'                  { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_SetEnterpriseInteractionLimits' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'view_enterprise_actions_usage_metrics'              { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ViewEnterpriseActionsUsageMetrics' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'view_enterprise_billing'                            { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ViewEnterpriseBilling' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'view_enterprise_secret_scanning_alerts'             { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_ViewEnterpriseSecretScanningAlerts' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'write_enterprise_actions_policies'                  { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteEnterpriseActionsPolicies' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'write_enterprise_billing'                           { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteEnterpriseBilling' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'write_enterprise_personal_access_token_policies'    { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteEnterprisePersonalAccessTokenPolicies' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'write_enterprise_sso'                               { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteEnterpriseSso' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+                'write_enterprise_team_members'                      { $null = $edges.Add((New-GitHoundEdge -Kind 'GH_WriteEnterpriseTeamMembers' -StartId $roleId -EndId $enterpriseNodeId -Properties @{ traversable = $false })) }
+            }
+        }
 
         # Direct user assignments
         try {
