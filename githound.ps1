@@ -741,12 +741,14 @@ function Convert-GitHoundOutputIds
         The edges ArrayList to transform in place.
     #>
     param(
-        [Parameter(Mandatory)]
-        [System.Collections.ArrayList]$Nodes,
+        [Parameter()]
+        [System.Collections.ArrayList]$Nodes = (New-Object System.Collections.ArrayList),
 
-        [Parameter(Mandatory)]
-        [System.Collections.ArrayList]$Edges
+        [Parameter()]
+        [System.Collections.ArrayList]$Edges = (New-Object System.Collections.ArrayList)
     )
+
+    if ($Nodes.Count -eq 0 -and $Edges.Count -eq 0) { return }
 
     # Properties known to contain objectids (node IDs, environment IDs, foreign keys)
     $idProperties = @('node_id', 'objectid', 'environmentid', 'github_user_id',
@@ -987,14 +989,26 @@ function Git-HoundEnterprise
     .PARAMETER Session
         A GitHound.Session object with EnterpriseName set, used for authentication and API requests.
 
+    .PARAMETER Token
+        Optional. A GitHub PAT with enterprise admin access. When provided, collects
+        enterprise policy settings from ownerInfo (GraphQL) and REST endpoints for
+        Actions permissions, workflow permissions, and code security settings.
+
     .EXAMPLE
         $enterprise = Git-HoundEnterprise -Session $enterpriseSession
+
+    .EXAMPLE
+        $enterprise = Git-HoundEnterprise -Session $enterpriseSession -Token $pat
     #>
 
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [PSTypeName('GitHound.Session')]
-        $Session
+        $Session,
+
+        [Parameter()]
+        [string]
+        $Token
     )
 
     $nodes = New-Object System.Collections.ArrayList
@@ -1073,6 +1087,69 @@ query {
 
     $billing = $enterprise.billingInfo
 
+    # ── Enterprise policy settings (requires PAT) ─────────────────────────
+    $ownerInfo = $null
+    $codeSecurity = $null
+    $actionsPerms = $null
+    $workflowPerms = $null
+
+    if ($Token) {
+        $patSession = New-GithubSession -Token $Token -EnterpriseName $enterpriseSlug
+
+        # GraphQL: ownerInfo policy settings
+        try {
+            Write-Host "[*] Git-HoundEnterprise: Collecting enterprise policy settings (ownerInfo)"
+            $ownerInfoQuery = @"
+{
+    enterprise(slug: "$enterpriseSlug") {
+        ownerInfo {
+            defaultRepositoryPermissionSetting
+            membersCanCreateRepositoriesSetting
+            membersCanCreatePrivateRepositoriesSetting
+            membersCanCreatePublicRepositoriesSetting
+            membersCanCreateInternalRepositoriesSetting
+            membersCanDeleteRepositoriesSetting
+            membersCanDeleteIssuesSetting
+            membersCanInviteCollaboratorsSetting
+            twoFactorRequiredSetting
+            notificationDeliveryRestrictionEnabledSetting
+            ipAllowListEnabledSetting
+            ipAllowListForInstalledAppsEnabledSetting
+        }
+    }
+}
+"@
+            $ownerInfoResult = Invoke-GitHubGraphQL -Session $patSession -Query $ownerInfoQuery
+            $ownerInfo = $ownerInfoResult.data.enterprise.ownerInfo
+        } catch {
+            Write-Warning "Git-HoundEnterprise: Failed to collect ownerInfo: $_"
+        }
+
+        # REST: Code security and analysis settings
+        try {
+            Write-Host "[*] Git-HoundEnterprise: Collecting code security settings"
+            $codeSecurity = Invoke-GithubRestMethod -Session $patSession -Path "enterprises/$enterpriseSlug/code_security_and_analysis"
+        } catch {
+            Write-Warning "Git-HoundEnterprise: Failed to collect code security settings: $_"
+        }
+
+        # REST: Actions permissions
+        try {
+            Write-Host "[*] Git-HoundEnterprise: Collecting Actions permissions"
+            $actionsPerms = Invoke-GithubRestMethod -Session $patSession -Path "enterprises/$enterpriseSlug/actions/permissions"
+        } catch {
+            Write-Warning "Git-HoundEnterprise: Failed to collect Actions permissions: $_"
+        }
+
+        # REST: Workflow permissions
+        try {
+            Write-Host "[*] Git-HoundEnterprise: Collecting workflow permissions"
+            $workflowPerms = Invoke-GithubRestMethod -Session $patSession -Path "enterprises/$enterpriseSlug/actions/permissions/workflow"
+        } catch {
+            Write-Warning "Git-HoundEnterprise: Failed to collect workflow permissions: $_"
+        }
+    }
+
     $properties = [pscustomobject]@{
         # Common Properties
         name                          = Normalize-Null $enterprise.name
@@ -1100,6 +1177,33 @@ query {
         bandwidth_usage               = Normalize-Null $billing.bandwidthUsage
         bandwidth_usage_percentage    = Normalize-Null $billing.bandwidthUsagePercentage
         asset_packs                   = Normalize-Null $billing.assetPacks
+        # Policy Settings (ownerInfo — requires PAT)
+        default_repository_permission                = Normalize-Null $ownerInfo.defaultRepositoryPermissionSetting
+        members_can_create_repositories              = Normalize-Null $ownerInfo.membersCanCreateRepositoriesSetting
+        members_can_create_private_repositories      = Normalize-Null $ownerInfo.membersCanCreatePrivateRepositoriesSetting
+        members_can_create_public_repositories       = Normalize-Null $ownerInfo.membersCanCreatePublicRepositoriesSetting
+        members_can_create_internal_repositories     = Normalize-Null $ownerInfo.membersCanCreateInternalRepositoriesSetting
+        members_can_delete_repositories              = Normalize-Null $ownerInfo.membersCanDeleteRepositoriesSetting
+        members_can_delete_issues                    = Normalize-Null $ownerInfo.membersCanDeleteIssuesSetting
+        members_can_invite_collaborators             = Normalize-Null $ownerInfo.membersCanInviteCollaboratorsSetting
+        two_factor_required                          = Normalize-Null $ownerInfo.twoFactorRequiredSetting
+        notification_delivery_restriction_enabled    = Normalize-Null $ownerInfo.notificationDeliveryRestrictionEnabledSetting
+        ip_allow_list_enabled                        = Normalize-Null $ownerInfo.ipAllowListEnabledSetting
+        ip_allow_list_for_installed_apps_enabled     = Normalize-Null $ownerInfo.ipAllowListForInstalledAppsEnabledSetting
+        # Code Security Settings (REST — requires PAT)
+        advanced_security_enabled_for_new_repos      = Normalize-Null $codeSecurity.advanced_security_enabled_for_new_repositories
+        dependabot_alerts_enabled_for_new_repos      = Normalize-Null $codeSecurity.dependabot_alerts_enabled_for_new_repositories
+        secret_scanning_enabled_for_new_repos        = Normalize-Null $codeSecurity.secret_scanning_enabled_for_new_repositories
+        secret_scanning_push_protection_enabled      = Normalize-Null $codeSecurity.secret_scanning_push_protection_enabled_for_new_repositories
+        secret_scanning_push_protection_custom_link  = Normalize-Null $codeSecurity.secret_scanning_push_protection_custom_link
+        secret_scanning_non_provider_patterns_enabled = Normalize-Null $codeSecurity.secret_scanning_non_provider_patterns_enabled_for_new_repositories
+        # Actions Permissions (REST — requires PAT)
+        actions_enabled_organizations                = Normalize-Null $actionsPerms.enabled_organizations
+        actions_allowed_actions                      = Normalize-Null $actionsPerms.allowed_actions
+        actions_sha_pinning_required                 = Normalize-Null $actionsPerms.sha_pinning_required
+        # Workflow Permissions (REST — requires PAT)
+        actions_default_workflow_permissions         = Normalize-Null $workflowPerms.default_workflow_permissions
+        actions_can_approve_pull_requests            = Normalize-Null $workflowPerms.can_approve_pull_request_reviews
         # Accordion Panel Queries
         query_organizations           = "MATCH p=(:GH_Enterprise {slug: '$enterpriseSlug'})-[:GH_Contains]->(:GH_Organization) RETURN p"
     }
@@ -7321,13 +7425,25 @@ function Invoke-GitHoundEnterprise
           4. Enterprise SCIM users (Git-HoundEnterpriseScimUser) — separate output file
           5. Enterprise SCIM groups (Git-HoundEnterpriseScimGroup) — separate output file
           6. Enterprise SAML provider (Git-HoundEnterpriseSamlProvider) — requires PAT, separate output file
+          7. Organization-level collection (Invoke-GitHound per org) — requires ClientId and PrivateKeyPath
 
         The SAML step requires a PAT with enterprise admin access since the ownerInfo
         field is not accessible with GitHub App tokens. If no PAT is provided, SAML
         collection is skipped.
 
-    .PARAMETER Session
-        A GitHound session object with EnterpriseName set (from New-GitHubAppSession).
+        When ClientId and PrivateKeyPath are provided, the function enumerates all GitHub
+        App installations, filters to organizations, and runs Invoke-GitHound on each one.
+        Each org's output is written to a subdirectory under CheckpointPath.
+
+    .PARAMETER ClientId
+        The GitHub App's Client ID.
+
+    .PARAMETER PrivateKeyPath
+        Path to the GitHub App's private key PEM file.
+
+    .PARAMETER EnterpriseName
+        The enterprise slug (e.g. "k-nexus-global"). Used to create the enterprise session
+        and to filter org installations.
 
     .PARAMETER Token
         Optional. A GitHub PAT with enterprise admin access for SAML collection.
@@ -7338,22 +7454,36 @@ function Invoke-GitHoundEnterprise
     .PARAMETER Resume
         When set, detects existing per-step output files and skips completed steps.
 
+    .PARAMETER CleanupIntermediates
+        When set, passes the flag through to Invoke-GitHound for org-level collection.
+
+    .PARAMETER SkipOrgCollection
+        When set, skips the organization-level Invoke-GitHound collection.
+
     .EXAMPLE
-        Invoke-GitHoundEnterprise -Session $session
+        Invoke-GitHoundEnterprise -ClientId $clientId -PrivateKeyPath $pemPath -EnterpriseName "k-nexus-global"
 
     .EXAMPLE
         # With SAML collection
-        Invoke-GitHoundEnterprise -Session $session -Token $pat
+        Invoke-GitHoundEnterprise -ClientId $clientId -PrivateKeyPath $pemPath -EnterpriseName "k-nexus-global" -Token $pat
 
     .EXAMPLE
         # Resume after a crash
-        Invoke-GitHoundEnterprise -Session $session -Resume
+        Invoke-GitHoundEnterprise -ClientId $clientId -PrivateKeyPath $pemPath -EnterpriseName "k-nexus-global" -Resume
     #>
     [CmdletBinding()]
     Param(
-        [Parameter(Position = 0, Mandatory = $true)]
-        [PSTypeName('GitHound.Session')]
-        $Session,
+        [Parameter(Mandatory = $true)]
+        [string]
+        $ClientId,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $PrivateKeyPath,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $EnterpriseName,
 
         [Parameter()]
         [string]
@@ -7365,18 +7495,38 @@ function Invoke-GitHoundEnterprise
 
         [Parameter()]
         [switch]
-        $Resume
+        $Resume,
+
+        [Parameter()]
+        [switch]
+        $CleanupIntermediates,
+
+        [Parameter()]
+        [switch]
+        $SkipOrgCollection
     )
 
     $nodes = New-Object System.Collections.ArrayList
     $edges = New-Object System.Collections.ArrayList
 
-    $enterpriseSlug = $Session.EnterpriseName
+    $enterpriseSlug = $EnterpriseName
 
-    if (-not $enterpriseSlug) {
-        Write-Error "Session does not have an EnterpriseName set. Use New-GitHubAppSession with -EnterpriseName."
+    # Discover the enterprise installation ID
+    Write-Host "[*] Discovering GitHub App installations"
+    $allInstallations = Get-GitHubAppInstallation -ClientId $ClientId -PrivateKeyPath $PrivateKeyPath
+
+    $enterpriseInstallation = $allInstallations | Where-Object {
+        $_.TargetType -eq "Enterprise" -and $_.Login -eq $enterpriseSlug
+    } | Select-Object -First 1
+
+    if (-not $enterpriseInstallation) {
+        Write-Error "No enterprise installation found for '$enterpriseSlug'. Available: $(($allInstallations | Where-Object { $_.TargetType -eq 'Enterprise' } | ForEach-Object { $_.Login }) -join ', ')"
         return
     }
+
+    Write-Host "[*] Creating enterprise session (InstallationId: $($enterpriseInstallation.InstallationId))"
+    $Session = New-GitHubAppSession -ClientId $ClientId -PrivateKeyPath $PrivateKeyPath `
+        -InstallationId $enterpriseInstallation.InstallationId -EnterpriseName $enterpriseSlug
 
     Write-Host "[*] Starting GitHound Enterprise collection for '$enterpriseSlug'"
 
@@ -7395,7 +7545,9 @@ function Invoke-GitHoundEnterprise
 
     if (-not $entId) {
         Write-Host "[*] Enumerating Enterprise"
-        $enterprise = Git-HoundEnterprise -Session $Session
+        $entParams = @{ Session = $Session }
+        if ($Token) { $entParams['Token'] = $Token }
+        $enterprise = Git-HoundEnterprise @entParams
         $entId = $enterprise.nodes[0].id
         Export-GitHoundStepOutput -StepResult $enterprise -FilePath (Join-Path $CheckpointPath "step_Enterprise_$entId.json")
         Write-Host "[+] Saved: step_Enterprise_$entId.json"
@@ -7539,25 +7691,67 @@ function Invoke-GitHoundEnterprise
         Write-Host "[*] Skipping Enterprise SAML (provide -Token for SAML collection)"
     }
 
-    # ── Cleanup Intermediates ──────────────────────────────────────────────
-    $stepFileNames = @(
-        "step_Enterprise_$entId.json",
-        "step_EnterpriseUser_$entId.json",
-        "step_EnterpriseTeam_$entId.json",
-        "step_EnterpriseScimUser_$entId.json",
-        "step_EnterpriseScimGroup_$entId.json",
-        "step_EnterpriseSaml_$entId.json"
-    )
-    $cleanedCount = 0
-    foreach ($fileName in $stepFileNames) {
-        $filePath = Join-Path $CheckpointPath $fileName
-        if (Test-Path $filePath) {
-            Remove-Item $filePath -Force
-            $cleanedCount++
+    # ── Step 7: Organization-level collection ────────────────────────────
+    if (-not $SkipOrgCollection) {
+        $orgInstallations = @($allInstallations | Where-Object {
+            $_.TargetType -eq "Organization" -and -not $_.SuspendedAt
+        })
+
+        Write-Host "[*] Found $($orgInstallations.Count) active organization installation(s)"
+
+        foreach ($inst in $orgInstallations) {
+            $orgName = $inst.Login
+            $orgCheckpointPath = Join-Path $CheckpointPath $orgName
+
+            if (-not (Test-Path $orgCheckpointPath)) {
+                New-Item -Path $orgCheckpointPath -ItemType Directory -Force | Out-Null
+            }
+
+            Write-Host ""
+            Write-Host "[*] ── Organization: $orgName ──────────────────────────────────"
+
+            try {
+                $orgSession = New-GitHubAppSession -ClientId $ClientId -PrivateKeyPath $PrivateKeyPath `
+                    -InstallationId $inst.InstallationId -OrganizationName $orgName
+
+                $invokeParams = @{
+                    Session        = $orgSession
+                    CheckpointPath = $orgCheckpointPath
+                }
+                if ($Resume) { $invokeParams['Resume'] = $true }
+                if ($CleanupIntermediates) { $invokeParams['CleanupIntermediates'] = $true }
+
+                Invoke-GitHound @invokeParams
+            }
+            catch {
+                Write-Warning "Failed to collect organization '$orgName': $_"
+            }
         }
+    } else {
+        Write-Host "[*] Skipping org-level collection (-SkipOrgCollection)"
     }
-    if ($cleanedCount -gt 0) {
-        Write-Host "[+] Cleaned up $cleanedCount intermediate file(s)."
+
+    # ── Cleanup Intermediates ──────────────────────────────────────────────
+    if ($CleanupIntermediates) {
+        $stepFileNames = @(
+            "step_Enterprise_$entId.json",
+            "step_EnterpriseUser_$entId.json",
+            "step_EnterpriseTeam_$entId.json",
+            "step_EnterpriseScimUser_$entId.json",
+            "step_EnterpriseScimGroup_$entId.json",
+            "step_EnterpriseSaml_$entId.json"
+        )
+        $cleanedCount = 0
+        foreach ($fileName in $stepFileNames) {
+            $filePath = Join-Path $CheckpointPath $fileName
+            if (Test-Path $filePath) {
+                Remove-Item $filePath -Force
+                $cleanedCount++
+            }
+        }
+        if ($cleanedCount -gt 0) {
+            Write-Host "[+] Cleaned up $cleanedCount intermediate file(s)."
+        }
     }
 
     Write-Host "[+] GitHound Enterprise collection complete for '$enterpriseSlug'."
