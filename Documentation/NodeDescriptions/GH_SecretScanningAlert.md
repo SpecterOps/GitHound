@@ -26,7 +26,7 @@ Created by: `Git-HoundSecretScanningAlert`
 
 ```mermaid
 flowchart TD
-    GH_Repository[fa:fa-box-archive GH_Repository]
+    GH_Repository[fa:fa-book GH_Repository]
     GH_SecretScanningAlert[fa:fa-key GH_SecretScanningAlert]
     GH_User[fa:fa-user GH_User]
     GH_OrgRole[fa:fa-user-tie GH_OrgRole]

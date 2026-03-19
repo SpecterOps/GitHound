@@ -81,8 +81,8 @@ Created by: `Git-HoundEnterprise`
 
 ```mermaid
 flowchart TD
-    GH_Enterprise[fa:fa-city GH_Enterprise]
-    GH_Organization[fa:fa-building GH_Organization]
+    GH_Enterprise[fa:fa-globe GH_Enterprise]
+    GH_Organization[fa:fa-building-flag GH_Organization]
     GH_User[fa:fa-user GH_User]
     GH_EnterpriseRole[fa:fa-shield GH_EnterpriseRole]
     GH_EnterpriseTeam[fa:fa-users-between-lines GH_EnterpriseTeam]

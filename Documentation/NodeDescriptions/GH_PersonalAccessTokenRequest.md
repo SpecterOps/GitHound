@@ -32,7 +32,7 @@ Created by: `Git-HoundPersonalAccessTokenRequest`
 flowchart TD
     GH_PersonalAccessTokenRequest[fa:fa-key GH_PersonalAccessTokenRequest]
     GH_User[fa:fa-user GH_User]
-    GH_Organization[fa:fa-building GH_Organization]
+    GH_Organization[fa:fa-building-flag GH_Organization]
 
 
     GH_User -.->|GH_HasPersonalAccessTokenRequest| GH_PersonalAccessTokenRequest

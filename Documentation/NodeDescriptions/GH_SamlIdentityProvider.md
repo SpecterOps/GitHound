@@ -26,8 +26,8 @@ Created by: `Git-HoundGraphQlSamlProvider`, `Git-HoundEnterpriseSamlProvider`
 
 ```mermaid
 flowchart TD
-    GH_Enterprise[fa:fa-city GH_Enterprise]
-    GH_Organization[fa:fa-building GH_Organization]
+    GH_Enterprise[fa:fa-globe GH_Enterprise]
+    GH_Organization[fa:fa-building-flag GH_Organization]
     GH_SamlIdentityProvider[fa:fa-id-badge GH_SamlIdentityProvider]
     GH_ExternalIdentity[fa:fa-arrows-left-right GH_ExternalIdentity]
 

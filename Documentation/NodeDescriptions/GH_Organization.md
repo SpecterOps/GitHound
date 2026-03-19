@@ -72,8 +72,8 @@ Created by: `Git-HoundOrganization`
 
 ```mermaid
 flowchart TD
-    GH_Organization[fa:fa-building GH_Organization]
-    GH_Repository[fa:fa-box-archive GH_Repository]
+    GH_Organization[fa:fa-building-flag GH_Organization]
+    GH_Repository[fa:fa-book GH_Repository]
     GH_OrgSecret[fa:fa-lock GH_OrgSecret]
     GH_SamlIdentityProvider[fa:fa-id-badge GH_SamlIdentityProvider]
     GH_OrgRole[fa:fa-user-tie GH_OrgRole]

@@ -23,7 +23,7 @@ Created by: `Git-HoundRepository`
 ```mermaid
 flowchart TD
     GH_RepoRole[fa:fa-user-tie GH_RepoRole]
-    GH_Repository[fa:fa-box-archive GH_Repository]
+    GH_Repository[fa:fa-book GH_Repository]
     GH_Branch[fa:fa-code-branch GH_Branch]
     GH_BranchProtectionRule[fa:fa-shield GH_BranchProtectionRule]
     GH_User[fa:fa-user GH_User]

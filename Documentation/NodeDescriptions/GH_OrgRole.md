@@ -23,7 +23,7 @@ flowchart TD
     GH_OrgRole[fa:fa-user-tie GH_OrgRole]
     GH_User[fa:fa-user GH_User]
     GH_Team[fa:fa-user-group GH_Team]
-    GH_Organization[fa:fa-building GH_Organization]
+    GH_Organization[fa:fa-building-flag GH_Organization]
     GH_RepoRole[fa:fa-user-tie GH_RepoRole]
     GH_SecretScanningAlert[fa:fa-key GH_SecretScanningAlert]
 

@@ -28,7 +28,7 @@ Created by: `Git-HoundWorkflow`
 ```mermaid
 flowchart TD
     GH_Workflow[fa:fa-cogs GH_Workflow]
-    GH_Repository[fa:fa-box-archive GH_Repository]
+    GH_Repository[fa:fa-book GH_Repository]
 
 
     GH_Repository -.->|GH_HasWorkflow| GH_Workflow

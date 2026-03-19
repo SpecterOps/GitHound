@@ -29,7 +29,7 @@ flowchart TD
     GH_TeamRole[fa:fa-user-tie GH_TeamRole]
     GH_Branch[fa:fa-code-branch GH_Branch]
     GH_BranchProtectionRule[fa:fa-shield GH_BranchProtectionRule]
-    GH_Repository[fa:fa-box-archive GH_Repository]
+    GH_Repository[fa:fa-book GH_Repository]
 
 
     GH_Team -->|GH_MemberOf| GH_Team

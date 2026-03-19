@@ -24,7 +24,7 @@ Created by: `Git-HoundVariable`
 ```mermaid
 flowchart TD
     GH_RepoVariable[fa:fa-lock-open GH_RepoVariable]
-    GH_Repository[fa:fa-box-archive GH_Repository]
+    GH_Repository[fa:fa-book GH_Repository]
 
 
     GH_Repository -.->|GH_Contains| GH_RepoVariable

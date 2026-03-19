@@ -33,8 +33,8 @@ Created by: `Git-HoundAppInstallation`
 flowchart TD
     GH_App[fa:fa-cube GH_App]
     GH_AppInstallation[fa:fa-plug GH_AppInstallation]
-    GH_Repository[fa:fa-box-archive GH_Repository]
-    GH_Organization[fa:fa-building GH_Organization]
+    GH_Repository[fa:fa-book GH_Repository]
+    GH_Organization[fa:fa-building-flag GH_Organization]
 
     GH_App -->|GH_InstalledAs| GH_AppInstallation
     GH_Organization -.->|GH_Contains| GH_AppInstallation

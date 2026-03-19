@@ -24,7 +24,7 @@ Created by: `Git-HoundEnvironment`
 ```mermaid
 flowchart TD
     GH_Environment[fa:fa-leaf GH_Environment]
-    GH_Repository[fa:fa-box-archive GH_Repository]
+    GH_Repository[fa:fa-book GH_Repository]
     GH_Branch[fa:fa-code-branch GH_Branch]
     GH_EnvironmentSecret[fa:fa-lock GH_EnvironmentSecret]
     GH_EnvironmentVariable[fa:fa-lock-open GH_EnvironmentVariable]

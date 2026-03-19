@@ -38,10 +38,10 @@ flowchart TD
     GH_PersonalAccessTokenRequest[fa:fa-key GH_PersonalAccessTokenRequest]
 
 
-    GH_Enterprise[fa:fa-city GH_Enterprise]
-    GH_Organization[fa:fa-building GH_Organization]
+    GH_Enterprise[fa:fa-globe GH_Enterprise]
+    GH_Organization[fa:fa-building-flag GH_Organization]
     GH_BranchProtectionRule[fa:fa-shield GH_BranchProtectionRule]
-    GH_Repository[fa:fa-box-archive GH_Repository]
+    GH_Repository[fa:fa-book GH_Repository]
 
     GH_Enterprise -.->|GH_HasMember| GH_User
     GH_Organization -.->|GH_HasMember| GH_User

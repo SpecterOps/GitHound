@@ -28,7 +28,7 @@ Created by: `Git-HoundEnterpriseTeam`
 
 ```mermaid
 flowchart TD
-    GH_Enterprise[fa:fa-city GH_Enterprise]
+    GH_Enterprise[fa:fa-globe GH_Enterprise]
     GH_EnterpriseTeam[fa:fa-users-between-lines GH_EnterpriseTeam]
     GH_TeamRole[fa:fa-id-badge GH_TeamRole]
     GH_User[fa:fa-user GH_User]

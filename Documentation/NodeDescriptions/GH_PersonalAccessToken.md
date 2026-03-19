@@ -31,8 +31,8 @@ Created by: `Git-HoundPersonalAccessToken`
 flowchart TD
     GH_PersonalAccessToken[fa:fa-key GH_PersonalAccessToken]
     GH_User[fa:fa-user GH_User]
-    GH_Organization[fa:fa-building GH_Organization]
-    GH_Repository[fa:fa-box-archive GH_Repository]
+    GH_Organization[fa:fa-building-flag GH_Organization]
+    GH_Repository[fa:fa-book GH_Repository]
 
 
     GH_User -.->|GH_HasPersonalAccessToken| GH_PersonalAccessToken

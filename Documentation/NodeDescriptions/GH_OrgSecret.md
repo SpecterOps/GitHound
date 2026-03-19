@@ -22,8 +22,8 @@ Created by: `Git-HoundOrganizationSecret`
 ```mermaid
 flowchart TD
     GH_OrgSecret[fa:fa-lock GH_OrgSecret]
-    GH_Organization[fa:fa-building GH_Organization]
-    GH_Repository[fa:fa-box-archive GH_Repository]
+    GH_Organization[fa:fa-building-flag GH_Organization]
+    GH_Repository[fa:fa-book GH_Repository]
 
 
     GH_Organization -.->|GH_Contains| GH_OrgSecret

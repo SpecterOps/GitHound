@@ -24,7 +24,7 @@ Created by: `Git-HoundSecret`
 ```mermaid
 flowchart TD
     GH_RepoSecret[fa:fa-lock GH_RepoSecret]
-    GH_Repository[fa:fa-box-archive GH_Repository]
+    GH_Repository[fa:fa-book GH_Repository]
 
 
     GH_Repository -.->|GH_Contains| GH_RepoSecret

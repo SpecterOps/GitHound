@@ -28,7 +28,7 @@ Created by: `Git-HoundEnterpriseRole`, `Git-HoundEnterpriseUser`
 
 ```mermaid
 flowchart TD
-    GH_Enterprise[fa:fa-city GH_Enterprise]
+    GH_Enterprise[fa:fa-globe GH_Enterprise]
     GH_EnterpriseRole[fa:fa-user-tie GH_EnterpriseRole]
     GH_User[fa:fa-user GH_User]
     GH_EnterpriseTeam[fa:fa-users-between-lines GH_EnterpriseTeam]

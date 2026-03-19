@@ -41,8 +41,8 @@ Created by: `Git-HoundRepository`
 
 ```mermaid
 flowchart TD
-    GH_Repository[fa:fa-box-archive GH_Repository]
-    GH_Organization[fa:fa-building GH_Organization]
+    GH_Repository[fa:fa-book GH_Repository]
+    GH_Organization[fa:fa-building-flag GH_Organization]
     GH_Branch[fa:fa-code-branch GH_Branch]
     GH_Workflow[fa:fa-cogs GH_Workflow]
     GH_Environment[fa:fa-leaf GH_Environment]
