@@ -2680,7 +2680,9 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
 
         foreach ($entTeam in $enterpriseTeams) {
             $teamNodeId = $entTeam.node_id
-            $entTeamId = "GH_EntTeam_$($entTeam.id)"
+            # Pre-compute hex ID because the GH_EnterpriseTeam node lives in the enterprise
+            # output — Convert-GitHoundOutputIds won't have it in the org-level collection.
+            $entTeamId = ConvertTo-HexObjectId "GH_EntTeam_$($entTeam.id)"
 
             $properties = [pscustomobject]@{
                 name             = Normalize-Null $entTeam.name
