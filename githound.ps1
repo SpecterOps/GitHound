@@ -6272,7 +6272,7 @@ function Git-HoundSecretScanningAlert
         $alertId = "SSA_$($Organization.id)_$($alert.repository.node_id)_$($alert.number)"
         $properties =[pscustomobject]@{
             # Common Properties
-            name                     = Normalize-Null $alert.number
+            name                     = Normalize-Null "$($alert.repository.name)\$($alert.secret_type_display_name) #$($alert.number)"
             node_id                  = Normalize-Null $alertId
             # Relational Properties
             environment_name         = Normalize-Null $alert.repository.owner.login
