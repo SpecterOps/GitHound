@@ -6801,7 +6801,7 @@ function Git-HoundScimUser
 
     do
     {
-        $result = [System.Text.Encoding]::ASCII.GetString((Invoke-GithubRestMethod -Session $Session -Path "scim/v2/organizations/$($Session.OrganizationName)/Users?startIndex=$($startIndex)")) | ConvertFrom-Json
+        $result = [System.Text.Encoding]::ASCII.GetString((Invoke-GithubRestMethod -Session $Session -Path "scim/v2/organizations/$($Session.OrganizationName)/Users?startIndex=$($startIndex)" -ErrorAction Stop)) | ConvertFrom-Json
         foreach($scimIdentity in $result.Resources)
         {
             $props = [pscustomobject]@{
@@ -7662,24 +7662,29 @@ function Invoke-GitHound
         Write-Host "[*] Enumerating SCIM Users"
         $scimNodes = New-Object System.Collections.ArrayList
         $scimEdges = New-Object System.Collections.ArrayList
-        $scim = Git-HoundScimUser -Session $Session
-        if($scim.nodes) { $scimNodes.AddRange(@($scim.nodes)) }
-        if($scim.edges) { $scimEdges.AddRange(@($scim.edges)) }
+        try {
+            $scim = Git-HoundScimUser -Session $Session
+            if($scim.nodes) { $scimNodes.AddRange(@($scim.nodes)) }
+            if($scim.edges) { $scimEdges.AddRange(@($scim.edges)) }
 
-        $orgScimFilteredNodes = [System.Collections.ArrayList]@($scimNodes | Where-Object { $_ -ne $null })
-        $orgScimFilteredEdges = [System.Collections.ArrayList]@($scimEdges | Where-Object { $_ -ne $null })
+            $orgScimFilteredNodes = [System.Collections.ArrayList]@($scimNodes | Where-Object { $_ -ne $null })
+            $orgScimFilteredEdges = [System.Collections.ArrayList]@($scimEdges | Where-Object { $_ -ne $null })
 
-        # Workaround: hex-encode objectids to avoid BloodHound case collisions (remove when BH supports case-sensitive IDs)
-        Convert-GitHoundOutputIds -Nodes $orgScimFilteredNodes -Edges $orgScimFilteredEdges
+            # Workaround: hex-encode objectids to avoid BloodHound case collisions (remove when BH supports case-sensitive IDs)
+            Convert-GitHoundOutputIds -Nodes $orgScimFilteredNodes -Edges $orgScimFilteredEdges
 
-        $payload = [PSCustomObject]@{
-            '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
-            graph = [PSCustomObject]@{
-                nodes = $orgScimFilteredNodes
-                edges = $orgScimFilteredEdges
-            }
-        } | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_scim_$orgId.json")
-        Write-Host "[+] SCIM payload: githound_scim_$orgId.json ($($orgScimFilteredNodes.Count) nodes, $($orgScimFilteredEdges.Count) edges)"
+            $payload = [PSCustomObject]@{
+                '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
+                graph = [PSCustomObject]@{
+                    nodes = $orgScimFilteredNodes
+                    edges = $orgScimFilteredEdges
+                }
+            } | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_scim_$orgId.json")
+            Write-Host "[+] SCIM payload: githound_scim_$orgId.json ($($orgScimFilteredNodes.Count) nodes, $($orgScimFilteredEdges.Count) edges)"
+        }
+        catch {
+            Write-Host "[*] Skipping org-level SCIM (SCIM may be configured at the enterprise level): $_"
+        }
     } else {
         Write-Host "[*] Skipping SCIM Users (use -CollectAll to include)"
     }
@@ -7806,6 +7811,10 @@ function Invoke-GitHoundEnterprise
         [Parameter()]
         [switch]
         $CleanupIntermediates,
+
+        [Parameter()]
+        [switch]
+        $CollectAll,
 
         [Parameter()]
         [switch]
@@ -8046,6 +8055,7 @@ function Invoke-GitHoundEnterprise
                 }
                 if ($Resume) { $invokeParams['Resume'] = $true }
                 if ($CleanupIntermediates) { $invokeParams['CleanupIntermediates'] = $true }
+                if ($CollectAll) { $invokeParams['CollectAll'] = $true }
 
                 Invoke-GitHound @invokeParams
             }
