@@ -10,8 +10,8 @@
     "GH_AppInstallation": {
       "icon": {
         "type": "font-awesome",
-        "name": "window-restore",
-        "color": "#EFC41D"
+        "name": "plug",
+        "color": "#A8D8EA"
       }
     },
     "GH_Branch": {
@@ -26,6 +26,27 @@
         "type": "font-awesome",
         "name": "shield",
         "color": "#FFB347"
+      }
+    },
+    "GH_Enterprise": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "globe",
+        "color": "#4A90D9"
+      }
+    },
+    "GH_EnterpriseTeam": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "users-between-lines",
+        "color": "#7C3AED"
+      }
+    },
+    "GH_EnterpriseRole": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "user-tie",
+        "color": "#A3D9A5"
       }
     },
     "GH_Environment": {
@@ -59,7 +80,7 @@
     "GH_Organization": {
       "icon": {
         "type": "font-awesome",
-        "name": "building",
+        "name": "building-flag",
         "color": "#5FED83"
       }
     },
@@ -87,7 +108,7 @@
     "GH_Repository": {
       "icon": {
         "type": "font-awesome",
-        "name": "box-archive",
+        "name": "book",
         "color": "#9EECFF"
       }
     },
