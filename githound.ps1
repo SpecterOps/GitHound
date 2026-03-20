@@ -7611,6 +7611,7 @@ function Invoke-GitHound
             "githound_Environment_$orgId.json",
             "githound_OrgSecret_$orgId.json",
             "githound_Secret_$orgId.json",
+            "githound_Variable_$orgId.json",
             "githound_SecretAlerts_$orgId.json",
             "githound_AppInstallation_$orgId.json",
             "githound_PersonalAccessToken_$orgId.json",
@@ -7620,7 +7621,8 @@ function Invoke-GitHound
             "githound_RepoRole_complete.json",
             "githound_Branch_complete.json",
             "githound_Workflow_complete.json",
-            "githound_Secret_complete.json"
+            "githound_Secret_complete.json",
+            "githound_Variable_complete.json"
         )
         $cleanedCount = 0
         foreach ($fileName in ($stepFileNames + $completeFilePatterns)) {
