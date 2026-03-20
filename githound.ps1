@@ -817,23 +817,38 @@ function Convert-GitHoundOutputIds
     }
 
     # ── Transform edges ────────────────────────────────────────────────────
-    # Only encode edge values that exist in our idMap (i.e., reference nodes in this output).
-    # Edge values referencing external nodes (Okta_User, AZUser, etc.) must stay as-is
-    # so they match the un-encoded objectids from those foreign collectors.
+    # For GH_ edges: encode all id-matched endpoints — values in the idMap use the
+    # cached encoding; cross-collection references (e.g., enterprise edges pointing
+    # to org nodes) fall back to ConvertTo-HexObjectId so they match the target output.
+    #
+    # For non-GH_ edges (SCIM_, etc.): only encode values found in the idMap.
+    # We don't control how external systems derive their IDs, so unknown values
+    # are left as-is.
+    #
+    # Always skip endpoints with match_by != 'id' or an explicit 'kind' key
+    # (foreign references like Okta_User, AZUser whose collectors don't hex-encode).
     foreach ($edge in $Edges) {
-        # Encode start value (only if in idMap; skip name-matched edges)
-        if (-not $edge.start.ContainsKey('match_by') -or $edge.start['match_by'] -eq 'id') {
+        $isGHEdge = $edge.kind -like 'GH_*'
+
+        # Encode start value
+        if ((-not $edge.start.ContainsKey('match_by') -or $edge.start['match_by'] -eq 'id') -and
+            -not $edge.start.ContainsKey('kind')) {
             $startVal = $edge.start['value']
             if ($idMap.ContainsKey($startVal)) {
                 $edge.start['value'] = $idMap[$startVal]
+            } elseif ($isGHEdge) {
+                $edge.start['value'] = ConvertTo-HexObjectId $startVal
             }
         }
 
-        # Encode end value (only if in idMap; skip name-matched edges)
-        if (-not $edge.end.ContainsKey('match_by') -or $edge.end['match_by'] -eq 'id') {
+        # Encode end value
+        if ((-not $edge.end.ContainsKey('match_by') -or $edge.end['match_by'] -eq 'id') -and
+            -not $edge.end.ContainsKey('kind')) {
             $endVal = $edge.end['value']
             if ($idMap.ContainsKey($endVal)) {
                 $edge.end['value'] = $idMap[$endVal]
+            } elseif ($isGHEdge) {
+                $edge.end['value'] = ConvertTo-HexObjectId $endVal
             }
         }
     }
@@ -2680,9 +2695,7 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
 
         foreach ($entTeam in $enterpriseTeams) {
             $teamNodeId = $entTeam.node_id
-            # Pre-compute hex ID because the GH_EnterpriseTeam node lives in the enterprise
-            # output — Convert-GitHoundOutputIds won't have it in the org-level collection.
-            $entTeamId = ConvertTo-HexObjectId "GH_EntTeam_$($entTeam.id)"
+            $entTeamId = "GH_EntTeam_$($entTeam.id)"
 
             $properties = [pscustomobject]@{
                 name             = Normalize-Null $entTeam.name
