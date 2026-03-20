@@ -6854,12 +6854,13 @@ function Parse-GitHoundOIDCSubject
 {
     <#
     .SYNOPSIS
-        Parses GitHub OIDC subject claims from AZFederatedIdentityCredential nodes and creates GH_CanAssumeIdentity edges.
+        Parses GitHub OIDC subject claims from AzureHound output and creates GH_CanAssumeIdentity edges.
 
     .DESCRIPTION
-        This function processes AZFederatedIdentityCredential nodes that have GitHub OIDC subject claims
-        (subjects beginning with "repo:") and creates GH_CanAssumeIdentity edges from the appropriate GitHub
-        node (GH_Branch, GH_Environment, or GH_Repository) to the AZFederatedIdentityCredential node.
+        This function reads an AzureHound Community Edition JSON output file, extracts
+        AZFederatedIdentityCredential entries whose issuer is GitHub Actions OIDC, parses
+        the subject claims, and creates GH_CanAssumeIdentity edges from the appropriate
+        GitHub node (GH_Branch, GH_Environment, or GH_Repository) to the Azure FIC.
 
         GitHub OIDC subject claim format: repo:{org}/{repo}:{qualifier}
 
@@ -6871,32 +6872,35 @@ function Parse-GitHoundOIDCSubject
           - pull_request               → GH_Repository (name: {repo}) [PR-level not tracked, falls back to repo]
           - job_workflow_ref:{path}    → GH_Repository (name: {repo}) [workflow ref not tracked, falls back to repo]
 
-    .PARAMETER FederatedIdentityCredentials
-        An array of AZFederatedIdentityCredential node objects. Each node must have:
-          - id: The objectid of the federated identity credential
-          - properties.subject: The OIDC subject claim string
+    .PARAMETER Path
+        Path to the AzureHound CE JSON output file.
 
     .EXAMPLE
-        $fidcNodes = @(
-            [PSCustomObject]@{
-                id = '6739d77d-ec59-468d-8505-bd9f9f139183'
-                properties = @{ subject = 'repo:SpecterTst/oidc-actions-test-1:ref:refs/heads/prod' }
-            }
-        )
-        $result = Parse-GitHoundOIDCSubject -FederatedIdentityCredentials $fidcNodes
+        $result = Parse-GitHoundOIDCSubject -Path "./output/azurehound-ce.json"
     #>
     [CmdletBinding()]
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
-        [PSObject[]]
-        $FederatedIdentityCredentials
+        [String]
+        $Path
     )
 
     $edges = New-Object System.Collections.ArrayList
 
-    $ghSubjects = @($FederatedIdentityCredentials | Where-Object { $_.properties.subject -like 'repo:*' })
+    $azData = Get-Content $Path -Raw | ConvertFrom-Json
+    $fidcEntries = @($azData.data | Where-Object { $_.kind -eq 'AZFederatedIdentityCredential' })
 
-    if($ghSubjects.Count -eq 0)
+    # Flatten: each entry can contain multiple FICs, filter to GitHub OIDC issuer
+    $ghFics = @(foreach ($entry in $fidcEntries) {
+        foreach ($ficWrapper in $entry.data.fics) {
+            if ($ficWrapper.fic.issuer -eq 'https://token.actions.githubusercontent.com' -and
+                $ficWrapper.fic.subject -like 'repo:*') {
+                $ficWrapper.fic
+            }
+        }
+    })
+
+    if ($ghFics.Count -eq 0)
     {
         Write-Host "[*] OIDC Subject Parser: No GitHub OIDC subjects found"
         Write-Output ([PSCustomObject]@{
@@ -6906,22 +6910,20 @@ function Parse-GitHoundOIDCSubject
         return
     }
 
-    Write-Host "[*] OIDC Subject Parser: Processing $($ghSubjects.Count) GitHub OIDC subject(s)"
+    Write-Host "[*] OIDC Subject Parser: Processing $($ghFics.Count) GitHub OIDC subject(s)"
 
     $parsed = 0
     $skipped = 0
 
-    foreach($fidc in $ghSubjects)
+    foreach ($fic in $ghFics)
     {
-        $subject = $fidc.properties.subject
-        $fidcId = $fidc.id
+        $subject = $fic.subject
+        $fidcId = $fic.id
 
         # Parse: repo:{org}/{repo}:{qualifier}
-        # The subject always starts with "repo:" and the org/repo is separated by "/"
-        # The qualifier follows after the second ":"
         $withoutPrefix = $subject.Substring(5)  # Remove "repo:"
         $slashIndex = $withoutPrefix.IndexOf('/')
-        if($slashIndex -lt 0)
+        if ($slashIndex -lt 0)
         {
             Write-Verbose "OIDC Subject Parser: Skipping malformed subject (no org/repo separator): $subject"
             $skipped++
@@ -6933,7 +6935,7 @@ function Parse-GitHoundOIDCSubject
 
         # Find the colon that separates repo from qualifier
         $colonIndex = $remainder.IndexOf(':')
-        if($colonIndex -lt 0)
+        if ($colonIndex -lt 0)
         {
             Write-Verbose "OIDC Subject Parser: Skipping malformed subject (no qualifier separator): $subject"
             $skipped++
@@ -6950,28 +6952,25 @@ function Parse-GitHoundOIDCSubject
         switch -Wildcard ($qualifier)
         {
             'ref:refs/heads/*' {
-                # Branch reference: repo:{org}/{repo}:ref:refs/heads/{branch}
                 $branch = $qualifier.Substring(15)  # Remove "ref:refs/heads/"
                 $startKind = 'GH_Branch'
                 $startValue = "$repo\$branch"
                 break
             }
             'environment:*' {
-                # Environment reference: repo:{org}/{repo}:environment:{envName}
                 $envName = $qualifier.Substring(12)  # Remove "environment:"
                 $startKind = 'GH_Environment'
                 $startValue = "$repo\$envName"
                 break
             }
             default {
-                # Wildcard or any other qualifier falls back to repository
-                # This handles: *, pull_request, ref:refs/tags/*, job_workflow_ref:*, etc.
+                # Handles: *, pull_request, ref:refs/tags/*, job_workflow_ref:*, etc.
                 $startKind = 'GH_Repository'
                 $startValue = $repo
             }
         }
 
-        if($null -eq $startKind)
+        if ($null -eq $startKind)
         {
             Write-Verbose "OIDC Subject Parser: Skipping unrecognized qualifier in subject: $subject"
             $skipped++
@@ -7268,7 +7267,11 @@ function Invoke-GitHound
 
         [Parameter()]
         [switch]
-        $CollectAll
+        $CollectAll,
+
+        [Parameter()]
+        [string]
+        $AzureHoundPath
     )
 
     $nodes = New-Object System.Collections.ArrayList
@@ -7682,37 +7685,29 @@ function Invoke-GitHound
     }
 
     # ── OIDC (separate output, not included in consolidated payload) ──────
-    $fidcJsonPath = Join-Path $CheckpointPath "azurehound_federatedidentitycredentials.json"
-    if(Test-Path $fidcJsonPath)
+    if ($AzureHoundPath -and (Test-Path $AzureHoundPath))
     {
-        Write-Host "[*] Parsing GitHub OIDC Subjects from Federated Identity Credentials"
-        $fidcData = Get-Content $fidcJsonPath -Raw | ConvertFrom-Json
-        $fidcNodes = @($fidcData.graph.nodes | Where-Object { $_.kind -contains 'AZFederatedIdentityCredential' })
-        if($fidcNodes.Count -gt 0)
+        $oidc = Parse-GitHoundOIDCSubject -Path $AzureHoundPath
+        if ($oidc.Edges.Count -gt 0)
         {
-            $oidc = Parse-GitHoundOIDCSubject -FederatedIdentityCredentials $fidcNodes
-            if($oidc.edges.Count -gt 0)
-            {
-                $oidcNodes = [System.Collections.ArrayList]@()
-                $oidcEdges = [System.Collections.ArrayList]@($oidc.Edges | Where-Object { $_ -ne $null })
+            $oidcNodes = [System.Collections.ArrayList]@()
+            $oidcEdges = [System.Collections.ArrayList]@($oidc.Edges | Where-Object { $_ -ne $null })
 
-                # Workaround: hex-encode objectids to avoid BloodHound case collisions (remove when BH supports case-sensitive IDs)
-                Convert-GitHoundOutputIds -Nodes $oidcNodes -Edges $oidcEdges
+            # Workaround: hex-encode objectids to avoid BloodHound case collisions (remove when BH supports case-sensitive IDs)
+            Convert-GitHoundOutputIds -Nodes $oidcNodes -Edges $oidcEdges
 
-                $payload = [PSCustomObject]@{
-                    '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
-                    graph = [PSCustomObject]@{
-                        nodes = $oidcNodes
-                        edges = $oidcEdges
-                    }
-                } | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_oidc_$orgId.json")
-            }
+            $payload = [PSCustomObject]@{
+                '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
+                graph = [PSCustomObject]@{
+                    nodes = $oidcNodes
+                    edges = $oidcEdges
+                }
+            } | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_oidc_$orgId.json")
         }
     }
-    else
+    elseif ($AzureHoundPath)
     {
-        Write-Host "[*] Skipping OIDC Subject Parsing (no federated identity credential data found at $fidcJsonPath)"
-        Write-Host "    To enable, provide AZFederatedIdentityCredential data in: $fidcJsonPath"
+        Write-Warning "AzureHound output not found at $AzureHoundPath"
     }
 
     Write-Host "[+] GitHound collection complete for $($Session.OrganizationName)."
@@ -7814,7 +7809,11 @@ function Invoke-GitHoundEnterprise
 
         [Parameter()]
         [switch]
-        $SkipOrgCollection
+        $SkipOrgCollection,
+
+        [Parameter()]
+        [string]
+        $AzureHoundPath
     )
 
     $nodes = New-Object System.Collections.ArrayList
@@ -8056,6 +8055,33 @@ function Invoke-GitHoundEnterprise
         }
     } else {
         Write-Host "[*] Skipping org-level collection (-SkipOrgCollection)"
+    }
+
+    # ── OIDC (separate output, enterprise-wide) ────────────────────────────
+    if ($AzureHoundPath -and (Test-Path $AzureHoundPath))
+    {
+        $oidc = Parse-GitHoundOIDCSubject -Path $AzureHoundPath
+        if ($oidc.Edges.Count -gt 0)
+        {
+            $oidcNodes = [System.Collections.ArrayList]@()
+            $oidcEdges = [System.Collections.ArrayList]@($oidc.Edges | Where-Object { $_ -ne $null })
+
+            # Workaround: hex-encode objectids to avoid BloodHound case collisions (remove when BH supports case-sensitive IDs)
+            Convert-GitHoundOutputIds -Nodes $oidcNodes -Edges $oidcEdges
+
+            $payload = [PSCustomObject]@{
+                '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
+                graph = [PSCustomObject]@{
+                    nodes = $oidcNodes
+                    edges = $oidcEdges
+                }
+            } | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_oidc_$entId.json")
+            Write-Host "[+] OIDC payload: githound_oidc_$entId.json ($($oidcEdges.Count) edges)"
+        }
+    }
+    elseif ($AzureHoundPath)
+    {
+        Write-Warning "AzureHound output not found at $AzureHoundPath"
     }
 
     # ── Cleanup Intermediates ──────────────────────────────────────────────
