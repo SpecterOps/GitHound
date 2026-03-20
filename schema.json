@@ -11,7 +11,7 @@
       "display_name": "GitHub Enterprise",
       "description": "A GitHub Enterprise account—top-level container for organizations with enterprise-wide policies and settings",
       "is_display_kind": true,
-      "icon": "city",
+      "icon": "globe",
       "color": "#4A90D9"
     },
     {
@@ -19,7 +19,7 @@
       "display_name": "GitHub Organization",
       "description": "A GitHub Organization—top-level container for repositories, teams, and settings",
       "is_display_kind": true,
-      "icon": "building",
+      "icon": "building-flag",
       "color": "#5FED83"
     },
     {
@@ -39,6 +39,14 @@
       "color": "#7C3AED"
     },
     {
+      "name": "GH_EnterpriseRole",
+      "display_name": "GitHub Enterprise Role",
+      "description": "An enterprise-level role defining permissions within the enterprise (predefined, custom, or default owners/members)",
+      "is_display_kind": true,
+      "icon": "user-tie",
+      "color": "#A3D9A5"
+    },
+    {
       "name": "GH_Team",
       "display_name": "GitHub Team",
       "description": "A team within an organization, grouping users for shared access and collaboration",
@@ -51,7 +59,7 @@
       "display_name": "GitHub Repository",
       "description": "A code repository in an organization, containing files, issues, and other resources",
       "is_display_kind": true,
-      "icon": "box-archive",
+      "icon": "book",
       "color": "#9EECFF"
     },
     {
@@ -634,6 +642,121 @@
     {
       "name": "GH_WriteOrganizationNetworkConfigurations",
       "description": "[Organization] Org role can write network configurations",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_CreateEnterpriseOrganizations",
+      "description": "[Enterprise] Enterprise role can create new organizations within the enterprise",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_EditEnterpriseCustomPropertiesForOrganizations",
+      "description": "[Enterprise] Enterprise role can edit custom properties for organizations",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ManageEnterpriseAdmins",
+      "description": "[Enterprise] Enterprise role can manage enterprise administrators",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_ManageEnterpriseIdentityProvider",
+      "description": "[Enterprise] Enterprise role can manage the enterprise SAML identity provider configuration",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ManageEnterpriseMembers",
+      "description": "[Enterprise] Enterprise role can manage enterprise membership",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_ManageEnterpriseOrganizationAdmins",
+      "description": "[Enterprise] Enterprise role can manage organization administrators across the enterprise",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_ManageEnterpriseOrganizations",
+      "description": "[Enterprise] Enterprise role can manage organizations within the enterprise",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ManageEnterpriseReferrals",
+      "description": "[Enterprise] Enterprise role can manage enterprise referral settings",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ManageEnterpriseTeams",
+      "description": "[Enterprise] Enterprise role can manage enterprise teams",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ReadEnterpriseAuditLog",
+      "description": "[Enterprise] Enterprise role can read the enterprise audit log",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ReadEnterpriseDomainVerification",
+      "description": "[Enterprise] Enterprise role can view the enterprise domain verification status",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ReadEnterpriseMembers",
+      "description": "[Enterprise] Enterprise role can view enterprise membership",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ReadEnterpriseOrgProjects",
+      "description": "[Enterprise] Enterprise role can view organization projects across the enterprise",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ReadEnterpriseOrganizationAdmin",
+      "description": "[Enterprise] Enterprise role can view organization admin settings across the enterprise",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_SetEnterpriseInteractionLimits",
+      "description": "[Enterprise] Enterprise role can set interaction limits for the enterprise",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ViewEnterpriseActionsUsageMetrics",
+      "description": "[Enterprise] Enterprise role can view GitHub Actions usage metrics for the enterprise",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ViewEnterpriseBilling",
+      "description": "[Enterprise] Enterprise role can view enterprise billing information",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_ViewEnterpriseSecretScanningAlerts",
+      "description": "[Enterprise] Enterprise role can view secret scanning alerts across the enterprise",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_WriteEnterpriseActionsPolicies",
+      "description": "[Enterprise] Enterprise role can modify GitHub Actions policies for the enterprise",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_WriteEnterpriseBilling",
+      "description": "[Enterprise] Enterprise role can modify enterprise billing settings",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_WriteEnterprisePersonalAccessTokenPolicies",
+      "description": "[Enterprise] Enterprise role can modify personal access token policies for the enterprise",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_WriteEnterpriseSso",
+      "description": "[Enterprise] Enterprise role can modify enterprise SSO settings",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_WriteEnterpriseTeamMembers",
+      "description": "[Enterprise] Enterprise role can modify enterprise team membership",
       "is_traversable": false
     },
     {
