@@ -188,6 +188,20 @@
         "name": "key",
         "color": "#D4A017"
       }
+    },
+    "GH_WorkflowJob": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "layer-group",
+        "color": "#6EE7B7"
+      }
+    },
+    "GH_WorkflowStep": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "circle-dot",
+        "color": "#C7D2FE"
+      }
     }
   }
 }

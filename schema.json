@@ -221,6 +221,22 @@
       "is_display_kind": true,
       "icon": "key",
       "color": "#D4A017"
+    },
+    {
+      "name": "GH_WorkflowJob",
+      "display_name": "GitHub Workflow Job",
+      "description": "A job within a GitHub Actions workflow, with a runner, permissions, and an ordered list of steps",
+      "is_display_kind": true,
+      "icon": "layer-group",
+      "color": "#6EE7B7"
+    },
+    {
+      "name": "GH_WorkflowStep",
+      "display_name": "GitHub Workflow Step",
+      "description": "A single step within a GitHub Actions job — either a uses: action reference or a run: shell command",
+      "is_display_kind": true,
+      "icon": "circle-dot",
+      "color": "#C7D2FE"
     }
   ],
   "relationship_kinds": [
@@ -867,6 +883,41 @@
     {
       "name": "GH_SyncedTo",
       "description": "External identity (Azure, Okta, PingOne) is synced to this GitHub user via SSO/SCIM",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_HasJob",
+      "description": "[Workflow] Workflow contains this job — GH_Workflow → GH_WorkflowJob",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_HasStep",
+      "description": "[Workflow] Job contains this step — GH_WorkflowJob → GH_WorkflowStep",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_DependsOn",
+      "description": "[Workflow] Job must run after another job (needs: dependency) — ordering only, not an access path",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_DeploysTo",
+      "description": "[Workflow] Job deploys to a GitHub Environment — GH_WorkflowJob → GH_Environment",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_UsesSecret",
+      "description": "[Workflow] Step references a secret by name — GH_WorkflowStep → GH_Secret (name match)",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_UsesVariable",
+      "description": "[Workflow] Step references a variable by name — GH_WorkflowStep → GH_Variable (name match)",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_CallsWorkflow",
+      "description": "[Workflow] Job calls a reusable workflow — GH_WorkflowJob → GH_Workflow",
       "is_traversable": true
     }
   ],
