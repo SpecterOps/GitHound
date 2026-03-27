@@ -7778,6 +7778,11 @@ function Invoke-GitHound
     }
 
     Write-Host "[+] GitHound collection complete for $($Session.OrganizationName)."
+    Write-Host ""
+    Write-Host "    To parse workflow jobs/steps and generate a BloodHound upload file:"
+    Write-Host "      `$data = Get-Content '$consolidatedFile' -Raw | ConvertFrom-Json"
+    Write-Host "      `$workflowNodes = `$data.graph.nodes | Where-Object { `$_.kinds -contains 'GH_Workflow' -and `$_.properties.contents -ne `$null }"
+    Write-Host "      Parse-GitHoundWorkflow -Workflows `$workflowNodes | ConvertTo-BHOG -EncodeIds | ConvertTo-Json -Depth 10 | Out-File (Join-Path '$CheckpointPath' 'githound_workflows_$orgId.json')"
 }
 
 function Invoke-GitHoundEnterprise
