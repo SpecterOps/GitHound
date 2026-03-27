@@ -274,7 +274,12 @@ function Invoke-GithubRestMethod {
 
             
 
-            $Response.Content | ConvertFrom-Json | ForEach-Object { $_ }
+            try {
+                $Response.Content | ConvertFrom-Json | ForEach-Object { $_ }
+            } catch {
+                Write-Warning "[!] JSON parse failed for $($Session.Uri)$Path — HTTP $($Response.StatusCode), first 200 chars: $($Response.Content.Substring(0, [Math]::Min(200, $Response.Content.Length)))"
+                throw $_
+            }
 
             $LinkHeader = $null
             if($Response.Headers['Link']) {
@@ -585,11 +590,11 @@ function New-GitHoundEdge
         [String]
         $Kind,
 
-        [Parameter(Position = 1, Mandatory = $true)]
+        [Parameter(Position = 1, Mandatory = $false)]
         [PSObject]
         $StartId,
 
-        [Parameter(Position = 2, Mandatory = $true)]
+        [Parameter(Position = 2, Mandatory = $false)]
         [PSObject]
         $EndId,
 
@@ -611,40 +616,71 @@ function New-GitHoundEdge
         [String]
         $EndMatchBy = 'id',
 
+        # Property-based matching (match_by: property). When provided, overrides StartId/StartMatchBy.
+        [Parameter(Mandatory = $false)]
+        [array]
+        $StartPropertyMatchers,
+
+        # Property-based matching (match_by: property). When provided, overrides EndId/EndMatchBy.
+        [Parameter(Mandatory = $false)]
+        [array]
+        $EndPropertyMatchers,
+
         [Parameter(Mandatory = $false)]
         [Hashtable]
         $Properties = @{}
     )
 
-    $edge = [pscustomobject]@{
-        kind = $Kind
-        start = @{
-            value = $StartId
-        }
-        end = @{
-            value = $EndId
-        }
+    $startEndpoint = if ($PSBoundParameters.ContainsKey('StartPropertyMatchers')) {
+        $ep = @{ match_by = 'property'; property_matchers = $StartPropertyMatchers }
+        if ($PSBoundParameters.ContainsKey('StartKind')) { $ep['kind'] = $StartKind }
+        $ep
+    } else {
+        $ep = @{ value = $StartId }
+        if ($PSBoundParameters.ContainsKey('StartKind'))    { $ep['kind']     = $StartKind }
+        if ($PSBoundParameters.ContainsKey('StartMatchBy')) { $ep['match_by'] = $StartMatchBy }
+        $ep
+    }
+
+    $endEndpoint = if ($PSBoundParameters.ContainsKey('EndPropertyMatchers')) {
+        $ep = @{ match_by = 'property'; property_matchers = $EndPropertyMatchers }
+        if ($PSBoundParameters.ContainsKey('EndKind')) { $ep['kind'] = $EndKind }
+        $ep
+    } else {
+        $ep = @{ value = $EndId }
+        if ($PSBoundParameters.ContainsKey('EndKind'))    { $ep['kind']     = $EndKind }
+        if ($PSBoundParameters.ContainsKey('EndMatchBy')) { $ep['match_by'] = $EndMatchBy }
+        $ep
+    }
+
+    Write-Output ([pscustomobject]@{
+        kind       = $Kind
+        start      = $startEndpoint
+        end        = $endEndpoint
         properties = $Properties
-    }
+    })
+}
 
-    if($PSBoundParameters.ContainsKey('StartKind')) 
-    {
-        $edge.start.Add('kind', $StartKind)
-    }
-    if($PSBoundParameters.ContainsKey('StartMatchBy')) 
-    {
-        $edge.start.Add('match_by', $StartMatchBy)
-    }
-    if($PSBoundParameters.ContainsKey('EndKind'))
-    {
-        $edge.end.Add('kind', $EndKind)
-    }
-    if($PSBoundParameters.ContainsKey('EndMatchBy')) 
-    {
-        $edge.end.Add('match_by', $EndMatchBy)
-    }
+function New-BHOGPropertyMatcher
+{
+    <#
+    .SYNOPSIS
+        Creates a property matcher object for use with New-GitHoundEdge -StartPropertyMatchers/-EndPropertyMatchers.
+    .EXAMPLE
+        New-BHOGPropertyMatcher -Key 'name' -Value 'MY_SECRET'
+    #>
+    Param(
+        [Parameter(Mandatory)]
+        [string]$Key,
 
-    Write-Output $edge
+        [Parameter(Mandatory)]
+        $Value,
+
+        [Parameter()]
+        [ValidateSet('equals')]
+        [string]$Operator = 'equals'
+    )
+    @{ key = $Key; operator = $Operator; value = $Value }
 }
 
 function Normalize-Null
@@ -800,18 +836,24 @@ function Convert-GitHoundOutputIds
                 }
             }
             elseif ($key -like 'query_*') {
-                # Cypher query string — find-replace all known IDs
-                foreach ($raw in $idMap.Keys) {
-                    if ($val.Contains($raw)) {
-                        $val = $val.Replace($raw, $idMap[$raw])
-                    }
-                    # BloodHound may also uppercase IDs in stored queries
-                    $rawUpper = $raw.ToUpper()
-                    if ($val.Contains($rawUpper)) {
-                        $val = $val.Replace($rawUpper, $idMap[$raw])
+                # Extract ID-like tokens from the query, then only look those up in the map.
+                # Much faster than iterating the entire idMap for every query string.
+                $tokens = [System.Text.RegularExpressions.Regex]::Matches($val, "[A-Za-z0-9+/=_-]{6,}")
+                $replaced = $false
+                foreach ($m in $tokens) {
+                    $token = $m.Value
+                    if ($idMap.ContainsKey($token)) {
+                        $val = $val.Replace($token, $idMap[$token])
+                        $replaced = $true
+                    } else {
+                        $tokenUpper = $token.ToUpper()
+                        if ($token -cne $tokenUpper -and $idMap.ContainsKey($tokenUpper)) {
+                            $val = $val.Replace($token, $idMap[$tokenUpper])
+                            $replaced = $true
+                        }
                     }
                 }
-                $node.properties.$key = $val
+                if ($replaced) { $node.properties.$key = $val }
             }
         }
     }
@@ -830,25 +872,52 @@ function Convert-GitHoundOutputIds
     foreach ($edge in $Edges) {
         $isGHEdge = $edge.kind -like 'GH_*'
 
+        # Helper: works for both hashtable and PSCustomObject (e.g. deserialized from JSON)
+        $hasKey = { param($obj, $key)
+            if ($obj -is [hashtable] -or $obj -is [System.Collections.Generic.Dictionary[string,object]]) {
+                return $obj.ContainsKey($key)
+            } else {
+                return $null -ne ($obj.PSObject.Properties[$key])
+            }
+        }
+        $getVal = { param($obj, $key)
+            if ($obj -is [hashtable] -or $obj -is [System.Collections.Generic.Dictionary[string,object]]) {
+                return $obj[$key]
+            } else {
+                return $obj.$key
+            }
+        }
+        $setVal = { param($obj, $key, $val)
+            if ($obj -is [hashtable] -or $obj -is [System.Collections.Generic.Dictionary[string,object]]) {
+                $obj[$key] = $val
+            } else {
+                $obj.$key = $val
+            }
+        }
+
         # Encode start value
-        if ((-not $edge.start.ContainsKey('match_by') -or $edge.start['match_by'] -eq 'id') -and
-            -not $edge.start.ContainsKey('kind')) {
-            $startVal = $edge.start['value']
-            if ($idMap.ContainsKey($startVal)) {
-                $edge.start['value'] = $idMap[$startVal]
-            } elseif ($isGHEdge) {
-                $edge.start['value'] = ConvertTo-HexObjectId $startVal
+        if ((-not (& $hasKey $edge.start 'match_by') -or (& $getVal $edge.start 'match_by') -eq 'id') -and
+            -not (& $hasKey $edge.start 'kind')) {
+            $startVal = & $getVal $edge.start 'value'
+            if ($startVal) {
+                if ($idMap.ContainsKey($startVal)) {
+                    & $setVal $edge.start 'value' $idMap[$startVal]
+                } elseif ($isGHEdge) {
+                    & $setVal $edge.start 'value' (ConvertTo-HexObjectId $startVal)
+                }
             }
         }
 
         # Encode end value
-        if ((-not $edge.end.ContainsKey('match_by') -or $edge.end['match_by'] -eq 'id') -and
-            -not $edge.end.ContainsKey('kind')) {
-            $endVal = $edge.end['value']
-            if ($idMap.ContainsKey($endVal)) {
-                $edge.end['value'] = $idMap[$endVal]
-            } elseif ($isGHEdge) {
-                $edge.end['value'] = ConvertTo-HexObjectId $endVal
+        if ((-not (& $hasKey $edge.end 'match_by') -or (& $getVal $edge.end 'match_by') -eq 'id') -and
+            -not (& $hasKey $edge.end 'kind')) {
+            $endVal = & $getVal $edge.end 'value'
+            if ($endVal) {
+                if ($idMap.ContainsKey($endVal)) {
+                    & $setVal $edge.end 'value' $idMap[$endVal]
+                } elseif ($isGHEdge) {
+                    & $setVal $edge.end 'value' (ConvertTo-HexObjectId $endVal)
+                }
             }
         }
     }
@@ -3791,6 +3860,11 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
                     $ruleToBranches[$prop.Name] = [System.Collections.ArrayList]@($prop.Value)
                 }
             }
+            if ($p2Data.metadata.rule_to_repo) {
+                foreach ($prop in $p2Data.metadata.rule_to_repo.PSObject.Properties) {
+                    $ruleToRepo[$prop.Name] = @{ name = $prop.Value.name; id = $prop.Value.id }
+                }
+            }
             Write-Host "[*] Auto-resume: Phase 2 checkpoint found ($($nodes.Count) branches). Skipping to Phase 3."
             $skipPhase1 = $true
             $skipPhase2 = $true
@@ -3829,6 +3903,11 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
                 if ($resumeData.metadata.rule_to_branches) {
                     foreach ($prop in $resumeData.metadata.rule_to_branches.PSObject.Properties) {
                         $ruleToBranches[$prop.Name] = [System.Collections.ArrayList]@($prop.Value)
+                    }
+                }
+                if ($resumeData.metadata.rule_to_repo) {
+                    foreach ($prop in $resumeData.metadata.rule_to_repo.PSObject.Properties) {
+                        $ruleToRepo[$prop.Name] = @{ name = $prop.Value.name; id = $prop.Value.id }
                     }
                 }
 
@@ -3928,6 +4007,7 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
                 timestamp        = (Get-Date -Format "o")
                 overflow_repos   = @($overflowRepos)
                 rule_to_branches = $ruleToBranches
+                rule_to_repo     = $ruleToRepo
             }
             graph = [PSCustomObject]@{
                 nodes = @($nodes)
@@ -4028,6 +4108,7 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
                 phase            = "branches_phase2"
                 timestamp        = (Get-Date -Format "o")
                 rule_to_branches = $ruleToBranches
+                rule_to_repo     = $ruleToRepo
             }
             graph = [PSCustomObject]@{
                 nodes = @($nodes)
@@ -5237,38 +5318,17 @@ function Git-HoundWorkflow
 
                 foreach($workflow in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/actions/workflows").workflows)
                 {
-                    # Download workflow file contents from the repository
-                    # Try the default branch first, then fall back to other branches if not found
                     $workflowContent = $null
                     $workflowBranch = $null
-                    $contentsBasePath = "repos/$($repo.properties.full_name)/contents/$($workflow.path)"
-                    try {
-                        $contentResponse = Invoke-GithubRestMethod -Session $Session -Path $contentsBasePath -ErrorAction Stop
-                        if ($contentResponse.content) {
-                            $workflowContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(($contentResponse.content -replace '\s','')))
-                            $workflowBranch = $repo.properties.default_branch
-                        }
-                    } catch {
-                        # Workflow not on default branch — try other branches
+                    if ($workflow.path -like '.github/workflows/*') {
                         try {
-                            $branches = Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/branches" -ErrorAction Stop
-                            foreach ($branch in $branches) {
-                                try {
-                                    $contentResponse = Invoke-GithubRestMethod -Session $Session -Path "$contentsBasePath`?ref=$($branch.name)" -ErrorAction Stop
-                                    if ($contentResponse.content) {
-                                        $workflowContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(($contentResponse.content -replace '\s','')))
-                                        $workflowBranch = $branch.name
-                                        break
-                                    }
-                                } catch {
-                                    continue
-                                }
+                            $fileResponse = Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/contents/$($workflow.path)" -ErrorAction Stop
+                            if ($fileResponse.content) {
+                                $cleanBase64 = $fileResponse.content -replace '[\r\n\s]', ''
+                                $workflowContent = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($cleanBase64))
                             }
                         } catch {
-                            Write-Warning "Could not list branches for $($repo.properties.full_name): $_"
-                        }
-                        if (-not $workflowContent) {
-                            Write-Warning "Could not download workflow contents for $($repo.properties.full_name)/$($workflow.path) on any branch"
+                            Write-Warning "[!] Could not fetch contents for workflow '$($workflow.path)' in '$($repo.properties.full_name)': $($_.Exception.Message)"
                         }
                     }
 
