@@ -4825,7 +4825,7 @@ function Git-HoundSecretScanningAlert
             repository_id            = Normalize-Null $alert.repository.node_id
             repository_url           = Normalize-Null $alert.repository.html_url
             # Node Specific Properties
-            secret                   = Normalize-Null $alert.secret
+            # secret                   = Normalize-Null $alert.secret  # omitted from output; still used for GH_ValidToken edge generation
             secret_type              = Normalize-Null $alert.secret_type
             secret_type_display_name = Normalize-Null $alert.secret_type_display_name
             validity                 = Normalize-Null $alert.validity
