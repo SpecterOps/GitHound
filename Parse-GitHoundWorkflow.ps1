@@ -276,11 +276,23 @@ function Parse-GitHoundWorkflow
                 $usesReusable = $job['uses']
             }
 
+            # Detect self-hosted runner
+            $isSelfHosted = $false
+            if ($runsOn) {
+                if ($runsOn -eq 'self-hosted') {
+                    $isSelfHosted = $true
+                } else {
+                    $parsed = try { $runsOn | ConvertFrom-Json -ErrorAction SilentlyContinue } catch { $null }
+                    if ($parsed -and ($parsed -contains 'self-hosted')) { $isSelfHosted = $true }
+                }
+            }
+
             $jobProps = @{
                 name             = "$repoName\$jobKey"
                 node_id          = $jobId
                 job_key          = $jobKey
                 runs_on          = Normalize-Null $runsOn
+                is_self_hosted   = $isSelfHosted
                 container        = Normalize-Null ($job['container'] -is [string] ? $job['container'] : ($job['container'] | ConvertTo-Json -Compress -ErrorAction SilentlyContinue))
                 environment      = Normalize-Null $jobEnvironment
                 permissions      = Normalize-Null $jobPermissions
@@ -472,24 +484,50 @@ function Parse-GitHoundWorkflow
                     $injectionRisks = @($allRiskyMatches | Select-Object -Unique) | ConvertTo-Json -Compress
                 }
 
+                # Detect local script execution in run: blocks
+                $localScriptRefs = $null
+                if ($step['run'])
+                {
+                    $scriptMatches = New-Object System.Collections.ArrayList
+                    # Pattern covers:
+                    #   ./path/to/script.ext              (direct execution)
+                    #   bash|sh|zsh|python|python3|node|ruby|perl|pwsh|powershell  path/to/script.ext
+                    #   source|.  ./path/to/script.ext    (shell sourcing)
+                    #   go run ./path/to/file.go
+                    $localScriptPattern = '(?m)(?:^|\s|&&|\|\||;)\s*(?:(?:bash|sh|zsh|python3?|node|ruby|perl|pwsh|powershell)\s+|(?:source|\.)\s+|go\s+run\s+)?(\./[^\s;|&\r\n]+|\.github/[^\s;|&\r\n]+)'
+                    foreach ($m in [regex]::Matches($step['run'], $localScriptPattern)) {
+                        $scriptPath = $m.Groups[1].Value
+                        # Filter out expression-only refs and common false positives
+                        if ($scriptPath -notmatch '^\$\{\{' -and $scriptPath -match '\.\w+$') {
+                            $null = $scriptMatches.Add($scriptPath)
+                        }
+                    }
+                    if ($scriptMatches.Count -gt 0) {
+                        $localScriptRefs = @($scriptMatches | Select-Object -Unique) | ConvertTo-Json -Compress
+                    }
+                }
+
                 $actionSlug = if ($actionOwner -and $actionName) { "$actionOwner/$actionName" } else { $null }
 
                 $stepProps = @{
-                    name            = Normalize-Null $stepName
-                    node_id         = $stepId
-                    step_index      = $stepIndex
-                    type            = $stepType
-                    action          = Normalize-Null $action
-                    action_slug     = Normalize-Null $actionSlug
-                    auth_provider   = Normalize-Null $authProvider
-                    action_owner    = Normalize-Null $actionOwner
-                    action_name     = Normalize-Null $actionName
-                    action_ref      = Normalize-Null $actionRef
-                    is_pinned       = $isPinned
-                    run             = Normalize-Null $step['run']
-                    contents        = Normalize-Null (($step | ConvertTo-Json -Compress -Depth 5 -ErrorAction SilentlyContinue) -replace '\r?\n', '')
-                    injection_risks = Normalize-Null $injectionRisks
-                    job_node_id     = $jobId
+                    name              = Normalize-Null $stepName
+                    node_id           = $stepId
+                    step_index        = $stepIndex
+                    type              = $stepType
+                    action            = Normalize-Null $action
+                    action_slug       = Normalize-Null $actionSlug
+                    auth_provider     = Normalize-Null $authProvider
+                    action_owner      = Normalize-Null $actionOwner
+                    action_name       = Normalize-Null $actionName
+                    action_ref        = Normalize-Null $actionRef
+                    is_pinned         = $isPinned
+                    has_injection_risk = [bool]$injectionRisks
+                    runs_local_script = [bool]$localScriptRefs
+                    run               = Normalize-Null $step['run']
+                    contents          = Normalize-Null (($step | ConvertTo-Json -Compress -Depth 5 -ErrorAction SilentlyContinue) -replace '\r?\n', '')
+                    injection_risks   = Normalize-Null $injectionRisks
+                    local_script_refs = Normalize-Null $localScriptRefs
+                    job_node_id       = $jobId
                 }
 
                 $null = $nodes.Add((New-GitHoundNode -Id $stepId -Kind 'GH_WorkflowStep' -Properties $stepProps))
@@ -781,9 +819,11 @@ function Get-GitHoundWorkflowFindings
 
         Severity levels:
           Critical — injection risk in pull_request_target trigger (fork PR exfiltration)
-          High     — injection risk in other triggers; pull_request_target with secret access
-          Medium   — cloud auth actions without OIDC; self-hosted runner exposure
-          Low      — unpinned actions (supply chain risk)
+          High     — injection risk in other triggers; pull_request_target with secret access;
+                     local script execution in pull_request_target workflow
+          Medium   — cloud auth actions without OIDC; self-hosted runner exposure;
+                     local script execution in pull_request workflow
+          Low      — unpinned actions (supply chain risk); local script execution in other triggers
           Info     — informational findings (workflow_dispatch inputs, etc.)
 
     .PARAMETER ParseResult
@@ -970,36 +1010,51 @@ function Get-GitHoundWorkflowFindings
     }
 
     # ── Finding 5: Self-hosted runners ────────────────────────────────────
-    foreach ($job in ($jobNodes | Where-Object { $_.properties.runs_on }))
+    foreach ($job in ($jobNodes | Where-Object { $_.properties.is_self_hosted }))
     {
-        $runsOn = $job.properties.runs_on
+        $wfName = $job.properties.workflow_node_id -replace '^scan_', ''
 
-        # Detect self-hosted: plain string, or JSON array containing "self-hosted"
-        $isSelfHosted = $false
-        if ($runsOn -eq 'self-hosted') {
-            $isSelfHosted = $true
-        } else {
-            $parsed = try { $runsOn | ConvertFrom-Json -ErrorAction SilentlyContinue } catch { $null }
-            if ($parsed -and ($parsed -contains 'self-hosted')) { $isSelfHosted = $true }
-        }
-
-        if ($isSelfHosted)
-        {
-            $wfName = $job.properties.workflow_node_id -replace '^scan_', ''
-
-            $null = $findings.Add([PSCustomObject]@{
-                severity = 'Medium'
-                type     = 'SelfHostedRunner'
-                title    = "Job '$($job.properties.job_key)' runs on a self-hosted runner"
-                workflow = $wfName
-                job      = $job.properties.job_key
-                step     = $null
-                detail   = "runs-on: $runsOn. Self-hosted runners are not ephemeral by default and may be reachable by untrusted fork PRs. If pull_request or pull_request_target triggers exist, this runner could be compromised."
-            })
-        }
+        $null = $findings.Add([PSCustomObject]@{
+            severity = 'Medium'
+            type     = 'SelfHostedRunner'
+            title    = "Job '$($job.properties.job_key)' runs on a self-hosted runner"
+            workflow = $wfName
+            job      = $job.properties.job_key
+            step     = $null
+            detail   = "runs-on: $($job.properties.runs_on). Self-hosted runners are not ephemeral by default and may be reachable by untrusted fork PRs. If pull_request or pull_request_target triggers exist, this runner could be compromised."
+        })
     }
 
-    # ── Finding 6: workflow_dispatch with user-controlled inputs ──────────
+    # ── Finding 6: Local script execution (pwn request ingredient) ───────
+    foreach ($step in ($stepNodes | Where-Object { $_.properties.runs_local_script }))
+    {
+        $jobId  = $step.properties.job_node_id
+        $job    = $jobNodes | Where-Object { $_.id -eq $jobId } | Select-Object -First 1
+        $wfId   = $job.properties.workflow_node_id
+        $wfName = $wfId -replace '^scan_', ''
+        $triggers = @($wfTriggerMap[$wfId] ?? @())
+
+        $hasPRT = $triggers -contains 'pull_request_target'
+        $hasPR  = $triggers -contains 'pull_request'
+
+        $refs = try { $step.properties.local_script_refs | ConvertFrom-Json } catch { @($step.properties.local_script_refs) }
+
+        $severity = if ($hasPRT) { 'High' }
+                    elseif ($hasPR) { 'Medium' }
+                    else            { 'Low' }
+
+        $null = $findings.Add([PSCustomObject]@{
+            severity = $severity
+            type     = 'LocalScriptExecution'
+            title    = "Step '$($step.properties.name)' executes local repo script(s)"
+            workflow = $wfName
+            job      = $job.properties.job_key
+            step     = $step.properties.name
+            detail   = "Scripts: $($refs -join ', '). Triggers: $($triggers -join ', '). An attacker who can modify these files (via PR or branch push) gains code execution in the workflow context with access to its secrets and permissions."
+        })
+    }
+
+    # ── Finding 7: workflow_dispatch with user-controlled inputs ──────────
     foreach ($wf in ($workflowNodes | Where-Object {
         ($wfTriggerMap[$_.properties.node_id] ?? @()) -contains 'workflow_dispatch' -and $_.properties.trigger_dispatch_inputs }))
     {
