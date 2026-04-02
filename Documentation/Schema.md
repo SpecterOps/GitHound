@@ -40,6 +40,8 @@
 | ![GH_TeamRole](Icons/gh_teamrole.png) | [GH_TeamRole](NodeDescriptions/GH_TeamRole.md) | GitHub Team Role |
 | ![GH_User](Icons/gh_user.png) | [GH_User](NodeDescriptions/GH_User.md) | GitHub User |
 | ![GH_Workflow](Icons/gh_workflow.png) | [GH_Workflow](NodeDescriptions/GH_Workflow.md) | GitHub Workflow |
+| ![GH_WorkflowJob](Icons/gh_workflowjob.png) | [GH_WorkflowJob](NodeDescriptions/GH_WorkflowJob.md) | GitHub Workflow Job |
+| ![GH_WorkflowStep](Icons/gh_workflowstep.png) | [GH_WorkflowStep](NodeDescriptions/GH_WorkflowStep.md) | GitHub Workflow Step |
 
 ## Edges
 
@@ -58,6 +60,7 @@
 | [GH_CanEditProtection](EdgeDescriptions/GH_CanEditProtection.md) | ✅ | [Repository - Computed] Repo role can modify or remove the branch protection rules governing this branch (computed from GH_EditRepoProtections + GH_ProtectedBy) |
 | [GH_CanReadSecretScanningAlert](EdgeDescriptions/GH_CanReadSecretScanningAlert.md) | ✅ | [Computed] Role can read secret scanning alerts (computed from GH_ViewSecretScanningAlerts permission + GH_Contains) |
 | [GH_CanWriteBranch](EdgeDescriptions/GH_CanWriteBranch.md) | ✅ | [Repository - Computed] Role can push to this branch after evaluating branch protection rules, push restrictions, and bypass allowances |
+| [GH_CallsWorkflow](EdgeDescriptions/GH_CallsWorkflow.md) | ✅ | [Workflow] Job calls a reusable workflow |
 | [GH_CloseDiscussion](EdgeDescriptions/GH_CloseDiscussion.md) | ❌ | [Repository] Repo role can close discussions |
 | [GH_CloseIssue](EdgeDescriptions/GH_CloseIssue.md) | ❌ | [Repository] Repo role can close issues |
 | [GH_ClosePullRequest](EdgeDescriptions/GH_ClosePullRequest.md) | ❌ | [Repository] Repo role can close pull requests |
@@ -73,6 +76,8 @@
 | [GH_DeleteDiscussionComment](EdgeDescriptions/GH_DeleteDiscussionComment.md) | ❌ | [Repository] Repo role can delete discussion comments |
 | [GH_DeleteIssue](EdgeDescriptions/GH_DeleteIssue.md) | ❌ | [Repository] Repo role can delete issues |
 | [GH_DeleteTag](EdgeDescriptions/GH_DeleteTag.md) | ❌ | [Repository] Repo role can delete tags and releases |
+| [GH_DependsOn](EdgeDescriptions/GH_DependsOn.md) | ❌ | [Workflow] Job depends on another job completing first (needs: ordering) |
+| [GH_DeploysTo](EdgeDescriptions/GH_DeploysTo.md) | ❌ | [Workflow] Job deploys to a GitHub Environment |
 | [GH_EditCategoryOnDiscussion](EdgeDescriptions/GH_EditCategoryOnDiscussion.md) | ❌ | [Repository] Repo role can change the category of a discussion |
 | [GH_EditDiscussionCategory](EdgeDescriptions/GH_EditDiscussionCategory.md) | ❌ | [Repository] Repo role can edit discussion categories |
 | [GH_EditDiscussionComment](EdgeDescriptions/GH_EditDiscussionComment.md) | ❌ | [Repository] Repo role can edit discussion comments |
@@ -84,11 +89,13 @@
 | [GH_HasBranch](EdgeDescriptions/GH_HasBranch.md) | ❌ | Repository has this branch |
 | [GH_HasEnvironment](EdgeDescriptions/GH_HasEnvironment.md) | ❌ | Repository or branch has/can deploy to this environment |
 | [GH_HasExternalIdentity](EdgeDescriptions/GH_HasExternalIdentity.md) | ❌ | SAML identity provider has this external identity |
+| [GH_HasJob](EdgeDescriptions/GH_HasJob.md) | ✅ | Workflow contains this job |
 | [GH_HasPersonalAccessToken](EdgeDescriptions/GH_HasPersonalAccessToken.md) | ❌ | User owns this personal access token that has been granted access to the organization |
 | [GH_HasPersonalAccessTokenRequest](EdgeDescriptions/GH_HasPersonalAccessTokenRequest.md) | ❌ | User has a pending personal access token request for the organization |
 | [GH_HasRole](EdgeDescriptions/GH_HasRole.md) | ✅ | User or team has a role assignment (org role, team role, or repo role) |
 | [GH_HasSamlIdentityProvider](EdgeDescriptions/GH_HasSamlIdentityProvider.md) | ❌ | Organization has this SAML identity provider configured |
 | [GH_HasSecret](EdgeDescriptions/GH_HasSecret.md) | ✅ | Repository or environment has access to this secret |
+| [GH_HasStep](EdgeDescriptions/GH_HasStep.md) | ✅ | Job contains this step |
 | [GH_HasVariable](EdgeDescriptions/GH_HasVariable.md) | ✅ | Repository has access to this variable (org-level or repo-level) |
 | [GH_HasWorkflow](EdgeDescriptions/GH_HasWorkflow.md) | ❌ | Repository has this workflow |
 | [GH_InstalledAs](EdgeDescriptions/GH_InstalledAs.md) | ✅ | GitHub App is installed as this app installation on an organization |
@@ -138,6 +145,8 @@
 | [GH_ToggleDiscussionAnswer](EdgeDescriptions/GH_ToggleDiscussionAnswer.md) | ❌ | [Repository] Repo role can toggle discussion answers |
 | [GH_ToggleDiscussionCommentMinimize](EdgeDescriptions/GH_ToggleDiscussionCommentMinimize.md) | ❌ | [Repository] Repo role can minimize discussion comments |
 | [GH_TransferRepository](EdgeDescriptions/GH_TransferRepository.md) | ❌ | [Organization] Org role can transfer repositories |
+| [GH_UsesSecret](EdgeDescriptions/GH_UsesSecret.md) | ✅ | [Workflow] Step references a secret (matched by name + scope) |
+| [GH_UsesVariable](EdgeDescriptions/GH_UsesVariable.md) | ❌ | [Workflow] Step references a variable (matched by name + scope) |
 | [GH_ValidToken](EdgeDescriptions/GH_ValidToken.md) | ✅ | Secret scanning alert contains a valid, active token belonging to this user |
 | [GH_ViewDependabotAlerts](EdgeDescriptions/GH_ViewDependabotAlerts.md) | ❌ | [Repository] Repo role can view Dependabot alerts |
 | [GH_ViewSecretScanningAlerts](EdgeDescriptions/GH_ViewSecretScanningAlerts.md) | ❌ | [Repository] Role can view secret scanning alerts |

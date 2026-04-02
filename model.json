@@ -1,0 +1,207 @@
+{
+  "custom_types": {
+    "GH_App": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "cube",
+        "color": "#7EC8E3"
+      }
+    },
+    "GH_AppInstallation": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "plug",
+        "color": "#A8D8EA"
+      }
+    },
+    "GH_Branch": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "code-branch",
+        "color": "#FF80D2"
+      }
+    },
+    "GH_BranchProtectionRule": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "shield",
+        "color": "#FFB347"
+      }
+    },
+    "GH_Enterprise": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "globe",
+        "color": "#4A90D9"
+      }
+    },
+    "GH_EnterpriseTeam": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "users-between-lines",
+        "color": "#7C3AED"
+      }
+    },
+    "GH_EnterpriseRole": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "user-tie",
+        "color": "#A3D9A5"
+      }
+    },
+    "GH_Environment": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "leaf",
+        "color": "#D5F2C2"
+      }
+    },
+    "GH_EnvironmentSecret": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "lock",
+        "color": "#6FB94A"
+      }
+    },
+    "GH_EnvironmentVariable": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "lock-open",
+        "color": "#D4A84B"
+      }
+    },
+    "GH_ExternalIdentity": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "arrows-left-right",
+        "color": "#8A8F98"
+      }
+    },
+    "GH_Organization": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "building-flag",
+        "color": "#5FED83"
+      }
+    },
+    "GH_OrgRole": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "user-tie",
+        "color": "#BFFFD1"
+      }
+    },
+    "GH_OrgSecret": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "lock",
+        "color": "#1FB65A"
+      }
+    },
+    "GH_OrgVariable": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "lock-open",
+        "color": "#E8B84D"
+      }
+    },
+    "GH_Repository": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "book",
+        "color": "#9EECFF"
+      }
+    },
+    "GH_RepoRole": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "user-tie",
+        "color": "#DEFEFA"
+      }
+    },
+    "GH_RepoSecret": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "lock",
+        "color": "#32BEE6"
+      }
+    },
+    "GH_RepoVariable": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "lock-open",
+        "color": "#E89B5C"
+      }
+    },
+    "GH_SamlIdentityProvider": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "id-badge",
+        "color": "#5A6C8F"
+      }
+    },
+    "GH_SecretScanningAlert": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "key",
+        "color": "#3C7A6E"
+      }
+    },
+    "GH_Team": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "user-group",
+        "color": "#C06EFF"
+      }
+    },
+    "GH_TeamRole": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "user-tie",
+        "color": "#D0B0FF"
+      }
+    },
+    "GH_User": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "user",
+        "color": "#FF8E40"
+      }
+    },
+    "GH_Workflow": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "cogs",
+        "color": "#FFE4A1"
+      }
+    },
+    "GH_PersonalAccessToken": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "key",
+        "color": "#F5A623"
+      }
+    },
+    "GH_PersonalAccessTokenRequest": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "key",
+        "color": "#D4A017"
+      }
+    },
+    "GH_WorkflowJob": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "layer-group",
+        "color": "#6EE7B7"
+      }
+    },
+    "GH_WorkflowStep": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "circle-dot",
+        "color": "#C7D2FE"
+      }
+    }
+  }
+}
