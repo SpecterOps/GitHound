@@ -77,7 +77,7 @@
 | [GH_DeleteIssue](EdgeDescriptions/GH_DeleteIssue.md) | ❌ | [Repository] Repo role can delete issues |
 | [GH_DeleteTag](EdgeDescriptions/GH_DeleteTag.md) | ❌ | [Repository] Repo role can delete tags and releases |
 | [GH_DependsOn](EdgeDescriptions/GH_DependsOn.md) | ❌ | [Workflow] Job depends on another job completing first (needs: ordering) |
-| [GH_DeploysTo](EdgeDescriptions/GH_DeploysTo.md) | ✅ | [Workflow] Job deploys to a GitHub Environment |
+| [GH_DeploysTo](EdgeDescriptions/GH_DeploysTo.md) | ❌ | [Workflow] Job deploys to a GitHub Environment |
 | [GH_EditCategoryOnDiscussion](EdgeDescriptions/GH_EditCategoryOnDiscussion.md) | ❌ | [Repository] Repo role can change the category of a discussion |
 | [GH_EditDiscussionCategory](EdgeDescriptions/GH_EditDiscussionCategory.md) | ❌ | [Repository] Repo role can edit discussion categories |
 | [GH_EditDiscussionComment](EdgeDescriptions/GH_EditDiscussionComment.md) | ❌ | [Repository] Repo role can edit discussion comments |

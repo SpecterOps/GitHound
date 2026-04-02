@@ -107,7 +107,7 @@
       "display_name": "GitHub Workflow",
       "description": "A GitHub Actions workflow defined in a repository",
       "is_display_kind": true,
-      "icon": "cogs",
+      "icon": "gears",
       "color": "#FFE4A1"
     },
     {
@@ -903,7 +903,7 @@
     {
       "name": "GH_DeploysTo",
       "description": "[Workflow] Job deploys to a GitHub Environment — GH_WorkflowJob → GH_Environment",
-      "is_traversable": true
+      "is_traversable": false
     },
     {
       "name": "GH_UsesSecret",

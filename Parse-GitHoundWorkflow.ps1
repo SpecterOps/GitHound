@@ -323,7 +323,7 @@ function Parse-GitHoundWorkflow
                     -EndId "$repoName\$jobEnvironment" `
                     -EndKind 'GH_Environment' `
                     -EndMatchBy 'name' `
-                    -Properties @{ traversable = $true }
+                    -Properties @{ traversable = $false }
                 ))
             }
 
