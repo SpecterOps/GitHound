@@ -3,7 +3,7 @@
 ## Edge Schema
 
 - Source: [GH_Repository](../NodeDescriptions/GH_Repository.md), [GH_Branch](../NodeDescriptions/GH_Branch.md), [GH_Environment](../NodeDescriptions/GH_Environment.md)
-- Destination: [AZFederatedIdentityCredential](https://bloodhound.specterops.io/resources/nodes/az-federated-identity-credential), [AWSRole](https://bloodhound.specterops.io/resources/nodes/aws-role)
+- Destination: [AZFederatedIdentityCredential](https://bloodhound.specterops.io/resources/nodes/az-federated-identity-credential), `AWSRole`
 
 ## General Information
 
