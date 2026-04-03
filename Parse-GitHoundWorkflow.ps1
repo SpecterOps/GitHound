@@ -1,5 +1,89 @@
 . "$PSScriptRoot/githound.ps1"
 
+# Override New-GitHoundEdge with property-matcher support (needed for scoped secret/variable edges).
+# This can be removed once githound.ps1 on main includes property matcher support natively.
+function New-GitHoundEdge
+{
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [String]$Kind,
+
+        [Parameter(Position = 1, Mandatory = $false)]
+        [PSObject]$StartId,
+
+        [Parameter(Position = 2, Mandatory = $false)]
+        [PSObject]$EndId,
+
+        [Parameter(Mandatory = $false)]
+        [String]$StartKind,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('id', 'name')]
+        [String]$StartMatchBy = 'id',
+
+        [Parameter(Mandatory = $false)]
+        [String]$EndKind,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('id', 'name')]
+        [String]$EndMatchBy = 'id',
+
+        [Parameter(Mandatory = $false)]
+        [array]$StartPropertyMatchers,
+
+        [Parameter(Mandatory = $false)]
+        [array]$EndPropertyMatchers,
+
+        [Parameter(Mandatory = $false)]
+        [Hashtable]$Properties = @{}
+    )
+
+    $startEndpoint = if ($PSBoundParameters.ContainsKey('StartPropertyMatchers')) {
+        $ep = @{ match_by = 'property'; property_matchers = $StartPropertyMatchers }
+        if ($PSBoundParameters.ContainsKey('StartKind')) { $ep['kind'] = $StartKind }
+        $ep
+    } else {
+        $ep = @{ value = $StartId }
+        if ($PSBoundParameters.ContainsKey('StartKind'))    { $ep['kind']     = $StartKind }
+        if ($PSBoundParameters.ContainsKey('StartMatchBy')) { $ep['match_by'] = $StartMatchBy }
+        $ep
+    }
+
+    $endEndpoint = if ($PSBoundParameters.ContainsKey('EndPropertyMatchers')) {
+        $ep = @{ match_by = 'property'; property_matchers = $EndPropertyMatchers }
+        if ($PSBoundParameters.ContainsKey('EndKind')) { $ep['kind'] = $EndKind }
+        $ep
+    } else {
+        $ep = @{ value = $EndId }
+        if ($PSBoundParameters.ContainsKey('EndKind'))    { $ep['kind']     = $EndKind }
+        if ($PSBoundParameters.ContainsKey('EndMatchBy')) { $ep['match_by'] = $EndMatchBy }
+        $ep
+    }
+
+    Write-Output ([pscustomobject]@{
+        kind       = $Kind
+        start      = $startEndpoint
+        end        = $endEndpoint
+        properties = $Properties
+    })
+}
+
+function New-BHOGPropertyMatcher
+{
+    Param(
+        [Parameter(Mandatory)]
+        [string]$Key,
+
+        [Parameter(Mandatory)]
+        $Value,
+
+        [Parameter()]
+        [ValidateSet('equals')]
+        [string]$Operator = 'equals'
+    )
+    @{ key = $Key; operator = $Operator; value = $Value }
+}
+
 function Add-GitHoundSecretEdges
 {
     # Emits two GH_UsesSecret edges per secret name: one targeting GH_RepoSecret (scoped by
@@ -88,6 +172,57 @@ function Add-GitHoundVariableEdges
     }
 }
 
+function Test-PwnRequestable
+{
+    <#
+    .SYNOPSIS
+        Determines if a parsed workflow is susceptible to pwn requests.
+
+    .DESCRIPTION
+        A workflow is pwn-requestable when:
+          1. It has a pull_request_target trigger
+          2. A step uses actions/checkout with a ref pointing to the PR head
+             (github.event.pull_request.head.sha, github.event.pull_request.head.ref,
+              or github.head_ref)
+
+    .PARAMETER TriggerEventNames
+        The list of trigger event names for the workflow.
+
+    .PARAMETER StepNodes
+        The parsed step nodes for this workflow.
+    #>
+    Param(
+        [System.Collections.ArrayList]$TriggerEventNames,
+        [System.Collections.ArrayList]$StepNodes
+    )
+
+    # Condition 1: must have pull_request_target trigger
+    if ($TriggerEventNames -notcontains 'pull_request_target') { return $false }
+
+    # Condition 2: a step must checkout the attacker-controlled ref
+    $pwnRefPatterns = @(
+        'github.event.pull_request.head.sha',
+        'github.event.pull_request.head.ref',
+        'github.head_ref'
+    )
+
+    foreach ($step in $StepNodes)
+    {
+        if ($step.properties.action_slug -ne 'actions/checkout') { continue }
+        if (-not $step.properties.with_args) { continue }
+
+        $withArgs = try { $step.properties.with_args | ConvertFrom-Json -AsHashtable -ErrorAction SilentlyContinue } catch { $null }
+        if (-not $withArgs -or -not $withArgs['ref']) { continue }
+
+        $refVal = "$($withArgs['ref'])"
+        foreach ($pattern in $pwnRefPatterns) {
+            if ($refVal -like "*$pattern*") { return $true }
+        }
+    }
+
+    return $false
+}
+
 function Parse-GitHoundWorkflow
 {
     <#
@@ -149,7 +284,7 @@ function Parse-GitHoundWorkflow
         $contents = $wf.properties.contents
         if (-not $contents -or $contents.Trim().Length -eq 0)
         {
-            $skipped++
+            $skipped = $skipped + 1
             continue
         }
 
@@ -166,12 +301,12 @@ function Parse-GitHoundWorkflow
         }
         catch {
             Write-Warning "Parse-GitHoundWorkflow: Failed to parse YAML for workflow '$($wf.properties.name)': $_"
-            $skipped++
+            $skipped = $skipped + 1
             continue
         }
 
         if (-not $yaml) {
-            $skipped++
+            $skipped = $skipped + 1
             continue
         }
 
@@ -206,12 +341,12 @@ function Parse-GitHoundWorkflow
         }
 
         # Store trigger event names as a JSON array on the workflow node
-        $wf.properties | Add-Member -NotePropertyName 'triggers' -NotePropertyValue ($triggerEventNames | ConvertTo-Json -Compress) -Force
+        $wf.properties | Add-Member -NotePropertyName 'triggers' -NotePropertyValue (@($triggerEventNames) | ConvertTo-Json -Compress) -Force
 
         # If workflow_dispatch has defined inputs, store the input names
         $dispatchConfig = $triggerEvents['workflow_dispatch']
         if ($dispatchConfig -and $dispatchConfig['inputs']) {
-            $wf.properties | Add-Member -NotePropertyName 'trigger_dispatch_inputs' -NotePropertyValue ($dispatchConfig['inputs'].Keys | ConvertTo-Json -Compress) -Force
+            $wf.properties | Add-Member -NotePropertyName 'trigger_dispatch_inputs' -NotePropertyValue (@($dispatchConfig['inputs'].Keys) | ConvertTo-Json -Compress) -Force
         }
 
         # Include the enriched workflow node in output
@@ -226,7 +361,12 @@ function Parse-GitHoundWorkflow
 
         # ── Jobs ──────────────────────────────────────────────────────────
         $jobs = $yaml['jobs']
-        if (-not $jobs) { $parsed++; continue }
+        $wfStepNodes = New-Object System.Collections.ArrayList
+        if (-not $jobs) {
+            $wf.properties | Add-Member -NotePropertyName 'is_pwn_requestable' -NotePropertyValue $false -Force
+            $parsed = $parsed + 1
+            continue
+        }
 
         # Build a map of job key → job node ID for resolving needs: references
         $jobIdMap = @{}
@@ -509,6 +649,13 @@ function Parse-GitHoundWorkflow
 
                 $actionSlug = if ($actionOwner -and $actionName) { "$actionOwner/$actionName" } else { $null }
 
+                # Capture with: arguments as compact JSON for uses steps
+                $withArgs = $null
+                if ($step['with'] -and ($step['with'] -is [System.Collections.IDictionary] -or $step['with'] -is [hashtable]))
+                {
+                    $withArgs = $step['with'] | ConvertTo-Json -Compress -Depth 5 -ErrorAction SilentlyContinue
+                }
+
                 $stepProps = @{
                     name              = Normalize-Null $stepName
                     node_id           = $stepId
@@ -524,13 +671,16 @@ function Parse-GitHoundWorkflow
                     has_injection_risk = [bool]$injectionRisks
                     runs_local_script = [bool]$localScriptRefs
                     run               = Normalize-Null $step['run']
+                    with_args         = Normalize-Null $withArgs
                     contents          = Normalize-Null (($step | ConvertTo-Json -Compress -Depth 5 -ErrorAction SilentlyContinue) -replace '\r?\n', '')
                     injection_risks   = Normalize-Null $injectionRisks
                     local_script_refs = Normalize-Null $localScriptRefs
                     job_node_id       = $jobId
                 }
 
-                $null = $nodes.Add((New-GitHoundNode -Id $stepId -Kind 'GH_WorkflowStep' -Properties $stepProps))
+                $stepNode = New-GitHoundNode -Id $stepId -Kind 'GH_WorkflowStep' -Properties $stepProps
+                $null = $nodes.Add($stepNode)
+                $null = $wfStepNodes.Add($stepNode)
                 $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasStep' -StartId $jobId -EndId $stepId -Properties @{ traversable = $false }))
 
                 # Extract secret/variable references from with:
@@ -579,7 +729,12 @@ function Parse-GitHoundWorkflow
             }
         }
 
-        $parsed++
+        # ── Pwn request detection ────────────────────────────────────────
+        $isPwnRequestable = Test-PwnRequestable -TriggerEventNames $triggerEventNames -StepNodes $wfStepNodes
+        $wf.properties | Add-Member -NotePropertyName 'is_pwn_requestable' -NotePropertyValue $isPwnRequestable -Force
+
+        $parsed = $parsed + 1
+        Write-Verbose "Parsed [$parsed]: $($wf.properties.name) — pwn_requestable=$isPwnRequestable"
     }
 
     Write-Host "[*] Parse-GitHoundWorkflow: Parsed $parsed workflow(s), skipped $skipped. Created $($nodes.Count) nodes, $($edges.Count) edges."
