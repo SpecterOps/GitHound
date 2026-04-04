@@ -733,6 +733,16 @@ function Parse-GitHoundWorkflow
         $isPwnRequestable = Test-PwnRequestable -TriggerEventNames $triggerEventNames -StepNodes $wfStepNodes
         $wf.properties | Add-Member -NotePropertyName 'is_pwn_requestable' -NotePropertyValue $isPwnRequestable -Force
 
+        # Capture pull_request_target branch constraints (if any)
+        $prtBranches = $null
+        if ($isPwnRequestable) {
+            $prtConfig = $triggerEvents['pull_request_target']
+            if ($prtConfig -and $prtConfig['branches']) {
+                $prtBranches = @($prtConfig['branches']) | ConvertTo-Json -Compress
+            }
+        }
+        $wf.properties | Add-Member -NotePropertyName 'prt_branches' -NotePropertyValue (Normalize-Null $prtBranches) -Force
+
         $parsed = $parsed + 1
         Write-Verbose "Parsed [$parsed]: $($wf.properties.name) — pwn_requestable=$isPwnRequestable"
     }
@@ -741,6 +751,188 @@ function Parse-GitHoundWorkflow
 
     Write-Output ([PSCustomObject]@{
         Nodes = $nodes
+        Edges = $edges
+    })
+}
+
+function Get-PwnRequestEdges
+{
+    <#
+    .SYNOPSIS
+        Computes GH_CanPwnRequest edges from repo roles to repositories and branches.
+
+    .DESCRIPTION
+        For each pwn-requestable workflow, identifies which GH_RepoRole nodes have
+        GH_ReadRepoContents access to the owning repository and draws GH_CanPwnRequest
+        edges to the repository and its branches.
+
+        For private/internal repos, forkability is checked:
+          - Org: members_can_fork_private_repositories must be true
+          - Repo: allow_forking must be true
+
+        For public repos, forkability is always true (anyone can fork).
+
+        Branch targeting:
+          - If the workflow's pull_request_target has branches: constraints,
+            edges are drawn only to matching branches (and the repo).
+          - If unconstrained, edges are drawn to the repo and all its branches.
+
+    .PARAMETER GraphData
+        The full collected graph data (from the consolidated output file).
+        Must have graph.nodes and graph.edges.
+
+    .PARAMETER WorkflowData
+        The parsed workflow output from Parse-GitHoundWorkflow.
+        Must have Nodes and Edges.
+
+    .EXAMPLE
+        $data = Get-Content ./githound_output.json | ConvertFrom-Json
+        $wfResult = Parse-GitHoundWorkflow -Workflows $workflowNodes
+        $pwnEdges = Get-PwnRequestEdges -GraphData $data -WorkflowData $wfResult
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory)]
+        [PSObject]$GraphData,
+
+        [Parameter(Mandatory)]
+        [PSObject]$WorkflowData
+    )
+
+    $edges = New-Object System.Collections.ArrayList
+
+    # ── Index collected graph data ────────────────────────────────────
+    $allNodes = $GraphData.graph.nodes
+    $allEdges = $GraphData.graph.edges
+
+    # Org node — check fork policy
+    $orgNode = $allNodes | Where-Object { $_.kinds -contains 'GH_Organization' } | Select-Object -First 1
+    $orgAllowsFork = $orgNode -and $orgNode.properties.members_can_fork_private_repositories -eq $true
+
+    # Repo nodes indexed by node_id
+    $repoMap = @{}
+    foreach ($r in ($allNodes | Where-Object { $_.kinds -contains 'GH_Repository' })) {
+        $repoMap[$r.properties.node_id] = $r
+    }
+
+    # Branch nodes indexed by repo — build from GH_HasBranch edges
+    $repoBranches = @{}
+    foreach ($e in ($allEdges | Where-Object { $_.kind -eq 'GH_HasBranch' })) {
+        $repoId = if ($e.start.value) { $e.start.value } else { $e.start }
+        $branchId = if ($e.end.value) { $e.end.value } else { $e.end }
+        if (-not $repoBranches.ContainsKey($repoId)) { $repoBranches[$repoId] = [System.Collections.ArrayList]@() }
+        $null = $repoBranches[$repoId].Add($branchId)
+    }
+
+    # Branch nodes indexed by id (for name lookup)
+    $branchMap = @{}
+    foreach ($b in ($allNodes | Where-Object { $_.kinds -contains 'GH_Branch' })) {
+        $branchMap[$b.id] = $b
+        if ($b.properties.node_id) { $branchMap[$b.properties.node_id] = $b }
+    }
+
+    # GH_ReadRepoContents edges: role_id → repo_id
+    $readEdges = @{}
+    foreach ($e in ($allEdges | Where-Object { $_.kind -eq 'GH_ReadRepoContents' })) {
+        $roleId = if ($e.start.value) { $e.start.value } else { $e.start }
+        $repoId = if ($e.end.value) { $e.end.value } else { $e.end }
+        if (-not $readEdges.ContainsKey($repoId)) { $readEdges[$repoId] = [System.Collections.ArrayList]@() }
+        $null = $readEdges[$repoId].Add($roleId)
+    }
+
+    # GH_HasWorkflow edges: repo_id → workflow_id
+    $repoWorkflows = @{}
+    foreach ($e in ($allEdges | Where-Object { $_.kind -eq 'GH_HasWorkflow' })) {
+        $repoId = if ($e.start.value) { $e.start.value } else { $e.start }
+        $wfId = if ($e.end.value) { $e.end.value } else { $e.end }
+        if (-not $repoWorkflows.ContainsKey($wfId)) { $repoWorkflows[$wfId] = $repoId }
+    }
+
+    # ── Find pwn-requestable workflows ────────────────────────────────
+    $pwnWorkflows = @($WorkflowData.Nodes | Where-Object {
+        $_.kinds -contains 'GH_Workflow' -and $_.properties.is_pwn_requestable -eq $true
+    })
+
+    $edgeCount = 0
+    foreach ($wf in $pwnWorkflows)
+    {
+        # Find the owning repo
+        $repoId = $repoWorkflows[$wf.id]
+        if (-not $repoId) { $repoId = $repoWorkflows[$wf.properties.node_id] }
+        if (-not $repoId -and $wf.properties.repository_id) { $repoId = $wf.properties.repository_id }
+        if (-not $repoId) {
+            Write-Warning "Get-PwnRequestEdges: Could not find repo for workflow '$($wf.properties.name)'"
+            continue
+        }
+
+        $repo = $repoMap[$repoId]
+        if (-not $repo) {
+            Write-Warning "Get-PwnRequestEdges: Repo node not found for id '$repoId'"
+            continue
+        }
+
+        # Check forkability
+        $isPublic = $repo.properties.visibility -eq 'public'
+        if (-not $isPublic) {
+            # Private/internal: both org and repo must allow forking
+            if (-not $orgAllowsFork) { continue }
+            if ($repo.properties.allow_forking -ne $true) { continue }
+        }
+
+        # Get roles with read access to this repo
+        $roleIds = $readEdges[$repoId]
+        if (-not $roleIds -or $roleIds.Count -eq 0) { continue }
+
+        # Determine target branches
+        $prtBranches = $null
+        if ($wf.properties.prt_branches) {
+            $prtBranches = try { $wf.properties.prt_branches | ConvertFrom-Json } catch { $null }
+        }
+
+        # Resolve branch node IDs for this repo
+        $targetBranchIds = [System.Collections.ArrayList]@()
+        $branches = $repoBranches[$repoId]
+        if ($branches) {
+            if ($prtBranches) {
+                # Constrained: only matching branches
+                foreach ($branchId in $branches) {
+                    $branch = $branchMap[$branchId]
+                    if ($branch) {
+                        $branchName = $branch.properties.name -replace '^.*\\', ''  # Strip repo prefix if present
+                        foreach ($pattern in $prtBranches) {
+                            if ($branchName -like $pattern) {
+                                $null = $targetBranchIds.Add($branchId)
+                                break
+                            }
+                        }
+                    }
+                }
+            } else {
+                # Unconstrained: all branches
+                $targetBranchIds.AddRange(@($branches))
+            }
+        }
+
+        # Draw edges from each role to the repo and target branches
+        $edgeProps = @{ traversable = $true; workflow = $wf.properties.name }
+
+        foreach ($roleId in $roleIds) {
+            # Edge to repo
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanPwnRequest' -StartId $roleId -EndId $repoId -Properties $edgeProps))
+            $edgeCount = $edgeCount + 1
+
+            # Edges to branches
+            foreach ($branchId in $targetBranchIds) {
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanPwnRequest' -StartId $roleId -EndId $branchId -Properties $edgeProps))
+                $edgeCount = $edgeCount + 1
+            }
+        }
+    }
+
+    Write-Host "[*] Get-PwnRequestEdges: $($pwnWorkflows.Count) pwn-requestable workflow(s), $edgeCount edges created."
+
+    Write-Output ([PSCustomObject]@{
+        Nodes = @()
         Edges = $edges
     })
 }

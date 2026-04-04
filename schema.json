@@ -2,7 +2,7 @@
   "schema": {
     "name": "GitHound",
     "display_name": "GitHub (GitHound)",
-    "version": "v1.1.0",
+    "version": "v1.2.0",
     "namespace": "GH"
   },
   "node_kinds": [
@@ -918,6 +918,11 @@
     {
       "name": "GH_CallsWorkflow",
       "description": "[Workflow] Job calls a reusable workflow — GH_WorkflowJob → GH_Workflow",
+      "is_traversable": true
+    },
+    {
+      "name": "GH_CanPwnRequest",
+      "description": "[Computed] Repo role can exploit a pwn-requestable workflow to execute arbitrary code with the target's secrets and permissions — GH_RepoRole → GH_Repository / GH_Branch",
       "is_traversable": true
     }
   ],
