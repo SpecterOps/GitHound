@@ -937,6 +937,90 @@ function Get-PwnRequestEdges
     })
 }
 
+function Invoke-GitHoundWorkflowAnalysis
+{
+    <#
+    .SYNOPSIS
+        Runs the full workflow analysis pipeline: parse workflows, compute pwn request edges,
+        and output a BloodHound OpenGraph JSON file.
+
+    .DESCRIPTION
+        One-step wrapper that:
+          1. Loads the collected GitHound output file
+          2. Filters for GH_Workflow nodes with contents
+          3. Runs Parse-GitHoundWorkflow to produce jobs, steps, edges, and findings
+          4. Runs Get-PwnRequestEdges to compute GH_CanPwnRequest edges
+          5. Combines everything into an OpenGraph payload
+          6. Writes to a JSON file alongside the input file
+
+    .PARAMETER Path
+        Path to the collected GitHound output JSON file (e.g., githound_O_kgDO....json).
+
+    .PARAMETER OutputPath
+        Optional. Path for the output file. Defaults to the input file's directory
+        with '_workflows' appended to the filename.
+
+    .EXAMPLE
+        Invoke-GitHoundWorkflowAnalysis -Path ./output/spectertst/githound_O_kgDOCoV2OQ.json
+
+    .EXAMPLE
+        Invoke-GitHoundWorkflowAnalysis -Path ./output.json -OutputPath ./workflows.json
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory)]
+        [string]$Path,
+
+        [Parameter()]
+        [string]$OutputPath
+    )
+
+    # Load collected data
+    if (-not (Test-Path $Path)) {
+        Write-Error "File not found: $Path"
+        return
+    }
+    Write-Host "[*] Loading collected data from $Path..."
+    $data = Get-Content $Path -Raw | ConvertFrom-Json
+
+    # Filter workflow nodes with contents
+    $workflowNodes = @($data.graph.nodes | Where-Object {
+        $_.kinds -contains 'GH_Workflow' -and $_.properties.contents -and $_.properties.contents.Trim().Length -gt 0
+    })
+
+    if ($workflowNodes.Count -eq 0) {
+        Write-Warning "No workflow nodes with contents found. Ensure workflow content collection is enabled."
+        return
+    }
+    Write-Host "[*] Found $($workflowNodes.Count) workflow(s) with contents."
+
+    # Parse workflows
+    $wfResult = Parse-GitHoundWorkflow -Workflows $workflowNodes
+
+    # Compute pwn request edges
+    $pwnResult = Get-PwnRequestEdges -GraphData $data -WorkflowData $wfResult
+
+    # Combine and convert to BHOG
+    $payload = $wfResult, $pwnResult | ConvertTo-BHOG
+    $json = $payload | ConvertTo-Json -Depth 10
+
+    # Determine output path
+    if (-not $OutputPath) {
+        $dir = Split-Path $Path -Parent
+        $base = [System.IO.Path]::GetFileNameWithoutExtension($Path)
+        $OutputPath = Join-Path $dir "${base}_workflows.json"
+    }
+
+    $json | Out-File $OutputPath
+    Write-Host "[+] Workflow analysis complete. Output written to $OutputPath"
+
+    # Summary
+    $pwnCount = @($wfResult.Nodes | Where-Object {
+        $_.kinds -contains 'GH_Workflow' -and $_.properties.is_pwn_requestable -eq $true
+    }).Count
+    Write-Host "[+] Summary: $($wfResult.Nodes.Count) nodes, $($wfResult.Edges.Count + $pwnResult.Edges.Count) edges, $pwnCount pwn-requestable workflow(s)"
+}
+
 function ConvertTo-BHOG
 {
     <#
