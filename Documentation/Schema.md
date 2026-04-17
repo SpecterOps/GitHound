@@ -57,7 +57,7 @@
 | [GH_CanAccess](EdgeDescriptions/GH_CanAccess.md) | ❌ | Personal access token or app installation can access this repository or organization |
 | [GH_CanAssumeIdentity](EdgeDescriptions/GH_CanAssumeIdentity.md) | ✅ | Repository can assume this cloud identity via OIDC federation (Azure workload identity or AWS IAM role) |
 | [GH_CanCreateBranch](EdgeDescriptions/GH_CanCreateBranch.md) | ✅ | [Repository - Computed] Role can create new branches in this repository (unprotected branches that bypass the merge gate) |
-| [GH_CanEditProtection](EdgeDescriptions/GH_CanEditProtection.md) | ✅ | [Repository - Computed] Repo role can modify or remove the branch protection rules governing this branch (computed from GH_EditRepoProtections + GH_ProtectedBy) |
+| [GH_CanEditProtection](EdgeDescriptions/GH_CanEditProtection.md) | ✅ | [Repository - Computed] Repo role can modify or remove branch protection rules in this repository, with supporting branch-level edges for impacted protected branches |
 | [GH_CanPwnRequest](EdgeDescriptions/GH_CanPwnRequest.md) | ✅ | [Computed] Repo role can exploit a pwn-requestable workflow to execute arbitrary code with the target's secrets and permissions |
 | [GH_CanReadSecretScanningAlert](EdgeDescriptions/GH_CanReadSecretScanningAlert.md) | ✅ | [Computed] Role can read secret scanning alerts (computed from GH_ViewSecretScanningAlerts permission + GH_Contains) |
 | [GH_CanWriteBranch](EdgeDescriptions/GH_CanWriteBranch.md) | ✅ | [Repository - Computed] Role can push to this branch after evaluating branch protection rules, push restrictions, and bypass allowances |

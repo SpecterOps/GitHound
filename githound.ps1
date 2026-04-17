@@ -480,6 +480,12 @@ function New-GitHoundEdge
     .PARAMETER EndMatchBy
         (Optional) The method to match the end node, either by 'id' or 'name'. Default is 'id'.
 
+    .PARAMETER StartPropertyMatchers
+        (Optional) Property matchers used to resolve the start node by property instead of by id/name.
+
+    .PARAMETER EndPropertyMatchers
+        (Optional) Property matchers used to resolve the end node by property instead of by id/name.
+
     .PARAMETER Properties
         (Optional) A hashtable of additional properties to associate with the edge.
 
@@ -521,39 +527,46 @@ function New-GitHoundEdge
         $EndMatchBy = 'id',
 
         [Parameter(Mandatory = $false)]
+        [array]
+        $StartPropertyMatchers,
+
+        [Parameter(Mandatory = $false)]
+        [array]
+        $EndPropertyMatchers,
+
+        [Parameter(Mandatory = $false)]
         [Hashtable]
         $Properties = @{}
     )
 
-    $edge = [pscustomobject]@{
-        kind = $Kind
-        start = @{
-            value = $StartId
-        }
-        end = @{
-            value = $EndId
-        }
+    $startEndpoint = if ($PSBoundParameters.ContainsKey('StartPropertyMatchers')) {
+        $ep = @{ match_by = 'property'; property_matchers = $StartPropertyMatchers }
+        if ($PSBoundParameters.ContainsKey('StartKind')) { $ep['kind'] = $StartKind }
+        $ep
+    } else {
+        $ep = @{ value = $StartId }
+        if ($PSBoundParameters.ContainsKey('StartKind'))    { $ep['kind']     = $StartKind }
+        if ($PSBoundParameters.ContainsKey('StartMatchBy')) { $ep['match_by'] = $StartMatchBy }
+        $ep
+    }
+
+    $endEndpoint = if ($PSBoundParameters.ContainsKey('EndPropertyMatchers')) {
+        $ep = @{ match_by = 'property'; property_matchers = $EndPropertyMatchers }
+        if ($PSBoundParameters.ContainsKey('EndKind')) { $ep['kind'] = $EndKind }
+        $ep
+    } else {
+        $ep = @{ value = $EndId }
+        if ($PSBoundParameters.ContainsKey('EndKind'))    { $ep['kind']     = $EndKind }
+        if ($PSBoundParameters.ContainsKey('EndMatchBy')) { $ep['match_by'] = $EndMatchBy }
+        $ep
+    }
+
+    Write-Output ([pscustomobject]@{
+        kind       = $Kind
+        start      = $startEndpoint
+        end        = $endEndpoint
         properties = $Properties
-    }
-
-    if($PSBoundParameters.ContainsKey('StartKind')) 
-    {
-        $edge.start.Add('kind', $StartKind)
-    }
-    if($PSBoundParameters.ContainsKey('StartMatchBy')) 
-    {
-        $edge.start.Add('match_by', $StartMatchBy)
-    }
-    if($PSBoundParameters.ContainsKey('EndKind'))
-    {
-        $edge.end.Add('kind', $EndKind)
-    }
-    if($PSBoundParameters.ContainsKey('EndMatchBy')) 
-    {
-        $edge.end.Add('match_by', $EndMatchBy)
-    }
-
-    Write-Output $edge
+    })
 }
 
 function Normalize-Null
@@ -3209,14 +3222,19 @@ function Compute-GitHoundBranchAccess
             $hasBypassBranch = $perms.Contains('GH_BypassBranchProtection')
             $hasEditProtections = $perms.Contains('GH_EditRepoProtections')
 
-            # ── GH_CanEditProtection (role -> each protected branch) ──
+            # ── GH_CanEditProtection (role -> repo and each protected branch) ──
             if ($hasEditProtections -or $hasAdmin) {
                 $reason = if ($hasAdmin) { 'admin' } else { 'edit_repo_protections' }
+                if ($bprs.Count -gt 0) {
+                    Add-ComputedEdge -Kind 'GH_CanEditProtection' -StartId $roleId -EndId $repoId `
+                        -Properties @{ traversable = $true; reason = $reason;
+                            query_composition = "MATCH p=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[:GH_EditRepoProtections|GH_AdminTo]->(:GH_Repository {objectid:'$($repoId.ToUpper())'})-[:GH_HasBranch]->(:GH_Branch)<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule) RETURN p" }
+                }
                 foreach ($branchId in $branches) {
                     if ($branchToBPR.ContainsKey($branchId)) {
                         Add-ComputedEdge -Kind 'GH_CanEditProtection' -StartId $roleId -EndId $branchId `
                             -Properties @{ traversable = $true; reason = $reason;
-                                query_composition = "MATCH p=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[:GH_EditRepoProtections]->(:GH_Repository)-[:GH_HasBranch]->(:GH_Branch {objectid:'$($branchId.ToUpper())'})<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule) RETURN p" }
+                                query_composition = "MATCH p=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[:GH_EditRepoProtections|GH_AdminTo]->(:GH_Repository)-[:GH_HasBranch]->(:GH_Branch {objectid:'$($branchId.ToUpper())'})<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule) RETURN p" }
                     }
                 }
             }

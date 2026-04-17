@@ -46,6 +46,18 @@ If collection is interrupted, resume from where you left off:
 Invoke-GitHound -Session $session -Resume
 ```
 
+## Workflow Parsing
+
+If you already have a GitHound collection JSON and want to extract the workflow graph for
+standalone workflow analysis, run:
+
+```powershell
+pwsh -NoProfile -Command ". ./Parse-GitHoundWorkflow.ps1; $data = Get-Content './githound_O_kgDOCoV2OQ.json' -Raw | ConvertFrom-Json; $workflows = @($data.graph.nodes | Where-Object { $_.kinds -contains 'GH_Workflow' }); $result = Parse-GitHoundWorkflow -Workflows $workflows; Export-GitHoundWorkflowPayload -ParseResult $result -OutputPath './githound_O_kgDOCoV2OQ_workflows.json'"
+```
+
+This produces a workflow-only BloodHound OpenGraph file such as
+`githound_O_kgDOCoV2OQ_workflows.json`.
+
 ## Schema
 
 ![Mermaid Schema](./Documentation/images/GitHound-Mermaid.png)
