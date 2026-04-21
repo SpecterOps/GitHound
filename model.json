@@ -133,6 +133,27 @@
         "color": "#E89B5C"
       }
     },
+    "GH_OrgRunner": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "server",
+        "color": "#FFD580"
+      }
+    },
+    "GH_RepoRunner": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "server",
+        "color": "#FFD580"
+      }
+    },
+    "GH_RunnerGroup": {
+      "icon": {
+        "type": "font-awesome",
+        "name": "users-rectangle",
+        "color": "#B4F8C8"
+      }
+    },
     "GH_SamlIdentityProvider": {
       "icon": {
         "type": "font-awesome",

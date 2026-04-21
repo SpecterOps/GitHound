@@ -104,6 +104,161 @@ function Add-GitHoundVariableEdges
     }
 }
 
+function Get-WorkflowRunsOnLabels
+{
+    param(
+        [Parameter()]
+        $RunsOn
+    )
+
+    if (-not $RunsOn) { return @() }
+
+    if ($RunsOn -is [System.Collections.IList]) {
+        return @($RunsOn | ForEach-Object { "$_".Trim() } | Where-Object { $_ })
+    }
+
+    if ($RunsOn -isnot [string]) {
+        return @("$RunsOn".Trim() | Where-Object { $_ })
+    }
+
+    $trimmed = $RunsOn.Trim()
+    if (-not $trimmed) { return @() }
+
+    if ($trimmed.StartsWith('[') -or $trimmed.StartsWith('{')) {
+        $parsed = try { $trimmed | ConvertFrom-Json -ErrorAction SilentlyContinue } catch { $null }
+        if ($parsed -is [System.Collections.IList]) {
+            return @($parsed | ForEach-Object { "$_".Trim() } | Where-Object { $_ })
+        }
+    }
+
+    return @($trimmed)
+}
+
+function Get-RunnerLabelNames
+{
+    param(
+        [Parameter()]
+        $Labels
+    )
+
+    if (-not $Labels) { return @() }
+
+    $parsed = $Labels
+    if ($Labels -is [string]) {
+        $parsed = try { $Labels | ConvertFrom-Json -ErrorAction SilentlyContinue } catch { $Labels }
+    }
+
+    if ($parsed -is [System.Collections.IList]) {
+        return @($parsed | ForEach-Object {
+            if ($_ -is [string]) { "$_".Trim() }
+            elseif ($_ -and $_.name) { "$($_.name)".Trim() }
+        } | Where-Object { $_ })
+    }
+
+    return @()
+}
+
+function Get-WorkflowRunnerDispatchEdges
+{
+    <#
+    .SYNOPSIS
+        Computes GH_CanDispatchTo edges from workflow jobs to matching self-hosted runners.
+
+    .DESCRIPTION
+        Resolves a workflow job's runs-on labels against the set of runners the owning repository
+        can use via GH_CanUseRunner. Only self-hosted jobs are considered.
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory)]
+        [PSObject]$GraphData,
+
+        [Parameter(Mandatory)]
+        [PSObject]$WorkflowData
+    )
+
+    $edges = New-Object System.Collections.ArrayList
+
+    $graphNodes = @($GraphData.graph.nodes ?? @())
+    $graphEdges = @($GraphData.graph.edges ?? @())
+    $workflowNodes = @($WorkflowData.Nodes ?? @())
+    $workflowEdges = @($WorkflowData.Edges ?? @())
+
+    $jobNodes = @($workflowNodes | Where-Object { $_.kinds -contains 'GH_WorkflowJob' })
+    $jobEdges = @($workflowEdges | Where-Object { $_.kind -eq 'GH_HasJob' })
+    $repoWorkflowEdges = @($graphEdges | Where-Object { $_.kind -eq 'GH_HasWorkflow' })
+    $repoRunnerEdges = @($graphEdges | Where-Object { $_.kind -eq 'GH_CanUseRunner' })
+    $runnerNodes = @($graphNodes | Where-Object { $_.kinds -contains 'GH_Runner' })
+
+    $workflowToRepoId = @{}
+    foreach ($edge in $repoWorkflowEdges) {
+        if (-not $edge.start.value -or -not $edge.end.value) { continue }
+        $workflowToRepoId[$edge.end.value] = $edge.start.value
+    }
+
+    $jobToWorkflowId = @{}
+    foreach ($edge in $jobEdges) {
+        if (-not $edge.start.value -or -not $edge.end.value) { continue }
+        $jobToWorkflowId[$edge.end.value] = $edge.start.value
+    }
+
+    $repoToRunnerIds = @{}
+    foreach ($edge in $repoRunnerEdges) {
+        $repoId = $edge.start.value
+        $runnerId = $edge.end.value
+        if (-not $repoId -or -not $runnerId) { continue }
+        if (-not $repoToRunnerIds.ContainsKey($repoId)) {
+            $repoToRunnerIds[$repoId] = New-Object System.Collections.ArrayList
+        }
+        $null = $repoToRunnerIds[$repoId].Add($runnerId)
+    }
+
+    $runnerById = @{}
+    foreach ($runner in $runnerNodes) {
+        $runnerById[$runner.id] = $runner
+    }
+
+    foreach ($job in $jobNodes) {
+        $requiredLabels = @(Get-WorkflowRunsOnLabels -RunsOn $job.properties.runs_on)
+        if ($requiredLabels.Count -eq 0 -or $requiredLabels -notcontains 'self-hosted') { continue }
+
+        $workflowId = $jobToWorkflowId[$job.id]
+        if (-not $workflowId) { continue }
+
+        $repoId = $workflowToRepoId[$workflowId]
+        if (-not $repoId -or -not $repoToRunnerIds.ContainsKey($repoId)) { continue }
+
+        foreach ($runnerId in $repoToRunnerIds[$repoId]) {
+            if (-not $job.id -or -not $runnerId) { continue }
+            if (-not $runnerById.ContainsKey($runnerId)) { continue }
+            $runner = $runnerById[$runnerId]
+            $runnerLabels = @(Get-RunnerLabelNames -Labels $runner.properties.labels)
+            if ($runnerLabels.Count -eq 0) { continue }
+
+            $allMatched = $true
+            foreach ($label in $requiredLabels) {
+                if ($runnerLabels -notcontains $label) {
+                    $allMatched = $false
+                    break
+                }
+            }
+            if (-not $allMatched) { continue }
+
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanDispatchTo' -StartId $job.id -EndId $runnerId -Properties @{
+                traversable = $false
+                required_labels = ($requiredLabels | ConvertTo-Json -Compress)
+                matched_labels = ($runnerLabels | Where-Object { $requiredLabels -contains $_ } | ConvertTo-Json -Compress)
+                runner_scope = $runner.properties.scope
+            }))
+        }
+    }
+
+    [PSCustomObject]@{
+        Nodes = @()
+        Edges = $edges
+    }
+}
+
 function Test-PwnRequestable
 {
     <#
@@ -929,11 +1084,12 @@ function Invoke-GitHoundWorkflowAnalysis
     # Parse workflows
     $wfResult = Parse-GitHoundWorkflow -Workflows $workflowNodes
 
-    # Compute pwn request edges
+    # Compute pwn request and runner dispatch edges
     $pwnResult = Get-PwnRequestEdges -GraphData $data -WorkflowData $wfResult
+    $dispatchResult = Get-WorkflowRunnerDispatchEdges -GraphData $data -WorkflowData $wfResult
 
     # Combine and convert to BHOG
-    $payload = $wfResult, $pwnResult | ConvertTo-BHOG
+    $payload = $wfResult, $pwnResult, $dispatchResult | ConvertTo-BHOG
     $json = $payload | ConvertTo-Json -Depth 10
 
     # Determine output path
@@ -950,7 +1106,8 @@ function Invoke-GitHoundWorkflowAnalysis
     $pwnCount = @($wfResult.Nodes | Where-Object {
         $_.kinds -contains 'GH_Workflow' -and $_.properties.is_pwn_requestable -eq $true
     }).Count
-    Write-Host "[+] Summary: $($wfResult.Nodes.Count) nodes, $($wfResult.Edges.Count + $pwnResult.Edges.Count) edges, $pwnCount pwn-requestable workflow(s)"
+    $dispatchCount = @($dispatchResult.Edges).Count
+    Write-Host "[+] Summary: $($wfResult.Nodes.Count) nodes, $($wfResult.Edges.Count + $pwnResult.Edges.Count + $dispatchCount) edges, $pwnCount pwn-requestable workflow(s), $dispatchCount job-to-runner dispatch edge(s)"
 }
 
 function ConvertTo-BHOG
