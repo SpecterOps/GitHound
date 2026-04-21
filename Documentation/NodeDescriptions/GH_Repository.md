@@ -1,6 +1,6 @@
 # <img src="../Icons/gh_repository.png" width="50"/> GH_Repository
 
-Represents a GitHub repository within the organization. Repository nodes capture metadata about the repo including visibility, Actions enablement status, and security configuration. Repository role nodes (GH_RepoRole) are created alongside each repository to represent the permission levels available.
+Represents a GitHub repository within the organization. Repository nodes capture metadata about the repo including visibility, Actions enablement status, self-hosted runner eligibility, and security configuration. Repository role nodes (GH_RepoRole) are created alongside each repository to represent the permission levels available.
 
 Created by: `Git-HoundRepository`
 
@@ -35,6 +35,7 @@ Created by: `Git-HoundRepository`
 | watchers                    | integer   | Number of watchers.                                                          |
 | default_branch              | string    | The name of the default branch (e.g., `main`).                               |
 | actions_enabled             | boolean   | Whether GitHub Actions is enabled for this repository.                       |
+| self_hosted_runners_enabled | boolean   | Whether this repository is currently allowed to use self-hosted runners under the organization's runner policy. |
 | secret_scanning             | string    | Status of secret scanning (e.g., `enabled`, `disabled`).                     |
 
 ## Diagram
@@ -46,6 +47,8 @@ flowchart TD
     GH_Branch[fa:fa-code-branch GH_Branch]
     GH_Workflow[fa:fa-cogs GH_Workflow]
     GH_Environment[fa:fa-leaf GH_Environment]
+    GH_OrgRunner[fa:fa-server GH_OrgRunner]
+    GH_RepoRunner[fa:fa-server GH_RepoRunner]
     GH_OrgSecret[fa:fa-lock GH_OrgSecret]
     GH_RepoSecret[fa:fa-lock GH_RepoSecret]
     GH_OrgVariable[fa:fa-lock-open GH_OrgVariable]
@@ -62,10 +65,13 @@ flowchart TD
     GH_Repository -.->|GH_HasBranch| GH_Branch
     GH_Repository -.->|GH_HasWorkflow| GH_Workflow
     GH_Repository -.->|GH_HasEnvironment| GH_Environment
+    GH_Repository -.->|GH_Contains| GH_RepoRunner
     GH_Repository -->|GH_HasSecret| GH_OrgSecret
     GH_Repository -->|GH_HasSecret| GH_RepoSecret
     GH_Repository -->|GH_HasVariable| GH_OrgVariable
     GH_Repository -->|GH_HasVariable| GH_RepoVariable
+    GH_Repository -.->|GH_CanUseRunner| GH_OrgRunner
+    GH_Repository -.->|GH_CanUseRunner| GH_RepoRunner
     GH_Repository -.->|GH_Contains| GH_RepoSecret
     GH_Repository -.->|GH_Contains| GH_RepoVariable
     GH_Repository -.->|GH_Contains| GH_SecretScanningAlert

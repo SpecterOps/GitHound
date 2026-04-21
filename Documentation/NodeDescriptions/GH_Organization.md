@@ -11,6 +11,7 @@ Created by: `Git-HoundOrganization`
 | objectid                                                     | string    | The GitHub `node_id` of the organization, used as the unique graph identifier.                                                                                                                |
 | id                                                           | integer   | The numeric GitHub ID of the organization.                                                                                                                                                    |
 | name                                                         | string    | The organization's login handle, used as the display name.                                                                                                                                    |
+| collected                                                    | boolean   | Marker property indicating that this organization node came from an actual GitHound collection rather than being synthesized or inferred.                                                   |
 | login                                                        | string    | The organization's login handle (URL slug).                                                                                                                                                   |
 | node_id                                                      | string    | The GitHub GraphQL node ID. Redundant with objectid.                                                                                                                                          |
 | description                                                  | string    | The organization's description.                                                                                                                                                               |
@@ -67,6 +68,7 @@ Created by: `Git-HoundOrganization`
 | actions_enabled_repositories                                 | string    | Which repositories have GitHub Actions enabled: `all`, `selected`, or `none`.                                                                                                                 |
 | actions_allowed_actions                                      | string    | Which Actions are allowed to run: `all`, `local_only`, or `selected`.                                                                                                                         |
 | actions_sha_pinning_required                                 | boolean   | Whether SHA pinning is required for GitHub Actions.                                                                                                                                           |
+| self_hosted_runners_enabled_repositories                     | string    | Which repositories are allowed to use self-hosted runners in the organization: `all`, `selected`, or `none`.                                                                                |
 
 ## Diagram
 
@@ -74,6 +76,8 @@ Created by: `Git-HoundOrganization`
 flowchart TD
     GH_Organization[fa:fa-building GH_Organization]
     GH_Repository[fa:fa-box-archive GH_Repository]
+    GH_RunnerGroup[fa:fa-users-rectangle GH_RunnerGroup]
+    GH_OrgRunner[fa:fa-server GH_OrgRunner]
     GH_OrgSecret[fa:fa-lock GH_OrgSecret]
     GH_SamlIdentityProvider[fa:fa-id-badge GH_SamlIdentityProvider]
     GH_OrgRole[fa:fa-user-tie GH_OrgRole]
@@ -85,6 +89,8 @@ flowchart TD
 
 
     GH_Organization -.->|GH_Contains| GH_OrgSecret
+    GH_Organization -.->|GH_Contains| GH_RunnerGroup
+    GH_RunnerGroup -.->|GH_Contains| GH_OrgRunner
     GH_Organization -.->|GH_HasSamlIdentityProvider| GH_SamlIdentityProvider
     GH_Organization -.->|GH_Contains| GH_PersonalAccessToken
     GH_Organization -.->|GH_Contains| GH_PersonalAccessTokenRequest
