@@ -686,4 +686,3 @@ LIMIT 1000
 ```
 
 This query can be imported into BloodHound from the [web-commit-signoff-not-required.json](../saved-queries/web-commit-signoff-not-required.json) file.
-

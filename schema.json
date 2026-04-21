@@ -1,19 +1,11 @@
 {
   "schema": {
-    "name": "GitHound",
-    "display_name": "GitHub (GitHound)",
-    "version": "v1.2.0",
+    "name": "SOGitHub",
+    "display_name": "GitHub Extension (by SpecterOps)",
+    "version": "v1.3.0",
     "namespace": "GH"
   },
   "node_kinds": [
-    {
-      "name": "GH_Enterprise",
-      "display_name": "GitHub Enterprise",
-      "description": "A GitHub Enterprise account—top-level container for organizations with enterprise-wide policies and settings",
-      "is_display_kind": true,
-      "icon": "globe",
-      "color": "#4A90D9"
-    },
     {
       "name": "GH_Organization",
       "display_name": "GitHub Organization",
@@ -31,22 +23,6 @@
       "color": "#FF8E40"
     },
     {
-      "name": "GH_EnterpriseTeam",
-      "display_name": "GitHub Enterprise Team",
-      "description": "An enterprise-level team that can span multiple organizations, optionally linked to an IdP group via SCIM",
-      "is_display_kind": true,
-      "icon": "users-between-lines",
-      "color": "#7C3AED"
-    },
-    {
-      "name": "GH_EnterpriseRole",
-      "display_name": "GitHub Enterprise Role",
-      "description": "An enterprise-level role defining permissions within the enterprise (predefined, custom, or default owners/members)",
-      "is_display_kind": true,
-      "icon": "user-tie",
-      "color": "#A3D9A5"
-    },
-    {
       "name": "GH_Team",
       "display_name": "GitHub Team",
       "description": "A team within an organization, grouping users for shared access and collaboration",
@@ -61,6 +37,38 @@
       "is_display_kind": true,
       "icon": "book",
       "color": "#9EECFF"
+    },
+    {
+      "name": "GH_RunnerGroup",
+      "display_name": "GitHub Runner Group",
+      "description": "An organization-level self-hosted runner group that controls which repositories may use a set of runners",
+      "is_display_kind": true,
+      "icon": "users-rectangle",
+      "color": "#B4F8C8"
+    },
+    {
+      "name": "GH_Runner",
+      "display_name": "GitHub Self-Hosted Runner",
+      "description": "A generic self-hosted runner kind shared by organization-scoped and repository-scoped runner nodes",
+      "is_display_kind": false,
+      "icon": "server",
+      "color": "#FFD580"
+    },
+    {
+      "name": "GH_OrgRunner",
+      "display_name": "GitHub Org Self-Hosted Runner",
+      "description": "A self-hosted runner registered at the organization scope for GitHub Actions jobs",
+      "is_display_kind": true,
+      "icon": "server",
+      "color": "#FFD580"
+    },
+    {
+      "name": "GH_RepoRunner",
+      "display_name": "GitHub Repo Self-Hosted Runner",
+      "description": "A self-hosted runner registered directly to a repository for GitHub Actions jobs",
+      "is_display_kind": true,
+      "icon": "server",
+      "color": "#FFD580"
     },
     {
       "name": "GH_Branch",
@@ -109,6 +117,22 @@
       "is_display_kind": true,
       "icon": "gears",
       "color": "#FFE4A1"
+    },
+    {
+      "name": "GH_WorkflowJob",
+      "display_name": "GitHub Workflow Job",
+      "description": "A job within a GitHub Actions workflow, with a runner, permissions, and an ordered list of steps",
+      "is_display_kind": true,
+      "icon": "layer-group",
+      "color": "#6EE7B7"
+    },
+    {
+      "name": "GH_WorkflowStep",
+      "display_name": "GitHub Workflow Step",
+      "description": "A single step within a GitHub Actions job — either a uses: action reference or a run: shell command",
+      "is_display_kind": true,
+      "icon": "circle-dot",
+      "color": "#C7D2FE"
     },
     {
       "name": "GH_Environment",
@@ -221,33 +245,12 @@
       "is_display_kind": true,
       "icon": "key",
       "color": "#D4A017"
-    },
-    {
-      "name": "GH_WorkflowJob",
-      "display_name": "GitHub Workflow Job",
-      "description": "A job within a GitHub Actions workflow, with a runner, permissions, and an ordered list of steps",
-      "is_display_kind": true,
-      "icon": "layer-group",
-      "color": "#6EE7B7"
-    },
-    {
-      "name": "GH_WorkflowStep",
-      "display_name": "GitHub Workflow Step",
-      "description": "A single step within a GitHub Actions job — either a uses: action reference or a run: shell command",
-      "is_display_kind": true,
-      "icon": "circle-dot",
-      "color": "#C7D2FE"
     }
   ],
   "relationship_kinds": [
     {
-      "name": "GH_HasMember",
-      "description": "Enterprise or organization has this user as a member",
-      "is_traversable": false
-    },
-    {
       "name": "GH_Contains",
-      "description": "Container relationship for organizational hierarchy (enterprise contains orgs, org contains secrets/variables, repo contains secrets/variables, environment contains secrets/variables)",
+      "description": "Container relationship for organizational hierarchy (org contains secrets/variables, repo contains secrets/variables, environment contains secrets/variables)",
       "is_traversable": false
     },
     {
@@ -661,121 +664,6 @@
       "is_traversable": false
     },
     {
-      "name": "GH_CreateEnterpriseOrganizations",
-      "description": "[Enterprise] Enterprise role can create new organizations within the enterprise",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_EditEnterpriseCustomPropertiesForOrganizations",
-      "description": "[Enterprise] Enterprise role can edit custom properties for organizations",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_ManageEnterpriseAdmins",
-      "description": "[Enterprise] Enterprise role can manage enterprise administrators",
-      "is_traversable": true
-    },
-    {
-      "name": "GH_ManageEnterpriseIdentityProvider",
-      "description": "[Enterprise] Enterprise role can manage the enterprise SAML identity provider configuration",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_ManageEnterpriseMembers",
-      "description": "[Enterprise] Enterprise role can manage enterprise membership",
-      "is_traversable": true
-    },
-    {
-      "name": "GH_ManageEnterpriseOrganizationAdmins",
-      "description": "[Enterprise] Enterprise role can manage organization administrators across the enterprise",
-      "is_traversable": true
-    },
-    {
-      "name": "GH_ManageEnterpriseOrganizations",
-      "description": "[Enterprise] Enterprise role can manage organizations within the enterprise",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_ManageEnterpriseReferrals",
-      "description": "[Enterprise] Enterprise role can manage enterprise referral settings",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_ManageEnterpriseTeams",
-      "description": "[Enterprise] Enterprise role can manage enterprise teams",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_ReadEnterpriseAuditLog",
-      "description": "[Enterprise] Enterprise role can read the enterprise audit log",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_ReadEnterpriseDomainVerification",
-      "description": "[Enterprise] Enterprise role can view the enterprise domain verification status",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_ReadEnterpriseMembers",
-      "description": "[Enterprise] Enterprise role can view enterprise membership",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_ReadEnterpriseOrgProjects",
-      "description": "[Enterprise] Enterprise role can view organization projects across the enterprise",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_ReadEnterpriseOrganizationAdmin",
-      "description": "[Enterprise] Enterprise role can view organization admin settings across the enterprise",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_SetEnterpriseInteractionLimits",
-      "description": "[Enterprise] Enterprise role can set interaction limits for the enterprise",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_ViewEnterpriseActionsUsageMetrics",
-      "description": "[Enterprise] Enterprise role can view GitHub Actions usage metrics for the enterprise",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_ViewEnterpriseBilling",
-      "description": "[Enterprise] Enterprise role can view enterprise billing information",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_ViewEnterpriseSecretScanningAlerts",
-      "description": "[Enterprise] Enterprise role can view secret scanning alerts across the enterprise",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_WriteEnterpriseActionsPolicies",
-      "description": "[Enterprise] Enterprise role can modify GitHub Actions policies for the enterprise",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_WriteEnterpriseBilling",
-      "description": "[Enterprise] Enterprise role can modify enterprise billing settings",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_WriteEnterprisePersonalAccessTokenPolicies",
-      "description": "[Enterprise] Enterprise role can modify personal access token policies for the enterprise",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_WriteEnterpriseSso",
-      "description": "[Enterprise] Enterprise role can modify enterprise SSO settings",
-      "is_traversable": false
-    },
-    {
-      "name": "GH_WriteEnterpriseTeamMembers",
-      "description": "[Enterprise] Enterprise role can modify enterprise team membership",
-      "is_traversable": false
-    },
-    {
       "name": "GH_BypassPullRequestAllowances",
       "description": "User or team can bypass pull request requirements on a branch protection rule",
       "is_traversable": false
@@ -881,18 +769,28 @@
       "is_traversable": true
     },
     {
+      "name": "GH_CanUseRunner",
+      "description": "[Actions] Repository can dispatch jobs to this self-hosted runner",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_CanDispatchTo",
+      "description": "[Workflow] Job can dispatch to this self-hosted runner based on runs-on label matching and repository runner access",
+      "is_traversable": false
+    },
+    {
       "name": "GH_SyncedTo",
       "description": "External identity (Azure, Okta, PingOne) is synced to this GitHub user via SSO/SCIM",
       "is_traversable": true
     },
     {
-      "name": "GH_HasJob",
-      "description": "[Workflow] Workflow contains this job — GH_Workflow → GH_WorkflowJob",
-      "is_traversable": true
+      "name": "GH_CallsWorkflow",
+      "description": "[Workflow] Job calls a reusable workflow — GH_WorkflowJob → GH_Workflow",
+      "is_traversable": false
     },
     {
-      "name": "GH_HasStep",
-      "description": "[Workflow] Job contains this step — GH_WorkflowJob → GH_WorkflowStep",
+      "name": "GH_CanPwnRequest",
+      "description": "[Computed] Repo role can exploit a pwn-requestable workflow to execute arbitrary code with the target's secrets and permissions — GH_RepoRole → GH_Repository / GH_Branch",
       "is_traversable": true
     },
     {
@@ -906,24 +804,29 @@
       "is_traversable": false
     },
     {
-      "name": "GH_UsesSecret",
-      "description": "[Workflow] Step references a secret by name — GH_WorkflowStep → GH_Secret (name match)",
-      "is_traversable": true
-    },
-    {
-      "name": "GH_UsesVariable",
-      "description": "[Workflow] Step references a variable by name — GH_WorkflowStep → GH_Variable (name match)",
+      "name": "GH_HasJob",
+      "description": "[Workflow] Workflow contains this job — GH_Workflow → GH_WorkflowJob",
       "is_traversable": false
     },
     {
-      "name": "GH_CallsWorkflow",
-      "description": "[Workflow] Job calls a reusable workflow — GH_WorkflowJob → GH_Workflow",
-      "is_traversable": true
+      "name": "GH_HasMember",
+      "description": "Enterprise or organization has this user as a member",
+      "is_traversable": false
     },
     {
-      "name": "GH_CanPwnRequest",
-      "description": "[Computed] Repo role can exploit a pwn-requestable workflow to execute arbitrary code with the target's secrets and permissions — GH_RepoRole → GH_Repository / GH_Branch",
-      "is_traversable": true
+      "name": "GH_HasStep",
+      "description": "[Workflow] Job contains this step — GH_WorkflowJob → GH_WorkflowStep",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_UsesSecret",
+      "description": "[Workflow] Step references a secret by name — GH_WorkflowStep → GH_RepoSecret / GH_OrgSecret (name match)",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_UsesVariable",
+      "description": "[Workflow] Step references a variable by name — GH_WorkflowStep → GH_RepoVariable / GH_OrgVariable (name match)",
+      "is_traversable": false
     }
   ],
   "environments": [

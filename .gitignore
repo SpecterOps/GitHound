@@ -12,6 +12,10 @@ Documentation/OfficialDocs/
 ehthumbs.db
 Thumbs.db
 
+# Python cache files #
+######################
+__pycache__/
+
 # 1PassHound Output Files #
 ###########################
 output/*

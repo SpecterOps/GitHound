@@ -27,10 +27,14 @@ flowchart TD
     GH_WorkflowJob[fa:fa-layer-group GH_WorkflowJob]
     GH_WorkflowStep[fa:fa-circle-dot GH_WorkflowStep]
     GH_Environment[fa:fa-leaf GH_Environment]
+    GH_OrgRunner[fa:fa-server GH_OrgRunner]
+    GH_RepoRunner[fa:fa-server GH_RepoRunner]
 
     GH_Workflow -.->|GH_HasJob| GH_WorkflowJob
     GH_WorkflowJob -.->|GH_HasStep| GH_WorkflowStep
     GH_WorkflowJob -.->|GH_DeploysTo| GH_Environment
+    GH_WorkflowJob -.->|GH_CanDispatchTo| GH_OrgRunner
+    GH_WorkflowJob -.->|GH_CanDispatchTo| GH_RepoRunner
     GH_WorkflowJob -.->|GH_DependsOn| GH_WorkflowJob
     GH_WorkflowJob -.->|GH_CallsWorkflow| GH_Workflow
 ```

@@ -47,6 +47,7 @@ flowchart TD
     GH_RepoRole -.->|GH_CreateTag| GH_Repository
     GH_RepoRole -.->|GH_DeleteTag| GH_Repository
     GH_RepoRole -->|GH_HasBaseRole| GH_RepoRole
+    GH_RepoRole -->|GH_CanEditProtection| GH_Repository
     GH_RepoRole -->|GH_CanEditProtection| GH_Branch
     GH_RepoRole -->|GH_CanWriteBranch| GH_Branch
     GH_RepoRole -->|GH_CanCreateBranch| GH_Repository

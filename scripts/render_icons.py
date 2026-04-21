@@ -2,7 +2,8 @@
 """
 Render PNG node icons for GitHound's BloodHound OpenGraph model.
 
-Reads model.json and generates a PNG icon for each custom node type.
+Reads schema.json and generates a PNG icon for each display node kind.
+Falls back to legacy model.json if schema.json is unavailable.
 Each icon is a colored circle with a black border and a centered black
 Font Awesome icon.
 
@@ -50,6 +51,7 @@ if _missing:
 # ── Constants ───────────────────────────────────────────────────────
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
+SCHEMA_JSON = REPO_ROOT / "schema.json"
 MODEL_JSON = REPO_ROOT / "model.json"
 OUTPUT_DIR = REPO_ROOT / "Documentation" / "Icons"
 
@@ -224,9 +226,42 @@ def render_icon(
     return final
 
 
+def load_icon_definitions() -> dict[str, dict]:
+    """Load icon definitions, preferring schema.json over legacy model.json."""
+    if SCHEMA_JSON.exists():
+        with open(SCHEMA_JSON) as f:
+            schema = json.load(f)
+
+        node_kinds = schema.get("node_kinds", [])
+        custom_types: dict[str, dict] = {}
+        for node in node_kinds:
+            if not node.get("is_display_kind"):
+                continue
+            icon_name = node.get("icon")
+            color = node.get("color")
+            if not icon_name or not color:
+                continue
+            custom_types[node["name"]] = {
+                "icon": {
+                    "type": "font-awesome",
+                    "name": icon_name,
+                    "color": color,
+                }
+            }
+        if custom_types:
+            return custom_types
+
+    if MODEL_JSON.exists():
+        with open(MODEL_JSON) as f:
+            model = json.load(f)
+        return model.get("custom_types", {})
+
+    return {}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Render PNG node icons from model.json"
+        description="Render PNG node icons from schema.json (or legacy model.json)"
     )
     parser.add_argument(
         "--size",
@@ -242,18 +277,14 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if not MODEL_JSON.exists():
-        print(f"Error: {MODEL_JSON} not found", file=sys.stderr)
-        sys.exit(1)
-
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    with open(MODEL_JSON) as f:
-        model = json.load(f)
-
-    custom_types = model.get("custom_types", {})
+    custom_types = load_icon_definitions()
     if not custom_types:
-        print("No custom_types found in model.json", file=sys.stderr)
+        print(
+            f"No display node kinds found in {SCHEMA_JSON.name} and no custom_types found in {MODEL_JSON.name}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     print(f"[*] Rendering {len(custom_types)} node icons ({args.size}x{args.size}px)")
