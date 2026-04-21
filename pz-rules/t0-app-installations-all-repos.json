@@ -1,7 +1,0 @@
-{
-  "name": "GitHub: Tier Zero App Installations (All Repositories)",
-  "description": "GitHub App installations scoped to all repositories in the organization that have at least one write permission. A compromised app credential grants write access to every repository. Installations with only read permissions are excluded \u2014 they pose a data exfiltration risk but do not grant control over the organization.",
-  "cypher": "MATCH (n:GH_AppInstallation {repository_selection:'all'})\nWHERE n.permissions CONTAINS '\"write\"'\nRETURN n",
-  "enabled": true,
-  "allow_disable": true
-}
