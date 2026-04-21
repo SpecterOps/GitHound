@@ -3707,11 +3707,19 @@ function Git-HoundWorkflow
     .PARAMETER ChunkSize
         Number of repos to process per chunk (default 50).
 
+    .PARAMETER WorkflowsDefaultBranchOnly
+        When set, only attempts to retrieve workflow file contents from the repository's default branch.
+        Skips the fallback that enumerates all branches looking for the workflow file. This significantly
+        reduces API calls for repositories with many branches.
+
     .OUTPUTS
         A PSObject containing arrays of nodes and edges representing the workflows and their relationships.
 
     .EXAMPLE
         $workflows = $repos | Git-HoundWorkflow -Session $Session
+
+    .EXAMPLE
+        $workflows = $repos | Git-HoundWorkflow -Session $Session -WorkflowsDefaultBranchOnly
     #>
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
@@ -3732,7 +3740,11 @@ function Git-HoundWorkflow
 
         [Parameter()]
         [int]
-        $ChunkSize = 50
+        $ChunkSize = 50,
+
+        [Parameter()]
+        [switch]
+        $WorkflowsDefaultBranchOnly
     )
 
     begin
@@ -3819,6 +3831,7 @@ function Git-HoundWorkflow
                 $nodes = $using:chunkNodes
                 $edges = $using:chunkEdges
                 $Session = $using:Session
+                $defaultBranchOnly = $using:WorkflowsDefaultBranchOnly
                 $functionBundle = $using:GitHoundFunctionBundle
                 foreach($funcName in $functionBundle.Keys) {
                     Set-Item -Path "function:$funcName" -Value ([scriptblock]::Create($functionBundle[$funcName]))
@@ -3842,26 +3855,30 @@ function Git-HoundWorkflow
                                 $workflowBranch = $repo.properties.default_branch
                             }
                         } catch {
-                            # Workflow not on default branch — try other branches
-                            try {
-                                $branches = Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/branches" -ErrorAction Stop
-                                foreach ($branch in $branches) {
-                                    try {
-                                        $contentResponse = Invoke-GithubRestMethod -Session $Session -Path "$contentsBasePath`?ref=$($branch.name)" -ErrorAction Stop
-                                        if ($contentResponse.content) {
-                                            $workflowContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(($contentResponse.content -replace '\s','')))
-                                            $workflowBranch = $branch.name
-                                            break
+                            if ($defaultBranchOnly) {
+                                Write-Warning "Workflow $($repo.properties.full_name)/$($workflow.path) not found on default branch ($($repo.properties.default_branch)) — skipping (WorkflowsDefaultBranchOnly)"
+                            } else {
+                                # Workflow not on default branch — try other branches
+                                try {
+                                    $branches = Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/branches" -ErrorAction Stop
+                                    foreach ($branch in $branches) {
+                                        try {
+                                            $contentResponse = Invoke-GithubRestMethod -Session $Session -Path "$contentsBasePath`?ref=$($branch.name)" -ErrorAction Stop
+                                            if ($contentResponse.content) {
+                                                $workflowContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(($contentResponse.content -replace '\s','')))
+                                                $workflowBranch = $branch.name
+                                                break
+                                            }
+                                        } catch {
+                                            continue
                                         }
-                                    } catch {
-                                        continue
                                     }
+                                } catch {
+                                    Write-Warning "Could not list branches for $($repo.properties.full_name): $_"
                                 }
-                            } catch {
-                                Write-Warning "Could not list branches for $($repo.properties.full_name): $_"
-                            }
-                            if (-not $workflowContent) {
-                                Write-Warning "Could not download workflow contents for $($repo.properties.full_name)/$($workflow.path) on any branch"
+                                if (-not $workflowContent) {
+                                    Write-Warning "Could not download workflow contents for $($repo.properties.full_name)/$($workflow.path) on any branch"
+                                }
                             }
                         }
                     } else {
@@ -6066,6 +6083,11 @@ function Invoke-GitHound
     .PARAMETER CleanupIntermediates
         When set, deletes per-step output files after the final consolidated payload is written.
 
+    .PARAMETER WorkflowsDefaultBranchOnly
+        When set, only attempts to retrieve workflow file contents from the repository's default branch.
+        Skips the fallback that enumerates all branches looking for the workflow file. This significantly
+        reduces API calls for repositories with many branches. Passed through to Git-HoundWorkflow.
+
     .EXAMPLE
         Invoke-GitHound -Session $Session
 
@@ -6097,7 +6119,11 @@ function Invoke-GitHound
 
         [Parameter()]
         [switch]
-        $CollectAll
+        $CollectAll,
+
+        [Parameter()]
+        [switch]
+        $WorkflowsDefaultBranchOnly
     )
 
     $nodes = New-Object System.Collections.ArrayList
@@ -6234,7 +6260,12 @@ function Invoke-GitHound
             Write-Host "[+] Saved: githound_Workflow_$orgId.json"
         } else {
             Write-Host "[*] Enumerating Organization Workflows"
-            $workflows = $repos | Git-HoundWorkflow -Session $Session -CheckpointPath $CheckpointPath
+            $workflowParams = @{
+                Session        = $Session
+                CheckpointPath = $CheckpointPath
+            }
+            if ($WorkflowsDefaultBranchOnly) { $workflowParams['WorkflowsDefaultBranchOnly'] = $true }
+            $workflows = $repos | Git-HoundWorkflow @workflowParams
             Export-GitHoundStepOutput -StepResult $workflows -FilePath $stepFile
             Write-Host "[+] Saved: githound_Workflow_$orgId.json"
         }
