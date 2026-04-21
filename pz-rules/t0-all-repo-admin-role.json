@@ -1,7 +1,0 @@
-{
-  "name": "GitHub: Tier Zero All-Repo Admin Role",
-  "description": "The synthetic all_repo_admin role grants admin access to every repository in the organization. This role is inherited by the owners role via GH_HasBaseRole and cascades admin permissions including branch protection editing, secret access, and deploy key management to all repositories.",
-  "cypher": "MATCH (n:GH_OrgRole) WHERE n.name CONTAINS 'ALL_REPO_ADMIN' RETURN n",
-  "enabled": true,
-  "allow_disable": true
-}

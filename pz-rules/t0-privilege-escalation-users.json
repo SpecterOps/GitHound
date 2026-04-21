@@ -1,7 +1,0 @@
-{
-  "name": "GitHub: Tier Zero Privilege Escalation Users",
-  "description": "Users who hold custom organization roles with write_organization_custom_org_role permission. These users can modify organization role definitions \u2014 including the role they hold \u2014 to set the base_role to all_repo_admin, granting themselves admin access to every repository in the organization.",
-  "cypher": "MATCH (n:GH_User)-[:GH_HasRole|GH_HasBaseRole*1..]->(:GH_OrgRole)-[:GH_WriteOrganizationCustomOrgRole]->(:GH_Organization)\nRETURN n",
-  "enabled": true,
-  "allow_disable": true
-}

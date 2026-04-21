@@ -4,7 +4,7 @@
 
 ## Overview
 
-**GitHound** is a BloodHound OpenGraph collector for GitHub, designed to map your organization’s structure and permissions into a navigable attack‑path graph. It:
+**GitHound** is a BloodHound OpenGraph collector for GitHub, designed to map your organization’s structure and permissions into a navigable attack‑path graph.
 
 - **Models Key GitHub Entities**  
   - **GH_Organization**: Your GitHub org metadata  
@@ -21,9 +21,9 @@
 
 With GitHound, you get a clear, interactive graph of your GitHub permissions landscape—perfect for security reviews, compliance audits, and rapid incident investigations.
 
-## Documentation
+GitHound is a community-maintained alternative to the SpecterOps-supported [OpenHound GitHub collector](https://bloodhound.specterops.io/openhound/collectors/github/overview).
 
-For detailed documentation, see [BloodHound Docs - GitHound](https://bloodhound.specterops.io/opengraph/extensions/githound).
+GitHound works with the [BloodHound GitHub Extension](https://bloodhound.specterops.io/opengraph/extensions/github/overview) and produces OpenGraph JSON output that can be uploaded to BloodHound.
 
 ## Quick Start
 
@@ -36,8 +36,6 @@ $session = New-GitHubSession -OrganizationName "YourOrgName" -Token (Get-Clipboa
 
 # 3. Run the collection
 Invoke-GitHound -Session $session
-
-# 4. Upload the resulting githound_<orgId>.json file to BloodHound
 ```
 
 If collection is interrupted, resume from where you left off:
@@ -52,17 +50,23 @@ If you already have a GitHound collection JSON and want to extract the workflow 
 standalone workflow analysis, run:
 
 ```powershell
-pwsh -NoProfile -Command ". ./Parse-GitHoundWorkflow.ps1; $data = Get-Content './githound_O_kgDOCoV2OQ.json' -Raw | ConvertFrom-Json; $workflows = @($data.graph.nodes | Where-Object { $_.kinds -contains 'GH_Workflow' }); $result = Parse-GitHoundWorkflow -Workflows $workflows; Export-GitHoundWorkflowPayload -ParseResult $result -OutputPath './githound_O_kgDOCoV2OQ_workflows.json'"
+pwsh -NoProfile -Command ". ./Parse-GitHoundWorkflow.ps1; $data = Get-Content './samples/githound_O_kgDOCoV2OQ.json' -Raw | ConvertFrom-Json; $workflows = @($data.graph.nodes | Where-Object { $_.kinds -contains 'GH_Workflow' }); $result = Parse-GitHoundWorkflow -Workflows $workflows; Export-GitHoundWorkflowPayload -ParseResult $result -OutputPath './githound_O_kgDOCoV2OQ_workflows.json'"
 ```
 
 This produces a workflow-only BloodHound OpenGraph file such as
 `githound_O_kgDOCoV2OQ_workflows.json`.
 
+## Use the Collected Data
+
+To use the collected GitHub data in BloodHound, follow the [GitHub Extension getting started guide](https://bloodhound.specterops.io/opengraph/extensions/github/getting-started) to install the extension and import the GitHub Cypher queries and Privilege Zone rules.
+
+After that, upload the generated JSON files to BloodHound.
+
 ## Schema
 
 ![Mermaid Schema](./Documentation/images/GitHound-Mermaid.png)
 
-For detailed documentation, see [BloodHound Docs - GitHound Schema](https://bloodhound.specterops.io/opengraph/extensions/githound/reference/schema).
+For detailed documentation, see [BloodHound Docs - GitHub Schema](https://bloodhound.specterops.io/opengraph/extensions/github/schema).
 
 **Key edge categories:**
 
