@@ -3707,10 +3707,10 @@ function Git-HoundWorkflow
     .PARAMETER ChunkSize
         Number of repos to process per chunk (default 50).
 
-    .PARAMETER WorkflowsDefaultBranchOnly
-        When set, only attempts to retrieve workflow file contents from the repository's default branch.
-        Skips the fallback that enumerates all branches looking for the workflow file. This significantly
-        reduces API calls for repositories with many branches.
+    .PARAMETER WorkflowsAllBranches
+        When set, falls back to enumerating all branches to find a workflow file if it is not present
+        on the repository's default branch. By default, only the default branch is checked. Enabling
+        this can significantly increase API calls and run time for repositories with many branches.
 
     .OUTPUTS
         A PSObject containing arrays of nodes and edges representing the workflows and their relationships.
@@ -3719,7 +3719,7 @@ function Git-HoundWorkflow
         $workflows = $repos | Git-HoundWorkflow -Session $Session
 
     .EXAMPLE
-        $workflows = $repos | Git-HoundWorkflow -Session $Session -WorkflowsDefaultBranchOnly
+        $workflows = $repos | Git-HoundWorkflow -Session $Session -WorkflowsAllBranches
     #>
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
@@ -3744,7 +3744,7 @@ function Git-HoundWorkflow
 
         [Parameter()]
         [switch]
-        $WorkflowsDefaultBranchOnly
+        $WorkflowsAllBranches
     )
 
     begin
@@ -3831,7 +3831,7 @@ function Git-HoundWorkflow
                 $nodes = $using:chunkNodes
                 $edges = $using:chunkEdges
                 $Session = $using:Session
-                $defaultBranchOnly = $using:WorkflowsDefaultBranchOnly
+                $allBranches = $using:WorkflowsAllBranches
                 $functionBundle = $using:GitHoundFunctionBundle
                 foreach($funcName in $functionBundle.Keys) {
                     Set-Item -Path "function:$funcName" -Value ([scriptblock]::Create($functionBundle[$funcName]))
@@ -3855,9 +3855,7 @@ function Git-HoundWorkflow
                                 $workflowBranch = $repo.properties.default_branch
                             }
                         } catch {
-                            if ($defaultBranchOnly) {
-                                Write-Warning "Workflow $($repo.properties.full_name)/$($workflow.path) not found on default branch ($($repo.properties.default_branch)) — skipping (WorkflowsDefaultBranchOnly)"
-                            } else {
+                            if ($allBranches) {
                                 # Workflow not on default branch — try other branches
                                 try {
                                     $branches = Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/branches" -ErrorAction Stop
@@ -3879,6 +3877,8 @@ function Git-HoundWorkflow
                                 if (-not $workflowContent) {
                                     Write-Warning "Could not download workflow contents for $($repo.properties.full_name)/$($workflow.path) on any branch"
                                 }
+                            } else {
+                                Write-Warning "Workflow $($repo.properties.full_name)/$($workflow.path) not found on default branch ($($repo.properties.default_branch)) — skipping (use -WorkflowsAllBranches to search other branches)"
                             }
                         }
                     } else {
@@ -6083,10 +6083,11 @@ function Invoke-GitHound
     .PARAMETER CleanupIntermediates
         When set, deletes per-step output files after the final consolidated payload is written.
 
-    .PARAMETER WorkflowsDefaultBranchOnly
-        When set, only attempts to retrieve workflow file contents from the repository's default branch.
-        Skips the fallback that enumerates all branches looking for the workflow file. This significantly
-        reduces API calls for repositories with many branches. Passed through to Git-HoundWorkflow.
+    .PARAMETER WorkflowsAllBranches
+        When set, falls back to enumerating all branches to find a workflow file if it is not present
+        on the repository's default branch. By default, only the default branch is checked. Enabling
+        this can significantly increase API calls and run time for repositories with many branches.
+        Passed through to Git-HoundWorkflow.
 
     .EXAMPLE
         Invoke-GitHound -Session $Session
@@ -6123,7 +6124,7 @@ function Invoke-GitHound
 
         [Parameter()]
         [switch]
-        $WorkflowsDefaultBranchOnly
+        $WorkflowsAllBranches
     )
 
     $nodes = New-Object System.Collections.ArrayList
@@ -6264,7 +6265,7 @@ function Invoke-GitHound
                 Session        = $Session
                 CheckpointPath = $CheckpointPath
             }
-            if ($WorkflowsDefaultBranchOnly) { $workflowParams['WorkflowsDefaultBranchOnly'] = $true }
+            if ($WorkflowsAllBranches) { $workflowParams['WorkflowsAllBranches'] = $true }
             $workflows = $repos | Git-HoundWorkflow @workflowParams
             Export-GitHoundStepOutput -StepResult $workflows -FilePath $stepFile
             Write-Host "[+] Saved: githound_Workflow_$orgId.json"
