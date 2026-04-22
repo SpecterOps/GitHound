@@ -8,7 +8,7 @@ Created by: `Git-HoundOrganization`
 
 | Property Name    | Data Type | Description                                                                              |
 | ---------------- | --------- | ---------------------------------------------------------------------------------------- |
-| objectid         | string    | A deterministic ID derived from the organization ID and role name.                       |
+| objectid         | string    | A deterministic synthetic ID in the form `{orgNodeId}_{roleName}` for custom roles, `{orgNodeId}_owners`, `{orgNodeId}_members`, or `{orgNodeId}_all_repo_{baseRole}` for default and inherited org role nodes. |
 | name             | string    | The fully qualified role name (e.g., `OrgName\Owners`).                                  |
 | id               | string    | Same as objectid.                                                                        |
 | short_name       | string    | The short display name of the role (e.g., `Owners`, `Members`, or the custom role name). |

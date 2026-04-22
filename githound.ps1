@@ -870,17 +870,17 @@ function Git-HoundOrganization
     # These were previously created in Git-HoundOrganizationRole but are moved here
     # because they are static properties of the organization, not per-user assignments.
 
-    $orgAllRepoReadId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_all_repo_read"))
-    $orgAllRepoTriageId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_all_repo_triage"))
-    $orgAllRepoWriteId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_all_repo_write"))
-    $orgAllRepoMaintainId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_all_repo_maintain"))
-    $orgAllRepoAdminId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_all_repo_admin"))
+    $orgAllRepoReadId = "$($orgNode.id)_all_repo_read"
+    $orgAllRepoTriageId = "$($orgNode.id)_all_repo_triage"
+    $orgAllRepoWriteId = "$($orgNode.id)_all_repo_write"
+    $orgAllRepoMaintainId = "$($orgNode.id)_all_repo_maintain"
+    $orgAllRepoAdminId = "$($orgNode.id)_all_repo_admin"
 
     # Custom Organization Roles
     # In general parallelizing this is a bad idea, because most organizations have a small number of custom roles
     foreach($customrole in (Invoke-GithubRestMethod -Session $session -Path "orgs/$($org.login)/organization-roles").roles)
     {
-        $customRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_$($customrole.name)"))
+        $customRoleId = "$($orgNode.id)_$($customrole.name)"
         $customRoleProps = [pscustomobject]@{
             # Common Properties
             name                   = Normalize-Null "$($org.login)/$($customrole.name)"
@@ -967,7 +967,7 @@ function Git-HoundOrganization
     }
 
     # Default Organization Role: Owners
-    $orgOwnersId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_owners"))
+    $orgOwnersId = "$($orgNode.id)_owners"
     $ownersProps = [pscustomobject]@{
         # Common Properties
         name                   = Normalize-Null "$($org.login)/owners"
@@ -995,7 +995,7 @@ function Git-HoundOrganization
     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgOwnersId -EndId $orgAllRepoAdminId -Properties @{traversable=$true}))
 
     # Default Organization Role: Members
-    $orgMembersId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_members"))
+    $orgMembersId = "$($orgNode.id)_members"
     $membersProps = [pscustomobject]@{
         # Common Properties
         name              = Normalize-Null "$($org.login)/members"
@@ -1019,7 +1019,7 @@ function Git-HoundOrganization
 
     if($org.default_repository_permission -ne 'none')
     {
-        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgMembersId -EndId ([Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($orgNode.id)_all_repo_$($org.default_repository_permission)"))) -Properties @{traversable=$true}))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgMembersId -EndId "$($orgNode.id)_all_repo_$($org.default_repository_permission)" -Properties @{traversable=$true}))
     }
 
     $output = [PSCustomObject]@{
@@ -1179,7 +1179,7 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
             }
 
             # --- Team Role Nodes (members and maintainers) ---
-            $memberId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($team.id)_members"))
+            $memberId = "$($team.id)_members"
             $memberProps = [pscustomobject]@{
                 # Common Properties
                 name               = Normalize-Null "$($Organization.properties.login)/$($team.slug)/members"
@@ -1200,7 +1200,7 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
             $null = $nodes.Add((New-GitHoundNode -Id $memberId -Kind 'GH_TeamRole','GH_Role' -Properties $memberProps))
             $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MemberOf' -StartId $memberId -EndId $team.id -Properties @{traversable=$true}))
 
-            $maintainerId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($team.id)_maintainers"))
+            $maintainerId = "$($team.id)_maintainers"
             $maintainerProps = [pscustomobject]@{
                 # Common Properties
                 name               = Normalize-Null "$($Organization.properties.login)/$($team.slug)/maintainers"
@@ -1329,8 +1329,8 @@ function Git-HoundUser
     $edges = New-Object System.Collections.ArrayList
 
     # Compute the owners and members role IDs using the same formula as Git-HoundOrganization
-    $orgOwnersId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_owners"))
-    $orgMembersId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_members"))
+    $orgOwnersId = "$($Organization.id)_owners"
+    $orgMembersId = "$($Organization.id)_members"
 
     $Query = @'
 query MembersWithRole($login: String!, $count: Int = 100, $after: String = null) {
@@ -1481,11 +1481,11 @@ function Git-HoundRepository
     # Pre-loop setup: Custom repository roles and org-level all_repo_* IDs
     $customRepoRoles = (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/custom-repository-roles").custom_roles
 
-    $orgAllRepoReadId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_read"))
-    $orgAllRepoTriageId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_triage"))
-    $orgAllRepoWriteId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_write"))
-    $orgAllRepoMaintainId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_maintain"))
-    $orgAllRepoAdminId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_all_repo_admin"))
+    $orgAllRepoReadId = "$($Organization.id)_all_repo_read"
+    $orgAllRepoTriageId = "$($Organization.id)_all_repo_triage"
+    $orgAllRepoWriteId = "$($Organization.id)_all_repo_write"
+    $orgAllRepoMaintainId = "$($Organization.id)_all_repo_maintain"
+    $orgAllRepoAdminId = "$($Organization.id)_all_repo_admin"
 
     # Per-repo processing: create repo node, role nodes, and fetch collaborator/team assignments
     Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/repos" | ForEach-Object -Parallel {
@@ -1534,7 +1534,7 @@ function Git-HoundRepository
             $selfHostedRunnersEnabled = $false
         }
 
-        $orgMembersId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_members"))
+        $orgMembersId = "$($Organization.id)_members"
 
         $properties = @{
             # Common Properties
@@ -1595,7 +1595,7 @@ function Git-HoundRepository
         # --- Default Repository Role Nodes ---
 
         # Read Role
-        $repoReadId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_read"))
+        $repoReadId = "$($repo.node_id)_read"
         $repoReadProps = [pscustomobject]@{
             # Common Properties
             name                   = Normalize-Null "$($repo.full_name)/read"
@@ -1626,7 +1626,7 @@ function Git-HoundRepository
         }
 
         # Write Role
-        $repoWriteId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_write"))
+        $repoWriteId = "$($repo.node_id)_write"
         $repoWriteProps = [pscustomobject]@{
             # Common Properties
             name                   = Normalize-Null "$($repo.full_name)/write"
@@ -1684,7 +1684,7 @@ function Git-HoundRepository
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgAllRepoWriteId -EndId $repoWriteId -Properties @{traversable=$true}))
 
         # Admin Role
-        $repoAdminId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_admin"))
+        $repoAdminId = "$($repo.node_id)_admin"
         $repoAdminProps = [pscustomobject]@{
             # Common Properties
             name                   = Normalize-Null "$($repo.full_name)/admin"
@@ -1772,7 +1772,7 @@ function Git-HoundRepository
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgAllRepoAdminId -EndId $repoAdminId -Properties @{traversable=$true}))
 
         # Triage Role
-        $repoTriageId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_triage"))
+        $repoTriageId = "$($repo.node_id)_triage"
         $repoTriageProps = [pscustomobject]@{
             # Common Properties
             name                   = Normalize-Null "$($repo.full_name)/triage"
@@ -1820,7 +1820,7 @@ function Git-HoundRepository
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $orgAllRepoTriageId -EndId $repoTriageId -Properties @{traversable=$true}))
 
         # Maintain Role
-        $repoMaintainId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_maintain"))
+        $repoMaintainId = "$($repo.node_id)_maintain"
         $repoMaintainProps = [pscustomobject]@{
             # Common Properties
             name                   = Normalize-Null "$($repo.full_name)/maintain"
@@ -1860,7 +1860,7 @@ function Git-HoundRepository
         # --- Custom Repository Roles ---
         foreach($customRepoRole in $customRepoRoles)
         {
-            $customRepoRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_$($customRepoRole.name)"))
+            $customRepoRoleId = "$($repo.node_id)_$($customRepoRole.name)"
             $customRepoRoleProps = [pscustomobject]@{
                 # Common Properties
                 name                   = Normalize-Null "$($repo.full_name)/$($customRepoRole.name)"
@@ -1883,7 +1883,7 @@ function Git-HoundRepository
 
             if($null -ne $customRepoRole.base_role)
             {
-                $targetBaseRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.node_id)_$($customRepoRole.base_role)"))
+                $targetBaseRoleId = "$($repo.node_id)_$($customRepoRole.base_role)"
                 $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasBaseRole' -StartId $customRepoRoleId -EndId $targetBaseRoleId -Properties @{traversable=$true}))
             }
 
@@ -2117,11 +2117,11 @@ function Git-HoundRepositoryRole
                 $repo = $_
 
                 # Compute deterministic role IDs from repo node_id
-                $repoReadId     = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.properties.node_id)_read"))
-                $repoWriteId    = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.properties.node_id)_write"))
-                $repoAdminId    = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.properties.node_id)_admin"))
-                $repoTriageId   = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.properties.node_id)_triage"))
-                $repoMaintainId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.properties.node_id)_maintain"))
+                $repoReadId     = "$($repo.properties.node_id)_read"
+                $repoWriteId    = "$($repo.properties.node_id)_write"
+                $repoAdminId    = "$($repo.properties.node_id)_admin"
+                $repoTriageId   = "$($repo.properties.node_id)_triage"
+                $repoMaintainId = "$($repo.properties.node_id)_maintain"
 
                 # --- Role Assignments: Direct Collaborators ---
                 foreach($collaborator in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.environment_name)/$($repo.properties.name)/collaborators?affiliation=direct"))
@@ -2133,7 +2133,7 @@ function Git-HoundRepositoryRole
                         'write'    { $repoRoleId = $repoWriteId }
                         'triage'   { $repoRoleId = $repoTriageId }
                         'read'     { $repoRoleId = $repoReadId }
-                        default    { $repoRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.properties.node_id)_$($collaborator.role_name)")) }
+                        default    { $repoRoleId = "$($repo.properties.node_id)_$($collaborator.role_name)" }
                     }
                     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartId $collaborator.node_id -EndId $repoRoleId -Properties @{traversable=$true}))
                 }
@@ -2148,7 +2148,7 @@ function Git-HoundRepositoryRole
                         'push'     { $repoRoleId = $repoWriteId }
                         'triage'   { $repoRoleId = $repoTriageId }
                         'pull'     { $repoRoleId = $repoReadId }
-                        default    { $repoRoleId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($repo.properties.node_id)_$($team.permission)")) }
+                        default    { $repoRoleId = "$($repo.properties.node_id)_$($team.permission)" }
                     }
                     $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartId $team.node_id -EndId $repoRoleId -Properties @{traversable=$true}))
                 }
@@ -5128,7 +5128,7 @@ function Git-HoundSecretScanningAlert
 
     foreach($alert in (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/secret-scanning/alerts"))
     {
-        $alertId = "SSA_$($Organization.id)_$($alert.repository.node_id)_$($alert.number)"
+        $alertId = "SSA_$($alert.repository.node_id)_$($alert.number)"
         $properties =[pscustomobject]@{
             # Common Properties
             name                     = Normalize-Null $alert.number
@@ -5273,10 +5273,12 @@ function Git-HoundAppInstallation
 
         foreach ($app in $installations)
         {
+            $installationNodeId = "GH_AppInstallation_$($app.id)"
+
             $properties = @{
                 # Common Properties
                 name                 = Normalize-Null $app.app_slug
-                node_id              = Normalize-Null $app.client_id
+                node_id              = Normalize-Null $installationNodeId
                 # Relational Properties
                 environment_name     = Normalize-Null $app.account.login
                 environmentid       = Normalize-Null $app.account.node_id
@@ -5296,20 +5298,20 @@ function Git-HoundAppInstallation
                 permissions          = Normalize-Null ($app.permissions | ConvertTo-Json -Depth 10)
                 events               = Normalize-Null ($app.events | ConvertTo-Json -Depth 10)
                 # Accordion Panel Queries
-                query_repositories   = "MATCH p=(:GH_AppInstallation {node_id: $($app.client_id)})-[:GH_CanAccess]->(:GH_Repository) RETURN p LIMIT 1000"
-                query_app            = "MATCH p=(:GH_App)-[:GH_InstalledAs]->(:GH_AppInstallation {node_id: $($app.client_id)}) RETURN p"
+                query_repositories   = "MATCH p=(:GH_AppInstallation {node_id:'$installationNodeId'})-[:GH_CanAccess]->(:GH_Repository) RETURN p LIMIT 1000"
+                query_app            = "MATCH p=(:GH_App)-[:GH_InstalledAs]->(:GH_AppInstallation {node_id:'$installationNodeId'}) RETURN p"
             }
 
-            $null = $nodes.Add((New-GitHoundNode -Id $app.client_id -Kind 'GH_AppInstallation' -Properties $properties))
+            $null = $nodes.Add((New-GitHoundNode -Id $installationNodeId -Kind 'GH_AppInstallation' -Properties $properties))
 
             # Edge: Organization contains the installation
-            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $orgNodeId -EndId $app.client_id -Properties @{ traversable = $false }))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $orgNodeId -EndId $installationNodeId -Properties @{ traversable = $false }))
 
             # Repository access edges
             if ($app.repository_selection -eq 'all') {
                 $allCount++
                 foreach ($repoNodeId in $allRepoNodeIds) {
-                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanAccess' -StartId $app.client_id -EndId $repoNodeId -Properties @{ traversable = $false }))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanAccess' -StartId $installationNodeId -EndId $repoNodeId -Properties @{ traversable = $false }))
                 }
             } else {
                 $selectedCount++
@@ -5322,7 +5324,7 @@ function Git-HoundAppInstallation
                 $appSlugInstallation[$app.app_slug] = $app
             }
             if ($app.app_slug) {
-                $null = $seenAppSlugs[$app.app_slug].Add($installationId)
+                $null = $seenAppSlugs[$app.app_slug].Add($installationNodeId)
             }
         }
 

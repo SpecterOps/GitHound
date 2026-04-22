@@ -8,7 +8,7 @@ Created by: `Git-HoundSecretScanningAlert`
 
 | Property Name            | Data Type | Description                                                                                    |
 | ------------------------ | --------- | ---------------------------------------------------------------------------------------------- |
-| objectid                 | string    | A deterministic Base64-encoded ID derived from the organization, repository, and alert number. |
+| objectid                 | string    | A deterministic synthetic ID in the form `SSA_<repository_node_id>_<alert_number>`. |
 | id                       | string    | Same as objectid.                                                                              |
 | name                     | string    | The alert number.                                                                              |
 | repository_name          | string    | The name of the repository where the secret was detected.                                      |

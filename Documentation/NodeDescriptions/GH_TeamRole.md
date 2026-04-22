@@ -8,10 +8,10 @@ Created by: `Git-HoundTeam`
 
 | Property Name    | Data Type | Description                                                                          |
 | ---------------- | --------- | ------------------------------------------------------------------------------------ |
-| objectid         | string    | A deterministic ID derived from the team ID and role name (e.g., `{teamId}_member`). |
-| name             | string    | The fully qualified role name (e.g., `TeamSlug\member`).                             |
+| objectid         | string    | A deterministic synthetic ID in the form `{teamId}_members` or `{teamId}_maintainers`. |
+| name             | string    | The fully qualified role name (e.g., `OrgName/team-slug/members`).                   |
 | id               | string    | Same as objectid.                                                                    |
-| short_name       | string    | The short role name: `member` or `maintainer`.                                       |
+| short_name       | string    | The short role name: `members` or `maintainers`.                                     |
 | type             | string    | Always `default` for team roles.                                                     |
 | environment_name | string    | The name of the environment (GitHub organization).                                   |
 | environmentid    | string    | The node_id of the environment (GitHub organization).                                |
