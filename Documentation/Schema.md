@@ -31,9 +31,12 @@
 | ![GH_PersonalAccessToken](Icons/gh_personalaccesstoken.png) | [GH_PersonalAccessToken](NodeDescriptions/GH_PersonalAccessToken.md) | GitHub Personal Access Token |
 | ![GH_PersonalAccessTokenRequest](Icons/gh_personalaccesstokenrequest.png) | [GH_PersonalAccessTokenRequest](NodeDescriptions/GH_PersonalAccessTokenRequest.md) | GitHub Personal Access Token Request |
 | ![GH_RepoRole](Icons/gh_reporole.png) | [GH_RepoRole](NodeDescriptions/GH_RepoRole.md) | GitHub Repo Role |
+| ![GH_RepoRunner](Icons/gh_reporunner.png) | [GH_RepoRunner](NodeDescriptions/GH_RepoRunner.md) | GitHub Repo Self-Hosted Runner |
 | ![GH_RepoSecret](Icons/gh_reposecret.png) | [GH_RepoSecret](NodeDescriptions/GH_RepoSecret.md) | GitHub Repo Secret |
 | ![GH_Repository](Icons/gh_repository.png) | [GH_Repository](NodeDescriptions/GH_Repository.md) | GitHub Repository |
 | ![GH_RepoVariable](Icons/gh_repovariable.png) | [GH_RepoVariable](NodeDescriptions/GH_RepoVariable.md) | GitHub Repo Variable |
+| ![GH_OrgRunner](Icons/gh_orgrunner.png) | [GH_OrgRunner](NodeDescriptions/GH_OrgRunner.md) | GitHub Org Self-Hosted Runner |
+| ![GH_RunnerGroup](Icons/gh_runnergroup.png) | [GH_RunnerGroup](NodeDescriptions/GH_RunnerGroup.md) | GitHub Runner Group |
 | ![GH_SamlIdentityProvider](Icons/gh_samlidentityprovider.png) | [GH_SamlIdentityProvider](NodeDescriptions/GH_SamlIdentityProvider.md) | GitHub SAML Identity Provider |
 | ![GH_SecretScanningAlert](Icons/gh_secretscanningalert.png) | [GH_SecretScanningAlert](NodeDescriptions/GH_SecretScanningAlert.md) | GitHub Secret Scanning Alert |
 | ![GH_Team](Icons/gh_team.png) | [GH_Team](NodeDescriptions/GH_Team.md) | GitHub Team |
@@ -56,6 +59,8 @@
 | [GH_BypassPullRequestAllowances](EdgeDescriptions/GH_BypassPullRequestAllowances.md) | ❌ | User or team can bypass pull request requirements on a branch protection rule |
 | [GH_CanAccess](EdgeDescriptions/GH_CanAccess.md) | ❌ | Personal access token or app installation can access this repository or organization |
 | [GH_CanAssumeIdentity](EdgeDescriptions/GH_CanAssumeIdentity.md) | ✅ | Repository can assume this cloud identity via OIDC federation (Azure workload identity or AWS IAM role) |
+| [GH_CanDispatchTo](EdgeDescriptions/GH_CanDispatchTo.md) | ❌ | [Workflow] Job can dispatch to this self-hosted runner based on runs-on label matching and repository runner access |
+| [GH_CanUseRunner](EdgeDescriptions/GH_CanUseRunner.md) | ❌ | [Actions] Repository can dispatch jobs to this self-hosted runner |
 | [GH_CanCreateBranch](EdgeDescriptions/GH_CanCreateBranch.md) | ✅ | [Repository - Computed] Role can create new branches in this repository (unprotected branches that bypass the merge gate) |
 | [GH_CanEditProtection](EdgeDescriptions/GH_CanEditProtection.md) | ✅ | [Repository - Computed] Repo role can modify or remove branch protection rules in this repository, with supporting branch-level edges for impacted protected branches |
 | [GH_CanPwnRequest](EdgeDescriptions/GH_CanPwnRequest.md) | ✅ | [Computed] Repo role can exploit a pwn-requestable workflow to execute arbitrary code with the target's secrets and permissions |

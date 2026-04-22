@@ -2,7 +2,7 @@
   "schema": {
     "name": "SOGitHub",
     "display_name": "GitHub Extension (by SpecterOps)",
-    "version": "v1.2.2",
+    "version": "v1.3.0",
     "namespace": "GH"
   },
   "node_kinds": [
@@ -37,6 +37,38 @@
       "is_display_kind": true,
       "icon": "book",
       "color": "#9EECFF"
+    },
+    {
+      "name": "GH_RunnerGroup",
+      "display_name": "GitHub Runner Group",
+      "description": "An organization-level self-hosted runner group that controls which repositories may use a set of runners",
+      "is_display_kind": true,
+      "icon": "users-rectangle",
+      "color": "#B4F8C8"
+    },
+    {
+      "name": "GH_Runner",
+      "display_name": "GitHub Self-Hosted Runner",
+      "description": "A generic self-hosted runner kind shared by organization-scoped and repository-scoped runner nodes",
+      "is_display_kind": false,
+      "icon": "server",
+      "color": "#FFD580"
+    },
+    {
+      "name": "GH_OrgRunner",
+      "display_name": "GitHub Org Self-Hosted Runner",
+      "description": "A self-hosted runner registered at the organization scope for GitHub Actions jobs",
+      "is_display_kind": true,
+      "icon": "server",
+      "color": "#FFD580"
+    },
+    {
+      "name": "GH_RepoRunner",
+      "display_name": "GitHub Repo Self-Hosted Runner",
+      "description": "A self-hosted runner registered directly to a repository for GitHub Actions jobs",
+      "is_display_kind": true,
+      "icon": "server",
+      "color": "#FFD580"
     },
     {
       "name": "GH_Branch",
@@ -735,6 +767,16 @@
       "name": "GH_CanAssumeIdentity",
       "description": "Repository can assume this cloud identity via OIDC federation (Azure workload identity or AWS IAM role)",
       "is_traversable": true
+    },
+    {
+      "name": "GH_CanUseRunner",
+      "description": "[Actions] Repository can dispatch jobs to this self-hosted runner",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_CanDispatchTo",
+      "description": "[Workflow] Job can dispatch to this self-hosted runner based on runs-on label matching and repository runner access",
+      "is_traversable": false
     },
     {
       "name": "GH_SyncedTo",

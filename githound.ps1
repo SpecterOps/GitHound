@@ -104,8 +104,9 @@ function New-GitHubJwtSession
         $PrivateKeyPath,
 
         [Parameter(Position=3, Mandatory = $true)]
+        [Alias('AppId')]
         [string]
-        $AppId
+        $InstallationId
     )
 
     $header = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject @{
@@ -128,7 +129,7 @@ function New-GitHubJwtSession
     
     $jwtsession = New-GithubSession -OrganizationName $OrganizationName -Token $jwt
 
-    $result = Invoke-GithubrestMethod -Session $jwtsession -Path "app/installations/$($AppId)/access_tokens" -Method POST 
+    $result = Invoke-GithubrestMethod -Session $jwtsession -Path "app/installations/$($InstallationId)/access_tokens" -Method POST
 
     $session = New-GitHubSession -OrganizationName $OrganizationName -Token $result.token
     
@@ -500,11 +501,11 @@ function New-GitHoundEdge
         [String]
         $Kind,
 
-        [Parameter(Position = 1, Mandatory = $true)]
+        [Parameter(Position = 1, Mandatory = $false)]
         [PSObject]
         $StartId,
 
-        [Parameter(Position = 2, Mandatory = $true)]
+        [Parameter(Position = 2, Mandatory = $false)]
         [PSObject]
         $EndId,
 
@@ -538,6 +539,14 @@ function New-GitHoundEdge
         [Hashtable]
         $Properties = @{}
     )
+
+    if (-not $PSBoundParameters.ContainsKey('StartPropertyMatchers') -and -not $PSBoundParameters.ContainsKey('StartId')) {
+        throw "New-GitHoundEdge requires either StartId or StartPropertyMatchers."
+    }
+
+    if (-not $PSBoundParameters.ContainsKey('EndPropertyMatchers') -and -not $PSBoundParameters.ContainsKey('EndId')) {
+        throw "New-GitHoundEdge requires either EndId or EndPropertyMatchers."
+    }
 
     $startEndpoint = if ($PSBoundParameters.ContainsKey('StartPropertyMatchers')) {
         $ep = @{ match_by = 'property'; property_matchers = $StartPropertyMatchers }
@@ -743,6 +752,7 @@ function Git-HoundOrganization
         API Reference:
         - Get an organization: https://docs.github.com/en/rest/orgs/orgs?apiVersion=2022-11-28#get-an-organization
         - Get GitHub Actions permissions for an organization: https://docs.github.com/en/rest/actions/permissions?apiVersion=2022-11-28#get-github-actions-permissions-for-an-organization
+        - Get self-hosted runners settings for an organization: https://docs.github.com/en/rest/actions/permissions?apiVersion=2022-11-28#get-self-hosted-runners-settings-for-an-organization
         - Get all organization roles for an organization: https://docs.github.com/en/rest/orgs/organization-roles?apiVersion=2022-11-28#get-all-organization-roles-for-an-organization
         - List teams that are assigned to an organization role: https://docs.github.com/en/rest/orgs/organization-roles?apiVersion=2022-11-28#list-teams-that-are-assigned-to-an-organization-role
         - List users that are assigned to an organization role: https://docs.github.com/en/rest/orgs/organization-roles?apiVersion=2022-11-28#list-users-that-are-assigned-to-an-organization-role
@@ -770,11 +780,13 @@ function Git-HoundOrganization
     $org = Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Session.OrganizationName)"
     $actions = Invoke-GithubRestMethod -Session $session -Path "orgs/$($Session.OrganizationName)/actions/permissions"
     $workflowPerms = Invoke-GithubRestMethod -Session $session -Path "orgs/$($Session.OrganizationName)/actions/permissions/workflow"
+    $selfHostedRunnerSettings = Invoke-GithubRestMethod -Session $session -Path "orgs/$($Session.OrganizationName)/actions/permissions/self-hosted-runners"
 
     $properties = [pscustomobject]@{
         # Common Properties
         name                                                         = Normalize-Null $org.login
         node_id                                                      = Normalize-Null $org.node_id
+        collected                                                    = $true
         # Relational Properties
         environmentid                                                = Normalize-Null $org.node_id
         environment_name                                             = Normalize-Null $org.login
@@ -834,6 +846,7 @@ function Git-HoundOrganization
         actions_enabled_repositories                                 = Normalize-Null $actions.enabled_repositories
         actions_allowed_actions                                      = Normalize-Null $actions.allowed_actions
         actions_sha_pinning_required                                 = Normalize-Null $actions.sha_pinning_required
+        self_hosted_runners_enabled_repositories                     = Normalize-Null $selfHostedRunnerSettings.enabled_repositories
         default_workflow_permissions                                 = Normalize-Null $workflowPerms.default_workflow_permissions
         can_approve_pull_request_reviews                             = Normalize-Null $workflowPerms.can_approve_pull_request_reviews
         # Accordion Panel Queries
@@ -841,6 +854,8 @@ function Git-HoundOrganization
         query_users                                    = "MATCH (n:GH_User {environmentid:'$($org.node_id)'}) RETURN n"
         query_teams                                    = "MATCH (n:GH_Team {environmentid:'$($org.node_id)'}) RETURN n"
         query_repositories                             = "MATCH (n:GH_Repository {environmentid:'$($org.node_id)'}) RETURN n"
+        query_runner_groups                           = "MATCH p=(:GH_Organization {node_id:'$($org.node_id)'})-[:GH_Contains]->(:GH_RunnerGroup) RETURN p"
+        query_runners                                 = "MATCH p=(:GH_Organization {node_id:'$($org.node_id)'})-[:GH_Contains]->(:GH_RunnerGroup)-[:GH_Contains]->(:GH_Runner) RETURN p"
         query_personal_access_tokens                   = "MATCH p=(:GH_Organization {node_id: '$($org.node_id)'})-[:GH_Contains]->(token) WHERE token:GH_PersonalAccessToken OR token:GH_PersonalAccessTokenRequest RETURN p"
         query_secret_scanning_alerts                   = "MATCH p=(:GH_Organization {node_id: '$($org.node_id)'})-[:GH_Contains]->(alert:GH_SecretScanningAlert) RETURN p"
         query_identity_provider                        = "MATCH p=(OIP:GH_SamlIdentityProvider)-[:GH_HasExternalIdentity]->(EI:GH_ExternalIdentity) MATCH p1=(OIP)<-[:GH_HasSamlIdentityProvider]-(:GH_Organization {node_id:'$($org.node_id)'}) MATCH p2=(EI)-[:GH_MapsToUser]->() RETURN p,p1,p2"
@@ -1413,6 +1428,8 @@ function Git-HoundRepository
         API Reference:
         - Get GitHub Actions permissions for an organization: https://docs.github.com/en/rest/actions/permissions?apiVersion=2022-11-28#get-github-actions-permissions-for-an-organization
         - List selected repositories enabled for GitHub Actions in an organization: https://docs.github.com/en/rest/actions/permissions?apiVersion=2022-11-28#list-github-actions-enabled-repositories-for-an-organization
+        - Get self-hosted runners settings for an organization: https://docs.github.com/en/rest/actions/permissions?apiVersion=2022-11-28#get-self-hosted-runners-settings-for-an-organization
+        - List repositories allowed to use self-hosted runners in an organization: https://docs.github.com/en/rest/actions/permissions?apiVersion=2022-11-28#list-repositories-allowed-to-use-self-hosted-runners-in-an-organization
         - List organization repositories: https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#list-organization-repositories
         - List custom repository roles in an organization: https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/custom-roles?apiVersion=2022-11-28#list-custom-repository-roles-in-an-organization
 
@@ -1447,11 +1464,18 @@ function Git-HoundRepository
 
     # Pre-loop setup: Actions permissions
     $actions = Invoke-GithubRestMethod -Session $session -Path "orgs/$($Organization.Properties.login)/actions/permissions"
+    $selfHostedRunnerSettings = Invoke-GithubRestMethod -Session $session -Path "orgs/$($Organization.Properties.login)/actions/permissions/self-hosted-runners"
 
     $enabledRepos = $null
     if($actions.enabled_repositories -ne 'all')
     {
         $enabledRepos = (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/actions/permissions/repositories").repositories.node_id
+    }
+
+    $selfHostedRunnerEnabledRepos = $null
+    if($selfHostedRunnerSettings.enabled_repositories -eq 'selected')
+    {
+        $selfHostedRunnerEnabledRepos = (Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.Properties.login)/actions/permissions/self-hosted-runners/repositories").repositories.node_id
     }
 
     # Pre-loop setup: Custom repository roles and org-level all_repo_* IDs
@@ -1471,7 +1495,9 @@ function Git-HoundRepository
         $Session = $using:Session
         $Organization = $using:Organization
         $actions = $using:actions
+        $selfHostedRunnerSettings = $using:selfHostedRunnerSettings
         $enabledRepos = $using:enabledRepos
+        $selfHostedRunnerEnabledRepos = $using:selfHostedRunnerEnabledRepos
         $customRepoRoles = $using:customRepoRoles
         $orgAllRepoReadId = $using:orgAllRepoReadId
         $orgAllRepoTriageId = $using:orgAllRepoTriageId
@@ -1493,6 +1519,19 @@ function Git-HoundRepository
         else
         {
             $actionsEnabled = $enabledRepos -contains $repo.node_id
+        }
+
+        if($selfHostedRunnerSettings.enabled_repositories -eq 'all')
+        {
+            $selfHostedRunnersEnabled = $true
+        }
+        elseif($selfHostedRunnerSettings.enabled_repositories -eq 'selected')
+        {
+            $selfHostedRunnersEnabled = $selfHostedRunnerEnabledRepos -contains $repo.node_id
+        }
+        else
+        {
+            $selfHostedRunnersEnabled = $false
         }
 
         $orgMembersId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Organization.id)_members"))
@@ -1527,6 +1566,7 @@ function Git-HoundRepository
             watchers                      = Normalize-Null $repo.watchers
             default_branch                = Normalize-Null $repo.default_branch
             actions_enabled               = Normalize-Null $actionsEnabled
+            self_hosted_runners_enabled   = Normalize-Null $selfHostedRunnersEnabled
             secret_scanning               = Normalize-Null $repo.security_and_analysis.secret_scanning.status
             # Accordion Panel Queries
             query_branches                = "MATCH p=(:GH_Repository {node_id: '$($repo.node_id)'})-[:GH_HasBranch]->(:GH_Branch) RETURN p"
@@ -1535,6 +1575,7 @@ function Git-HoundRepository
             query_roles                   = "MATCH p=(:GH_RepoRole)-[*1..2]->(:GH_Repository {node_id: '$($repo.node_id)'}) RETURN p"
             query_teams                   = "MATCH p=(:GH_Team)-[:GH_MemberOf|GH_HasRole*1..]->(:GH_RepoRole)-[]->(:GH_Repository {node_id: '$($repo.node_id)'}) RETURN p"
             query_workflows               = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_HasWorkflow]->(w:GH_Workflow) RETURN p"
+            query_runners                 = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_CanUseRunner]->(:GH_Runner) RETURN p"
             query_environments            = "MATCH p=(:GH_Repository {node_id: '$($repo.node_id)'})-[:GH_HasEnvironment]->(:GH_Environment) RETURN p"
             query_secrets                 = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_HasSecret]->(:GH_Secret) RETURN p"
             query_variables               = "MATCH p=(:GH_Repository {node_id:'$($repo.node_id)'})-[:GH_HasVariable]->(:GH_Variable) RETURN p"
@@ -4157,11 +4198,19 @@ function Git-HoundWorkflow
     .PARAMETER ChunkSize
         Number of repos to process per chunk (default 50).
 
+    .PARAMETER WorkflowsAllBranches
+        When set, falls back to enumerating all branches to find a workflow file if it is not present
+        on the repository's default branch. By default, only the default branch is checked. Enabling
+        this can significantly increase API calls and run time for repositories with many branches.
+
     .OUTPUTS
         A PSObject containing arrays of nodes and edges representing the workflows and their relationships.
 
     .EXAMPLE
         $workflows = $repos | Git-HoundWorkflow -Session $Session
+
+    .EXAMPLE
+        $workflows = $repos | Git-HoundWorkflow -Session $Session -WorkflowsAllBranches
     #>
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
@@ -4182,7 +4231,11 @@ function Git-HoundWorkflow
 
         [Parameter()]
         [int]
-        $ChunkSize = 50
+        $ChunkSize = 50,
+
+        [Parameter()]
+        [switch]
+        $WorkflowsAllBranches
     )
 
     begin
@@ -4269,6 +4322,7 @@ function Git-HoundWorkflow
                 $nodes = $using:chunkNodes
                 $edges = $using:chunkEdges
                 $Session = $using:Session
+                $allBranches = $using:WorkflowsAllBranches
                 $functionBundle = $using:GitHoundFunctionBundle
                 foreach($funcName in $functionBundle.Keys) {
                     Set-Item -Path "function:$funcName" -Value ([scriptblock]::Create($functionBundle[$funcName]))
@@ -4277,39 +4331,49 @@ function Git-HoundWorkflow
 
                 foreach($workflow in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/actions/workflows").workflows)
                 {
+                    $isStaticWorkflowFile = $workflow.path -match '^\.github/workflows/[^/]+\.(?:yml|yaml)$'
+
                     # Download workflow file contents from the repository
                     # Try the default branch first, then fall back to other branches if not found
                     $workflowContent = $null
                     $workflowBranch = $null
-                    $contentsBasePath = "repos/$($repo.properties.full_name)/contents/$($workflow.path)"
-                    try {
-                        $contentResponse = Invoke-GithubRestMethod -Session $Session -Path $contentsBasePath -ErrorAction Stop
-                        if ($contentResponse.content) {
-                            $workflowContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(($contentResponse.content -replace '\s','')))
-                            $workflowBranch = $repo.properties.default_branch
-                        }
-                    } catch {
-                        # Workflow not on default branch — try other branches
+                    if ($isStaticWorkflowFile) {
+                        $contentsBasePath = "repos/$($repo.properties.full_name)/contents/$($workflow.path)"
                         try {
-                            $branches = Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/branches" -ErrorAction Stop
-                            foreach ($branch in $branches) {
-                                try {
-                                    $contentResponse = Invoke-GithubRestMethod -Session $Session -Path "$contentsBasePath`?ref=$($branch.name)" -ErrorAction Stop
-                                    if ($contentResponse.content) {
-                                        $workflowContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(($contentResponse.content -replace '\s','')))
-                                        $workflowBranch = $branch.name
-                                        break
-                                    }
-                                } catch {
-                                    continue
-                                }
+                            $contentResponse = Invoke-GithubRestMethod -Session $Session -Path $contentsBasePath -ErrorAction Stop
+                            if ($contentResponse.content) {
+                                $workflowContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(($contentResponse.content -replace '\s','')))
+                                $workflowBranch = $repo.properties.default_branch
                             }
                         } catch {
-                            Write-Warning "Could not list branches for $($repo.properties.full_name): $_"
+                            if ($allBranches) {
+                                # Workflow not on default branch — try other branches
+                                try {
+                                    $branches = Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/branches" -ErrorAction Stop
+                                    foreach ($branch in $branches) {
+                                        try {
+                                            $contentResponse = Invoke-GithubRestMethod -Session $Session -Path "$contentsBasePath`?ref=$($branch.name)" -ErrorAction Stop
+                                            if ($contentResponse.content) {
+                                                $workflowContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(($contentResponse.content -replace '\s','')))
+                                                $workflowBranch = $branch.name
+                                                break
+                                            }
+                                        } catch {
+                                            continue
+                                        }
+                                    }
+                                } catch {
+                                    Write-Warning "Could not list branches for $($repo.properties.full_name): $_"
+                                }
+                                if (-not $workflowContent) {
+                                    Write-Warning "Could not download workflow contents for $($repo.properties.full_name)/$($workflow.path) on any branch"
+                                }
+                            } else {
+                                Write-Warning "Workflow $($repo.properties.full_name)/$($workflow.path) not found on default branch ($($repo.properties.default_branch)) — skipping (use -WorkflowsAllBranches to search other branches)"
+                            }
                         }
-                        if (-not $workflowContent) {
-                            Write-Warning "Could not download workflow contents for $($repo.properties.full_name)/$($workflow.path) on any branch"
-                        }
+                    } else {
+                        Write-Verbose "Skipping content download for non-repo-backed or dynamic workflow '$($repo.properties.full_name)/$($workflow.path)'"
                     }
 
                     $props = [pscustomobject]@{
@@ -4406,6 +4470,239 @@ function Git-HoundWorkflow
         }
 
         Write-Output $output
+    }
+}
+
+function Git-HoundRunner
+{
+    <#
+    .SYNOPSIS
+        Fetches self-hosted runner groups and runners at the organization and repository scope.
+
+    .DESCRIPTION
+        This function models self-hosted runner access in two layers:
+        - Organization runner groups and the runners assigned to them
+        - Repository-level self-hosted runners registered directly to a repository
+
+        It emits explicit GH_CanUseRunner edges from repositories to the runners they can
+        dispatch jobs to, so access is represented directly in the graph without relying on
+        implicit policy interpretation at query time.
+
+        API Reference:
+        - List self-hosted runner groups for an organization: https://docs.github.com/en/rest/actions/self-hosted-runner-groups?apiVersion=2022-11-28#list-self-hosted-runner-groups-for-an-organization
+        - List repository access to a self-hosted runner group in an organization: https://docs.github.com/en/rest/actions/self-hosted-runner-groups?apiVersion=2022-11-28#list-repository-access-to-a-self-hosted-runner-group-in-an-organization
+        - List self-hosted runners in a group for an organization: https://docs.github.com/en/rest/actions/self-hosted-runner-groups?apiVersion=2022-11-28#list-self-hosted-runners-in-a-group-for-an-organization
+        - List self-hosted runners for a repository: https://docs.github.com/en/rest/actions/self-hosted-runners?apiVersion=2022-11-28#list-self-hosted-runners-for-a-repository
+
+        Fine Grained Permissions Reference:
+        - "Self-hosted runners" organization permissions (read)
+        - "Administration" repository permissions (read)
+
+    .PARAMETER Session
+        A GitHound.Session object used for authentication and API requests.
+
+    .PARAMETER Organization
+        The GH_Organization node for the current collection.
+
+    .PARAMETER Repository
+        Repository output from Git-HoundRepository. Used to resolve repository access.
+    #>
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session,
+
+        [Parameter(Position = 1, Mandatory = $true)]
+        [psobject]
+        $Organization,
+
+        [Parameter(Position = 2, Mandatory = $true, ValueFromPipeline)]
+        [psobject[]]
+        $Repository
+    )
+
+    begin
+    {
+        $nodes = New-Object System.Collections.ArrayList
+        $edges = New-Object System.Collections.ArrayList
+        $repoNodes = New-Object System.Collections.ArrayList
+    }
+
+    process
+    {
+        $Repository.nodes | Where-Object {$_.kinds -eq 'GH_Repository'} | ForEach-Object {
+            $null = $repoNodes.Add($_)
+        }
+    }
+
+    end
+    {
+        $orgLogin = $Session.OrganizationName
+        $orgNodeId = $Organization.id
+
+        $repoByNodeId = @{}
+        $allRepoIds = New-Object System.Collections.ArrayList
+        $privateRepoIds = New-Object System.Collections.ArrayList
+
+        foreach ($repoNode in $repoNodes) {
+            $repoByNodeId[$repoNode.properties.node_id] = $repoNode
+            $null = $allRepoIds.Add($repoNode.id)
+            if ($repoNode.properties.visibility -in @('private', 'internal')) {
+                $null = $privateRepoIds.Add($repoNode.id)
+            }
+        }
+
+        $seenRunnerNodeIds = @{}
+        $seenUseEdges = @{}
+
+        $runnerGroups = @()
+        try {
+            $runnerGroups = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/runner-groups").runner_groups)
+        } catch {
+            Write-Warning "Could not enumerate organization runner groups for ${orgLogin}: $_"
+        }
+
+        foreach ($group in $runnerGroups) {
+            $groupNodeId = "$orgNodeId`_runner_group_$($group.id)"
+            $groupProperties = [pscustomobject]@{
+                name                       = Normalize-Null "$orgLogin/$($group.name)"
+                node_id                    = Normalize-Null $groupNodeId
+                environment_name           = Normalize-Null $orgLogin
+                environmentid              = Normalize-Null $Organization.properties.node_id
+                group_id                   = Normalize-Null $group.id
+                group_name                 = Normalize-Null $group.name
+                visibility                 = Normalize-Null $group.visibility
+                default                    = Normalize-Null $group.default
+                inherited                  = Normalize-Null $group.inherited
+                allows_public_repositories = Normalize-Null $group.allows_public_repositories
+                restricted_to_workflows    = Normalize-Null $group.restricted_to_workflows
+                selected_workflows         = Normalize-Null ($group.selected_workflows | ConvertTo-Json -Depth 10)
+                runners_url                = Normalize-Null $group.runners_url
+                query_runners              = "MATCH p=(:GH_RunnerGroup {node_id:'$groupNodeId'})-[:GH_Contains]->(:GH_OrgRunner) RETURN p"
+                query_repositories         = "MATCH p=(:GH_Repository)-[:GH_CanUseRunner]->(:GH_OrgRunner)<-[:GH_Contains]-(:GH_RunnerGroup {node_id:'$groupNodeId'}) RETURN p"
+            }
+            $null = $nodes.Add((New-GitHoundNode -Id $groupNodeId -Kind 'GH_RunnerGroup' -Properties $groupProperties))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $orgNodeId -EndId $groupNodeId -Properties @{ traversable = $false }))
+
+            $accessibleRepoIds = @()
+            switch ($group.visibility) {
+                'all' {
+                    $accessibleRepoIds = @($allRepoIds)
+                }
+                'private' {
+                    $accessibleRepoIds = @($privateRepoIds)
+                }
+                'selected' {
+                    try {
+                        $selectedRepos = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/runner-groups/$($group.id)/repositories").repositories)
+                        $accessibleRepoIds = @($selectedRepos | Where-Object { $repoByNodeId.ContainsKey($_.node_id) } | ForEach-Object { $repoByNodeId[$_.node_id].id })
+                    } catch {
+                        Write-Warning "Could not enumerate selected repository access for runner group '$($group.name)' in ${orgLogin}: $_"
+                    }
+                }
+                default {
+                    $accessibleRepoIds = @()
+                }
+            }
+
+            $groupRunners = @()
+            try {
+                $groupRunners = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/runner-groups/$($group.id)/runners").runners)
+            } catch {
+                Write-Warning "Could not enumerate runners for runner group '$($group.name)' in ${orgLogin}: $_"
+            }
+
+            foreach ($runner in $groupRunners) {
+                $runnerNodeId = "$orgNodeId`_org_runner_$($runner.id)"
+                if (-not $seenRunnerNodeIds.ContainsKey($runnerNodeId)) {
+                    $runnerProperties = [pscustomobject]@{
+                        name                 = Normalize-Null $runner.name
+                        node_id              = Normalize-Null $runnerNodeId
+                        environment_name     = Normalize-Null $orgLogin
+                        environmentid        = Normalize-Null $Organization.properties.node_id
+                        scope                = Normalize-Null 'organization'
+                        runner_id            = Normalize-Null $runner.id
+                        os                   = Normalize-Null $runner.os
+                        status               = Normalize-Null $runner.status
+                        busy                 = Normalize-Null $runner.busy
+                        ephemeral            = Normalize-Null $runner.ephemeral
+                        runner_group_id      = Normalize-Null $group.id
+                        runner_group_name    = Normalize-Null $group.name
+                        labels               = Normalize-Null ($runner.labels | ConvertTo-Json -Depth 10)
+                    }
+                    $null = $nodes.Add((New-GitHoundNode -Id $runnerNodeId -Kind @('GH_OrgRunner', 'GH_Runner') -Properties $runnerProperties))
+                    $seenRunnerNodeIds[$runnerNodeId] = $true
+                }
+
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $groupNodeId -EndId $runnerNodeId -Properties @{ traversable = $false }))
+
+                foreach ($repoId in $accessibleRepoIds) {
+                    $edgeKey = "$repoId|$runnerNodeId"
+                    if (-not $seenUseEdges.ContainsKey($edgeKey)) {
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanUseRunner' -StartId $repoId -EndId $runnerNodeId -Properties @{
+                            traversable = $false
+                            scope = 'organization'
+                            via = 'runner_group'
+                            runner_group_name = $group.name
+                            runner_group_visibility = $group.visibility
+                        }))
+                        $seenUseEdges[$edgeKey] = $true
+                    }
+                }
+            }
+        }
+
+        $repoRunnerCandidates = @($repoNodes | Where-Object { $_.properties.actions_enabled -and $_.properties.self_hosted_runners_enabled })
+        foreach ($repoNode in $repoRunnerCandidates) {
+            $repoRunners = @()
+            try {
+                $repoRunners = @((Invoke-GithubRestMethod -Session $Session -Path "repos/$($repoNode.properties.full_name)/actions/runners").runners)
+            } catch {
+                Write-Warning "Could not enumerate repository runners for $($repoNode.properties.full_name): $_"
+            }
+
+            foreach ($runner in $repoRunners) {
+                $runnerNodeId = "$($repoNode.id)`_repo_runner_$($runner.id)"
+                if (-not $seenRunnerNodeIds.ContainsKey($runnerNodeId)) {
+                    $runnerProperties = [pscustomobject]@{
+                        name                 = Normalize-Null $runner.name
+                        node_id              = Normalize-Null $runnerNodeId
+                        environment_name     = Normalize-Null $orgLogin
+                        environmentid        = Normalize-Null $Organization.properties.node_id
+                        scope                = Normalize-Null 'repository'
+                        runner_id            = Normalize-Null $runner.id
+                        repository_name      = Normalize-Null $repoNode.properties.name
+                        repository_id        = Normalize-Null $repoNode.properties.node_id
+                        repository_full_name = Normalize-Null $repoNode.properties.full_name
+                        os                   = Normalize-Null $runner.os
+                        status               = Normalize-Null $runner.status
+                        busy                 = Normalize-Null $runner.busy
+                        ephemeral            = Normalize-Null $runner.ephemeral
+                        labels               = Normalize-Null ($runner.labels | ConvertTo-Json -Depth 10)
+                    }
+                    $null = $nodes.Add((New-GitHoundNode -Id $runnerNodeId -Kind @('GH_RepoRunner', 'GH_Runner') -Properties $runnerProperties))
+                    $seenRunnerNodeIds[$runnerNodeId] = $true
+                }
+
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $repoNode.id -EndId $runnerNodeId -Properties @{ traversable = $false }))
+
+                $edgeKey = "$($repoNode.id)|$runnerNodeId"
+                if (-not $seenUseEdges.ContainsKey($edgeKey)) {
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanUseRunner' -StartId $repoNode.id -EndId $runnerNodeId -Properties @{
+                        traversable = $false
+                        scope = 'repository'
+                        via = 'repository'
+                    }))
+                    $seenUseEdges[$edgeKey] = $true
+                }
+            }
+        }
+
+        Write-Host "[+] Git-HoundRunner complete. $($nodes.Count) nodes, $($edges.Count) edges."
+        [PSCustomObject]@{
+            Nodes = $nodes
+            Edges = $edges
+        }
     }
 }
 
@@ -6277,6 +6574,12 @@ function Invoke-GitHound
     .PARAMETER CleanupIntermediates
         When set, deletes per-step output files after the final consolidated payload is written.
 
+    .PARAMETER WorkflowsAllBranches
+        When set, falls back to enumerating all branches to find a workflow file if it is not present
+        on the repository's default branch. By default, only the default branch is checked. Enabling
+        this can significantly increase API calls and run time for repositories with many branches.
+        Passed through to Git-HoundWorkflow.
+
     .EXAMPLE
         Invoke-GitHound -Session $Session
 
@@ -6308,7 +6611,11 @@ function Invoke-GitHound
 
         [Parameter()]
         [switch]
-        $CollectAll
+        $CollectAll,
+
+        [Parameter()]
+        [switch]
+        $WorkflowsAllBranches
     )
 
     $nodes = New-Object System.Collections.ArrayList
@@ -6445,7 +6752,12 @@ function Invoke-GitHound
             Write-Host "[+] Saved: githound_Workflow_$orgId.json"
         } else {
             Write-Host "[*] Enumerating Organization Workflows"
-            $workflows = $repos | Git-HoundWorkflow -Session $Session -CheckpointPath $CheckpointPath
+            $workflowParams = @{
+                Session        = $Session
+                CheckpointPath = $CheckpointPath
+            }
+            if ($WorkflowsAllBranches) { $workflowParams['WorkflowsAllBranches'] = $true }
+            $workflows = $repos | Git-HoundWorkflow @workflowParams
             Export-GitHoundStepOutput -StepResult $workflows -FilePath $stepFile
             Write-Host "[+] Saved: githound_Workflow_$orgId.json"
         }
@@ -6453,6 +6765,24 @@ function Invoke-GitHound
         if($workflows.edges) { $edges.AddRange(@($workflows.edges)) }
     } else {
         Write-Host "[*] Skipping Workflows (use -CollectAll to include)"
+    }
+
+    # ── Step 7.5: Self-Hosted Runners (requires -CollectAll) ──────────────
+    if ($CollectAll) {
+        $stepFile = Join-Path $CheckpointPath "githound_Runner_$orgId.json"
+        if ($Resume -and (Test-Path $stepFile)) {
+            Write-Host "[*] Resuming: Loaded Self-Hosted Runners from githound_Runner_$orgId.json"
+            $runners = Import-GitHoundStepOutput -FilePath $stepFile
+        } else {
+            Write-Host "[*] Enumerating Self-Hosted Runners"
+            $runners = $repos | Git-HoundRunner -Session $Session -Organization $org.nodes[0]
+            Export-GitHoundStepOutput -StepResult $runners -FilePath $stepFile
+            Write-Host "[+] Saved: githound_Runner_$orgId.json"
+        }
+        if($runners.nodes) { $nodes.AddRange(@($runners.nodes)) }
+        if($runners.edges) { $edges.AddRange(@($runners.edges)) }
+    } else {
+        Write-Host "[*] Skipping Self-Hosted Runners (use -CollectAll to include)"
     }
 
     # ── Step 8: Environments (requires -CollectAll) ───────────────────────
