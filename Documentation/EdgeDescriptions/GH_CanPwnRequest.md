@@ -7,7 +7,7 @@
 
 ## General Information
 
-The traversable [GH_CanPwnRequest](GH_CanPwnRequest.md) edge indicates that a repository role can exploit a pwn-requestable workflow to execute arbitrary code with the base branch's secrets, GITHUB_TOKEN permissions, and OIDC identity. Created by `Get-PwnRequestEdges`, this is a computed edge that combines workflow analysis with repository access and fork policy evaluation.
+The traversable [GH_CanPwnRequest](GH_CanPwnRequest.md) edge indicates that a repository role can exploit a pwn-requestable workflow to execute arbitrary code with the base branch's secrets, GITHUB_TOKEN permissions, and OIDC identity. Created during the integrated workflow-analysis step in `Invoke-GitHound`, this is a computed edge that combines workflow analysis with repository access and fork policy evaluation.
 
 ### Pwn Request Conditions
 
