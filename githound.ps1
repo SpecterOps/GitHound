@@ -29,9 +29,13 @@ function New-GithubSession {
     [OutputType('GitHound.Session')] 
     [CmdletBinding()]
     Param(
-        [Parameter(Position=0, Mandatory = $true)]
+        [Parameter(Position=0, Mandatory = $false)]
         [string]
         $OrganizationName,
+
+        [Parameter(Mandatory = $false)]
+        [string]
+        $EnterpriseName,
 
         [Parameter(Position=1, Mandatory = $false)]
         [string]
@@ -47,7 +51,23 @@ function New-GithubSession {
 
         [Parameter(Position=4, Mandatory = $false)]
         [HashTable]
-        $Headers = @{}
+        $Headers = @{},
+
+        [Parameter(Mandatory = $false)]
+        [HashTable]
+        $JwtHeaders,
+
+        [Parameter(Mandatory = $false)]
+        [HashTable]
+        $PatHeaders,
+
+        [Parameter(Mandatory = $false)]
+        [string]
+        $ClientId,
+
+        [Parameter(Mandatory = $false)]
+        [string]
+        $InstallationId
     )
 
     if($Headers['Accept']) {
@@ -83,6 +103,43 @@ function New-GithubSession {
         Uri = $ApiUri
         Headers = $Headers
         OrganizationName = $OrganizationName
+        EnterpriseName = $EnterpriseName
+        JwtHeaders = $JwtHeaders
+        PatHeaders = $PatHeaders
+        ClientId = $ClientId
+        InstallationId = $InstallationId
+        HasPersonalAccessToken = ($null -ne $PatHeaders)
+        TargetType = if ($EnterpriseName) { 'Enterprise' } elseif ($OrganizationName) { 'Organization' } else { 'Application' }
+    }
+}
+
+function Get-GitHoundAuthHeaders
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session,
+
+        [Parameter()]
+        [ValidateSet('App', 'JWT', 'PAT')]
+        [string]
+        $AuthType = 'App'
+    )
+
+    switch ($AuthType) {
+        'App' {
+            if (-not $Session.Headers) { throw "Session does not contain app installation headers." }
+            return $Session.Headers
+        }
+        'JWT' {
+            if (-not $Session.JwtHeaders) { throw "Session does not contain JWT headers." }
+            return $Session.JwtHeaders
+        }
+        'PAT' {
+            if (-not $Session.PatHeaders) { throw "Session does not contain PAT headers." }
+            return $Session.PatHeaders
+        }
     }
 }
 
@@ -91,9 +148,13 @@ function New-GitHubJwtSession
 {
     [CmdletBinding()]
     Param(
-        [Parameter(Position=0, Mandatory = $true)]
+        [Parameter(Position=0, Mandatory = $true, ParameterSetName = 'Organization')]
         [string]
         $OrganizationName,
+
+        [Parameter(Mandatory = $true, ParameterSetName = 'Enterprise')]
+        [string]
+        $EnterpriseName,
         
         [Parameter(Position=1, Mandatory = $true)]
         [string]
@@ -106,7 +167,12 @@ function New-GitHubJwtSession
         [Parameter(Position=3, Mandatory = $true)]
         [Alias('AppId')]
         [string]
-        $InstallationId
+        $InstallationId,
+
+        [Parameter(Mandatory = $false)]
+        [Alias('Token')]
+        [string]
+        $PersonalAccessToken
     )
 
     $header = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject @{
@@ -126,14 +192,57 @@ function New-GitHubJwtSession
     $signature = [Convert]::ToBase64String($rsa.SignData([System.Text.Encoding]::UTF8.GetBytes("$header.$payload"), [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
     
     $jwt = "$header.$payload.$signature"
-    
-    $jwtsession = New-GithubSession -OrganizationName $OrganizationName -Token $jwt
 
-    $result = Invoke-GithubrestMethod -Session $jwtsession -Path "app/installations/$($InstallationId)/access_tokens" -Method POST
+    $jwtSession = New-GithubSession -Token $jwt
+    $jwtHeaders = $jwtSession.Headers
 
-    $session = New-GitHubSession -OrganizationName $OrganizationName -Token $result.token
+    $result = Invoke-GithubRestMethod -Session $jwtSession -Path "app/installations/$($InstallationId)/access_tokens" -Method POST
+
+    $patHeaders = $null
+    if ($PersonalAccessToken) {
+        $patHeaders = (New-GithubSession -Token $PersonalAccessToken).Headers
+    }
+
+    $session = New-GitHubSession `
+        -OrganizationName $OrganizationName `
+        -EnterpriseName $EnterpriseName `
+        -Token $result.token `
+        -JwtHeaders $jwtHeaders `
+        -PatHeaders $patHeaders `
+        -ClientId $ClientId `
+        -InstallationId $InstallationId
     
     Write-Output $session
+}
+
+function Get-GitHubAppInstallation
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session
+    )
+
+    $jwtHeaders = Get-GitHoundAuthHeaders -Session $Session -AuthType JWT
+    $installations = Invoke-GithubRestMethod -Session $Session -Headers $jwtHeaders -Path "app/installations"
+
+    foreach ($inst in $installations) {
+        $login = if ($inst.account.login) { $inst.account.login } else { $inst.account.slug }
+        $name = if ($inst.account.name) { $inst.account.name } else { $inst.account.login }
+
+        [PSCustomObject]@{
+            InstallationId = $inst.id
+            ClientId       = $inst.client_id
+            TargetType     = $inst.target_type
+            Login          = $login
+            Name           = $name
+            NodeId         = $inst.account.node_id
+            AppSlug        = $inst.app_slug
+            Permissions    = $inst.permissions
+            SuspendedAt    = $inst.suspended_at
+        }
+    }
 }
 
 function Invoke-GithubRestMethod {
@@ -149,8 +258,16 @@ function Invoke-GithubRestMethod {
 
         [Parameter()]
         [string]
-        $Method = 'GET'
+        $Method = 'GET',
+
+        [Parameter()]
+        [hashtable]
+        $Headers
     )
+
+    if (-not $Headers) {
+        $Headers = $Session.Headers
+    }
 
     $LinkHeader = $Null;
     try {
@@ -161,10 +278,10 @@ function Invoke-GithubRestMethod {
             while (-not $requestSuccessful -and $retryCount -lt 3) {
                 try {
                     if($LinkHeader) {
-                        $Response = Invoke-WebRequest -Uri "$LinkHeader" -Headers $Session.Headers -Method $Method -ErrorAction Stop
+                        $Response = Invoke-WebRequest -Uri "$LinkHeader" -Headers $Headers -Method $Method -ErrorAction Stop
                     } else {
                         Write-Verbose "https://api.github.com/$($Path)"
-                        $Response = Invoke-WebRequest -Uri "$($Session.Uri)$($Path)" -Headers $Session.Headers -Method $Method -ErrorAction Stop
+                        $Response = Invoke-WebRequest -Uri "$($Session.Uri)$($Path)" -Headers $Headers -Method $Method -ErrorAction Stop
                     }
                     $requestSuccessful = $true
                 }
