@@ -46,6 +46,49 @@ If collection is interrupted, resume from where you left off:
 Invoke-GitHound -Session $session -Resume
 ```
 
+## GitHub App Sessions
+
+GitHound supports both Personal Access Token sessions and GitHub App installation sessions.
+The existing organization-scoped GitHub App workflow is unchanged:
+
+```powershell
+. ./githound.ps1
+
+$session = New-GitHubJwtSession `
+  -OrganizationName "YourOrgName" `
+  -ClientId $clientId `
+  -PrivateKeyPath $privateKeyPath `
+  -InstallationId $installationId
+
+Invoke-GitHound -Session $session -CollectAll
+```
+
+The same function can also create enterprise-capable sessions:
+
+```powershell
+. ./githound.ps1
+
+$session = New-GitHubJwtSession `
+  -EnterpriseName "YourEnterpriseSlug" `
+  -ClientId $clientId `
+  -PrivateKeyPath $privateKeyPath `
+  -InstallationId $installationId `
+  -PersonalAccessToken $pat
+```
+
+Enterprise-capable sessions retain multiple auth contexts on the returned `GitHound.Session`:
+
+- `Headers`: the GitHub App installation token headers used for normal collection
+- `JwtHeaders`: GitHub App JWT headers used for app-level endpoints such as installation enumeration
+- `PatHeaders`: optional Personal Access Token headers for collection paths that require user-token auth
+
+To enumerate the installations that belong to the authenticated GitHub App:
+
+```powershell
+Get-GitHubAppInstallation -Session $session |
+  Select-Object TargetType, InstallationId, Login, Name, SuspendedAt
+```
+
 ## Workflow Analysis
 
 Workflow parsing is now built into `Invoke-GitHound` when you use `-CollectAll`. The collector
@@ -58,6 +101,19 @@ will:
 
 For resume/debugging purposes, the intermediate workflow-analysis checkpoint is written as
 `githound_WorkflowAnalysis_<orgId>.json`.
+
+## Enterprise Collection Foundation
+
+GitHound now includes a minimal enterprise collection foundation through `Git-HoundEnterprise`.
+That collector currently creates:
+
+- `GH_Enterprise`
+- lightweight `GH_Organization` stub nodes for member organizations
+- `GH_Contains` edges from the enterprise to its organizations
+
+These organization stubs are intentionally emitted with `collected = false`. They represent
+structural discovery from the enterprise context and are meant to be enriched later by normal
+organization collection.
 
 ## Schema
 
