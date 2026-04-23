@@ -1007,6 +1007,148 @@ query($slug: String!, $after: String) {
     }
 }
 
+function Git-HoundEnterpriseUser
+{
+    <#
+    .SYNOPSIS
+        Fetches and processes GitHub Users for an enterprise.
+
+    .DESCRIPTION
+        This function retrieves enterprise members using the GitHub GraphQL API `enterprise.members`
+        connection. It creates GH_User nodes that match the shape used by Git-HoundUser and emits
+        GH_HasMember edges linking the enterprise to each discovered user.
+
+        Enterprise members can be returned either as normal `User` objects or as
+        `EnterpriseUserAccount` objects in Enterprise Managed Users (EMU) environments. When an
+        `EnterpriseUserAccount` is returned, the nested `user` object is preferred when available
+        so that the GH_User node identity matches org-level collection. If the nested `user` object
+        is absent, the enterprise account fields are used as a fallback.
+
+    .PARAMETER Session
+        A GitHound.Session object with EnterpriseName set.
+
+    .PARAMETER Enterprise
+        A GH_Enterprise node object from Git-HoundEnterprise.
+
+    .EXAMPLE
+        $enterpriseUsers = Git-HoundEnterpriseUser -Session $session -Enterprise $enterprise.Nodes[0]
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session,
+
+        [Parameter(Position = 1, Mandatory = $true)]
+        [PSObject]
+        $Enterprise
+    )
+
+    if (-not $Session.EnterpriseName) {
+        throw "Git-HoundEnterpriseUser requires Session.EnterpriseName to be set."
+    }
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+
+    $enterpriseSlug = $Session.EnterpriseName
+    $enterpriseNodeId = Normalize-Null $(if ($Enterprise.id) { $Enterprise.id } elseif ($Enterprise.properties.node_id) { $Enterprise.properties.node_id } else { $null })
+
+    if (-not $enterpriseNodeId) {
+        throw "Git-HoundEnterpriseUser requires a GH_Enterprise node object with an id or properties.node_id."
+    }
+
+    Write-Host "[*] Git-HoundEnterpriseUser: Collecting enterprise members for '$enterpriseSlug'"
+
+    $Query = @'
+query EnterpriseMembers($slug: String!, $count: Int = 100, $after: String = null) {
+    enterprise(slug: $slug) {
+        members(first: $count, after: $after) {
+            edges {
+                node {
+                    ... on User {
+                        id
+                        databaseId
+                        login
+                        name
+                        email
+                        company
+                    }
+                    ... on EnterpriseUserAccount {
+                        id
+                        login
+                        name
+                        user {
+                            id
+                            databaseId
+                            login
+                            name
+                            email
+                            company
+                        }
+                    }
+                }
+            }
+            pageInfo {
+                endCursor
+                hasNextPage
+            }
+        }
+    }
+}
+'@
+
+    $Variables = @{
+        slug = $enterpriseSlug
+        count = 100
+        after = $null
+    }
+
+    do {
+        $result = Invoke-GitHubGraphQL -Session $Session -Query $Query -Variables $Variables
+
+        foreach ($edge in @($result.data.enterprise.members.edges)) {
+            $member = $edge.node
+            $user = if ($member.user) { $member.user } else { $member }
+
+            if (-not $user.id) {
+                Write-Warning "Git-HoundEnterpriseUser: Skipping member '$($member.login)' because no user id was returned."
+                continue
+            }
+
+            $properties = @{
+                name                         = Normalize-Null $user.login
+                node_id                      = Normalize-Null $user.id
+                environment_name             = Normalize-Null $enterpriseSlug
+                environmentid                = Normalize-Null $enterpriseNodeId
+                login                        = Normalize-Null $user.login
+                full_name                    = Normalize-Null $user.name
+                company                      = Normalize-Null $user.company
+                email                        = Normalize-Null $user.email
+                query_personal_access_tokens = "MATCH p=(:GH_User {node_id: '$($user.id)'})-[]->(token) WHERE token:GH_PersonalAccessToken OR token:GH_PersonalAccessTokenRequest RETURN p"
+                query_roles                  = "MATCH p=(t:GH_User {node_id:'$($user.id)'})-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_Role) RETURN p"
+                query_teams                  = "MATCH p=(:GH_User {node_id:'$($user.id)'})-[:GH_HasRole]->(t:GH_TeamRole)-[:GH_MemberOf*1..4]->(:GH_Team) RETURN p"
+                query_repositories           = "MATCH p=(t:GH_User {node_id:'$($user.id)'})-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_ReadRepoContents|GH_WriteRepoContents|GH_WriteRepoPullRequests|GH_ManageWebhooks|GH_ManageDeployKeys|GH_PushProtectedBranch|GH_DeleteAlertsCodeScanning|GH_ViewSecretScanningAlerts|GH_RunOrgMigration|GH_BypassBranchProtection|GH_EditRepoProtections]->(:GH_Repository) RETURN p"
+                query_branches               = "MATCH p=(:GH_User {node_id:'$($user.id)'})-[r]->(:GH_BranchProtectionRule)-[:GH_ProtectedBy]->(:GH_Branch) RETURN p"
+                query_enterprises            = "MATCH p=(:GH_Enterprise)-[:GH_HasMember]->(:GH_User {node_id:'$($user.id)'}) RETURN p"
+            }
+
+            $null = $nodes.Add((New-GitHoundNode -Id $user.id -Kind 'GH_User' -Properties $properties))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasMember' -StartId $enterpriseNodeId -EndId $user.id -Properties @{ traversable = $false }))
+        }
+
+        $Variables['after'] = $result.data.enterprise.members.pageInfo.endCursor
+    }
+    while ($result.data.enterprise.members.pageInfo.hasNextPage)
+
+    Write-Host "[+] Git-HoundEnterpriseUser complete. $($nodes.Count) nodes, $($edges.Count) edges."
+
+    [PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    }
+}
+
 function New-BHOGPropertyMatcher
 {
     Param(

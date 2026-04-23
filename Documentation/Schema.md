@@ -97,6 +97,7 @@
 | [GH_HasEnvironment](EdgeDescriptions/GH_HasEnvironment.md) | ❌ | Repository or branch has/can deploy to this environment |
 | [GH_HasExternalIdentity](EdgeDescriptions/GH_HasExternalIdentity.md) | ❌ | SAML identity provider has this external identity |
 | [GH_HasJob](EdgeDescriptions/GH_HasJob.md) | ✅ | Workflow contains this job |
+| [GH_HasMember](EdgeDescriptions/GH_HasMember.md) | ❌ | Enterprise or organization has this user as a member |
 | [GH_HasPersonalAccessToken](EdgeDescriptions/GH_HasPersonalAccessToken.md) | ❌ | User owns this personal access token that has been granted access to the organization |
 | [GH_HasPersonalAccessTokenRequest](EdgeDescriptions/GH_HasPersonalAccessTokenRequest.md) | ❌ | User has a pending personal access token request for the organization |
 | [GH_HasRole](EdgeDescriptions/GH_HasRole.md) | ✅ | User or team has a role assignment (org role, team role, or repo role) |

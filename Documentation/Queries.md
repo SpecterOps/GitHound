@@ -198,6 +198,18 @@ LIMIT 1000
 
 This query is helpful for validating enterprise discovery before running full organization collection.
 
+## Enterprise Members
+
+Returns enterprises and the users that are direct members of those enterprises.
+
+```cypher
+MATCH p=(enterprise:GH_Enterprise)-[:GH_HasMember]->(user:GH_User)
+RETURN p
+LIMIT 1000
+```
+
+This query is useful for validating enterprise member discovery and Enterprise Managed Users handling.
+
 ## Organizations with default repository permission
 
 Returns organizations that have a default repository permission other than 'none'.
