@@ -3348,23 +3348,27 @@ function Git-HoundBranch
         Retrieves branches and branch protection rules for GitHub repositories.
 
     .DESCRIPTION
-        This function uses the GitHub GraphQL API to enumerate branches and their protection
-        rules across all repositories in the organization.
+        This function uses the GitHub GraphQL API to enumerate branches, branch protection
+        rules, and repository rulesets across all repositories in the organization.
 
-        This uses a three-phase approach with checkpointing and rate limit management:
-        - Phase 1: Paginate organization repositories with nested refs (50 per page).
+        This uses a four-phase approach with checkpointing and rate limit management:
+        - Phase 1: Paginate organization repositories with nested refs (25 per page).
           Each ref includes only its branchProtectionRule ID to determine protection status.
+          Also collects ruleset IDs and default branch names per repository.
           Checkpoints are written after each page.
         - Phase 2: For repos with >100 branches, paginate the remaining refs individually.
-        - Phase 3: Fetch protection rule details by node ID in batches of 100.
+        - Phase 3: Fetch branch protection rule details by node ID in batches of 100.
+        - Phase 4: Fetch repository ruleset details by node ID in batches of 100.
+          Normalizes rulesets into GH_BranchProtectionRule nodes with source_type="ruleset".
+          Matches ruleset ref-name conditions against branches to create GH_ProtectedBy edges.
 
         Creates:
         - GH_Branch nodes for each branch
-        - GH_BranchProtectionRule nodes for each protection rule
+        - GH_BranchProtectionRule nodes for each protection rule and active/evaluate ruleset
         - GH_HasBranch edges (Repository → Branch)
         - GH_ProtectedBy edges (Rule → Branch)
-        - GH_BypassPullRequestAllowances edges (User/Team → Rule)
-        - GH_RestrictionsCanPush edges (User/Team → Rule)
+        - GH_BypassPullRequestAllowances edges (User/Team/App → Rule)
+        - GH_RestrictionsCanPush edges (User/Team/App → Rule)
 
         Between phases and pages, the GraphQL rate limit is checked. If exhausted, the function
         sleeps until reset and continues. Checkpoint files are written to disk after each page
@@ -3431,6 +3435,7 @@ query RepoRefs($login: String!, $count: Int = 100, $after: String = null) {
                 name
                 nameWithOwner
                 owner { login }
+                defaultBranchRef { name }
                 refs(first: 100, refPrefix: "refs/heads/") {
                     nodes {
                         id
@@ -3439,6 +3444,10 @@ query RepoRefs($login: String!, $count: Int = 100, $after: String = null) {
                         branchProtectionRule { id }
                     }
                     pageInfo { endCursor, hasNextPage }
+                }
+                rulesets(first: 100, includeParents: true, targets: [BRANCH]) {
+                    nodes { id }
+                    pageInfo { hasNextPage endCursor }
                 }
             }
             pageInfo { endCursor, hasNextPage }
@@ -3473,6 +3482,10 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
     $ruleToBranches = @{}
     # Map: branchProtectionRule ID → { name, id } of its parent repository (for Phase 3)
     $ruleToRepo = @{}
+    # Map: rulesetId → list of { name, id, defaultBranch } repo objects (for Phase 4)
+    $rulesetToRepos = @{}
+    # Map: repoId → default branch name (for Phase 4 refName pattern matching)
+    $repoDefaultBranch = @{}
 
     # ── Phase 1: Paginate repos with nested refs ───────────────────────────
     $overflowRepos = New-Object System.Collections.ArrayList
@@ -3497,6 +3510,16 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
             if ($p2Data.metadata.rule_to_branches) {
                 foreach ($prop in $p2Data.metadata.rule_to_branches.PSObject.Properties) {
                     $ruleToBranches[$prop.Name] = [System.Collections.ArrayList]@($prop.Value)
+                }
+            }
+            if ($p2Data.metadata.ruleset_to_repos) {
+                foreach ($prop in $p2Data.metadata.ruleset_to_repos.PSObject.Properties) {
+                    $rulesetToRepos[$prop.Name] = [System.Collections.ArrayList]@($prop.Value)
+                }
+            }
+            if ($p2Data.metadata.repo_default_branch) {
+                foreach ($prop in $p2Data.metadata.repo_default_branch.PSObject.Properties) {
+                    $repoDefaultBranch[$prop.Name] = $prop.Value
                 }
             }
             Write-Host "[*] Auto-resume: Phase 2 checkpoint found ($($nodes.Count) branches). Skipping to Phase 3."
@@ -3537,6 +3560,16 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
                 if ($resumeData.metadata.rule_to_branches) {
                     foreach ($prop in $resumeData.metadata.rule_to_branches.PSObject.Properties) {
                         $ruleToBranches[$prop.Name] = [System.Collections.ArrayList]@($prop.Value)
+                    }
+                }
+                if ($resumeData.metadata.ruleset_to_repos) {
+                    foreach ($prop in $resumeData.metadata.ruleset_to_repos.PSObject.Properties) {
+                        $rulesetToRepos[$prop.Name] = [System.Collections.ArrayList]@($prop.Value)
+                    }
+                }
+                if ($resumeData.metadata.repo_default_branch) {
+                    foreach ($prop in $resumeData.metadata.repo_default_branch.PSObject.Properties) {
+                        $repoDefaultBranch[$prop.Name] = $prop.Value
                     }
                 }
 
@@ -3620,6 +3653,27 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
                     cursor   = $repo.refs.pageInfo.endCursor
                 })
             }
+
+            # Track default branch for Phase 4 refName pattern matching
+            $defaultBranch = if ($repo.defaultBranchRef) { $repo.defaultBranchRef.name } else { $null }
+            $repoDefaultBranch[$repo.id] = $defaultBranch
+
+            # Track rulesets for Phase 4
+            if ($repo.rulesets -and $repo.rulesets.nodes) {
+                foreach ($ruleset in $repo.rulesets.nodes) {
+                    if (-not $rulesetToRepos.ContainsKey($ruleset.id)) {
+                        $rulesetToRepos[$ruleset.id] = New-Object System.Collections.ArrayList
+                    }
+                    $null = $rulesetToRepos[$ruleset.id].Add(@{
+                        name          = $repo.name
+                        id            = $repo.id
+                        defaultBranch = $defaultBranch
+                    })
+                }
+                if ($repo.rulesets.pageInfo.hasNextPage) {
+                    Write-Warning "Repository $($repo.nameWithOwner) has more than 100 rulesets. Some rulesets may not be collected."
+                }
+            }
         }
 
         # Checkpoint after each page
@@ -3634,8 +3688,10 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
                 repos_processed  = $reposProcessed
                 cursor           = if ($result.data.organization.repositories.pageInfo.hasNextPage) { $nextCursor } else { $null }
                 timestamp        = (Get-Date -Format "o")
-                overflow_repos   = @($overflowRepos)
-                rule_to_branches = $ruleToBranches
+                overflow_repos     = @($overflowRepos)
+                rule_to_branches   = $ruleToBranches
+                ruleset_to_repos   = $rulesetToRepos
+                repo_default_branch = $repoDefaultBranch
             }
             graph = [PSCustomObject]@{
                 nodes = @($nodes)
@@ -3732,10 +3788,12 @@ query RefOverflow($owner: String!, $name: String!, $count: Int = 100, $after: St
     if ($overflowRepos.Count -gt 0) {
         $chunkPayload = [PSCustomObject]@{
             metadata = [PSCustomObject]@{
-                source_kind      = "GitHub"
-                phase            = "branches_phase2"
-                timestamp        = (Get-Date -Format "o")
-                rule_to_branches = $ruleToBranches
+                source_kind         = "GitHub"
+                phase               = "branches_phase2"
+                timestamp           = (Get-Date -Format "o")
+                rule_to_branches    = $ruleToBranches
+                ruleset_to_repos    = $rulesetToRepos
+                repo_default_branch = $repoDefaultBranch
             }
             graph = [PSCustomObject]@{
                 nodes = @($nodes)
@@ -3850,6 +3908,8 @@ query ProtectionRulesByIds($ids: [ID!]!) {
                     dismisses_stale_reviews         = Normalize-Null $rule.dismissesStaleReviews
                     allows_force_pushes             = Normalize-Null $rule.allowsForcePushes
                     allows_deletions                = Normalize-Null $rule.allowsDeletions
+                    # Source Properties
+                    source_type                     = Normalize-Null 'branch_protection_rule'
                     # Accordion Panel Queries
                     query_user_exceptions           = "MATCH p=(:GH_User)-[]->(:GH_BranchProtectionRule {node_id:'$($rule.id)'}) RETURN p"
                     query_branches                  = "MATCH p=(:GH_BranchProtectionRule {node_id:'$($rule.id)'})-[:GH_ProtectedBy]->(:GH_Branch) RETURN p"
@@ -3885,6 +3945,393 @@ query ProtectionRulesByIds($ids: [ID!]!) {
         Write-Host "[*] Phase 3: No protected branches found, skipping protection rule fetch."
     }
 
+    # ── Phase 4: Fetch repository rulesets by node ID ─────────────────────
+    # Query ruleset details in batches using GraphQL nodes() query, then normalize
+    # into GH_BranchProtectionRule nodes with source_type="ruleset".
+
+    $rulesetIds = @($rulesetToRepos.Keys)
+    if ($rulesetIds.Count -gt 0) {
+        Write-Host "[*] Phase 4: Fetching $($rulesetIds.Count) repository rulesets..."
+
+        $RulesetsQuery = @'
+query RulesetsByIds($ids: [ID!]!) {
+    nodes(ids: $ids) {
+        ... on RepositoryRuleset {
+            id
+            name
+            enforcement
+            source {
+                ... on Organization { id login }
+                ... on Repository { id name }
+            }
+            conditions {
+                refName { include exclude }
+            }
+            rules(first: 25) {
+                nodes {
+                    type
+                    parameters {
+                        ... on PullRequestParameters {
+                            requiredApprovingReviewCount
+                            dismissStaleReviewsOnPush
+                            requireCodeOwnerReview
+                            requireLastPushApproval
+                        }
+                        ... on RequiredStatusChecksParameters {
+                            strictRequiredStatusChecksPolicy
+                        }
+                    }
+                }
+            }
+            bypassActors(first: 100) {
+                nodes {
+                    actor {
+                        ... on User { id login }
+                        ... on Team { id slug }
+                        ... on App { id name }
+                    }
+                    bypassMode
+                    organizationAdmin
+                    repositoryRoleName
+                    repositoryRoleDatabaseId
+                }
+            }
+        }
+    }
+}
+'@
+
+        # Helper: Test if a branch name matches a ruleset's refName conditions.
+        # Patterns use refs/heads/ prefix and special tokens ~ALL, ~DEFAULT_BRANCH.
+        function Test-RefNameMatch {
+            param(
+                [string]$BranchName,
+                [string[]]$Include,
+                [string[]]$Exclude,
+                [string]$DefaultBranch
+            )
+
+            $matched = $false
+            foreach ($pattern in $Include) {
+                if ($pattern -eq '~ALL') {
+                    $matched = $true
+                    break
+                }
+                if ($pattern -eq '~DEFAULT_BRANCH') {
+                    if ($BranchName -eq $DefaultBranch) {
+                        $matched = $true
+                        break
+                    }
+                    continue
+                }
+                # Strip refs/heads/ prefix for matching
+                $branchPattern = $pattern -replace '^refs/heads/', ''
+                if ($BranchName -like $branchPattern) {
+                    $matched = $true
+                    break
+                }
+            }
+
+            if (-not $matched) { return $false }
+
+            # Check exclusions
+            foreach ($pattern in $Exclude) {
+                if ($pattern -eq '~ALL') { return $false }
+                if ($pattern -eq '~DEFAULT_BRANCH') {
+                    if ($BranchName -eq $DefaultBranch) { return $false }
+                    continue
+                }
+                $branchPattern = $pattern -replace '^refs/heads/', ''
+                if ($BranchName -like $branchPattern) { return $false }
+            }
+
+            return $true
+        }
+
+        # Build branch lookup: repoId → list of { id, shortName } for pattern matching
+        $repoBranchList = @{}
+        foreach ($node in $nodes) {
+            if ($node.kinds -contains 'GH_Branch') {
+                $repoId = $node.properties.repository_id
+                if (-not $repoBranchList.ContainsKey($repoId)) {
+                    $repoBranchList[$repoId] = New-Object System.Collections.ArrayList
+                }
+                $null = $repoBranchList[$repoId].Add(@{
+                    id        = $node.id
+                    shortName = $node.properties.short_name
+                })
+            }
+        }
+
+        # Build RepoRole lookup: repoId → { shortName → roleNodeId } for repositoryRoleName bypass resolution
+        $repoRoleLookup = @{}
+        foreach ($node in $nodes) {
+            if ($node.kinds -contains 'GH_RepoRole' -and $node.properties.repository_id -and $node.properties.short_name) {
+                $repoId = $node.properties.repository_id
+                if (-not $repoRoleLookup.ContainsKey($repoId)) {
+                    $repoRoleLookup[$repoId] = @{}
+                }
+                $repoRoleLookup[$repoId][$node.properties.short_name] = $node.id
+            }
+        }
+
+        $batchSize = 100
+        $batchCount = 0
+
+        for ($i = 0; $i -lt $rulesetIds.Count; $i += $batchSize) {
+            $batchCount++
+            $batch = $rulesetIds[$i..[Math]::Min($i + $batchSize - 1, $rulesetIds.Count - 1)]
+
+            # Check GraphQL rate limit before each batch
+            $graphqlRateLimit = (Get-RateLimitInformation -Session $Session).graphql
+            if ($graphqlRateLimit.remaining -lt 50) {
+                $timeNow = [DateTimeOffset]::Now.ToUnixTimeSeconds()
+                $sleepSeconds = [Math]::Max(1, $graphqlRateLimit.reset - $timeNow + 5)
+                $resetLocal = ([DateTimeOffset]::FromUnixTimeSeconds($graphqlRateLimit.reset)).LocalDateTime.ToString("HH:mm:ss")
+                Write-Host "[!] GraphQL rate limit low ($($graphqlRateLimit.remaining) remaining). Sleeping $sleepSeconds seconds until reset at $resetLocal..."
+                Start-Sleep -Seconds $sleepSeconds
+            }
+
+            Write-Host "[*] Phase 4 batch $batchCount ($($batch.Count) rulesets)..."
+
+            $result = Invoke-GitHubGraphQL -Session $Session -Headers $Session.Headers -Query $RulesetsQuery -Variables @{ ids = $batch }
+
+            foreach ($ruleset in $result.data.nodes) {
+                if (-not $ruleset) { continue }  # Skip null entries
+
+                $rulesetId = $ruleset.id
+
+                # Skip disabled rulesets entirely
+                if ($ruleset.enforcement -eq 'DISABLED') { continue }
+
+                # Determine source level
+                $sourceLevel = 'repository'
+                $sourceContainerId = $null
+                if ($ruleset.source.login) {
+                    # Source is Organization
+                    $sourceLevel = 'organization'
+                    $sourceContainerId = $ruleset.source.id
+                }
+
+                # ── Normalize ruleset rules into BPR-shaped properties ──
+                $hasPullRequest = $false
+                $requiredApprovingReviewCount = 0
+                $dismissesStaleReviews = $false
+                $requireCodeOwnerReviews = $false
+                $requireLastPushApproval = $false
+                $requiresStatusChecks = $false
+                $requiresStrictStatusChecks = $false
+                $hasNonFastForward = $false
+                $hasDeletion = $false
+                $hasCreation = $false
+                $hasUpdate = $false
+                $hasLockBranch = $false
+
+                foreach ($rule in $ruleset.rules.nodes) {
+                    switch ($rule.type) {
+                        'PULL_REQUEST' {
+                            $hasPullRequest = $true
+                            if ($rule.parameters) {
+                                $requiredApprovingReviewCount = $rule.parameters.requiredApprovingReviewCount
+                                $dismissesStaleReviews = $rule.parameters.dismissStaleReviewsOnPush
+                                $requireCodeOwnerReviews = $rule.parameters.requireCodeOwnerReview
+                                $requireLastPushApproval = $rule.parameters.requireLastPushApproval
+                            }
+                        }
+                        'REQUIRED_STATUS_CHECKS' {
+                            $requiresStatusChecks = $true
+                            if ($rule.parameters) {
+                                $requiresStrictStatusChecks = $rule.parameters.strictRequiredStatusChecksPolicy
+                            }
+                        }
+                        'NON_FAST_FORWARD' { $hasNonFastForward = $true }
+                        'DELETION'         { $hasDeletion = $true }
+                        'CREATION'         { $hasCreation = $true }
+                        'UPDATE'           { $hasUpdate = $true }
+                        'LOCK_BRANCH'      { $hasLockBranch = $true }
+                    }
+                }
+
+                # ── Determine enforce_admins from bypass actors ──
+                # If any bypass actor has organizationAdmin=true, admins can bypass (enforce_admins=false)
+                $enforceAdmins = $true
+                foreach ($ba in $ruleset.bypassActors.nodes) {
+                    if ($ba.organizationAdmin -eq $true) {
+                        $enforceAdmins = $false
+                        break
+                    }
+                }
+
+                # ── Determine representative pattern from refName conditions ──
+                $refInclude = @()
+                $refExclude = @()
+                if ($ruleset.conditions -and $ruleset.conditions.refName) {
+                    $refInclude = @($ruleset.conditions.refName.include)
+                    $refExclude = @($ruleset.conditions.refName.exclude)
+                }
+
+                $displayPattern = if ($refInclude.Count -eq 0 -or $refInclude -contains '~ALL') {
+                    '*'
+                } elseif ($refInclude.Count -eq 1) {
+                    ($refInclude[0] -replace '^refs/heads/', '')
+                } else {
+                    ($refInclude[0] -replace '^refs/heads/', '')
+                }
+
+                $enforcement = $ruleset.enforcement.ToLower()
+
+                # ── Process each repo this ruleset applies to ──
+                $repos = $rulesetToRepos[$rulesetId]
+                if (-not $repos) { continue }
+
+                foreach ($rulesetRepo in $repos) {
+                    # Generate a unique node ID per ruleset-repo pair (org-level rulesets span multiple repos)
+                    $nodeId = "$($rulesetId)_$($rulesetRepo.id)"
+
+                    # Create GH_BranchProtectionRule node with normalized properties
+                    $props = [pscustomobject]@{
+                        # Common Properties
+                        name                            = Normalize-Null $displayPattern
+                        node_id                         = Normalize-Null $nodeId
+                        # Relational Properties
+                        environment_name                = Normalize-Null $orgLogin
+                        environmentid                  = Normalize-Null $orgNodeId
+                        repository_name                 = Normalize-Null $rulesetRepo.name
+                        repository_id                   = Normalize-Null $rulesetRepo.id
+                        # Node Specific Properties
+                        pattern                         = Normalize-Null $displayPattern
+                        enforce_admins                  = Normalize-Null $enforceAdmins
+                        lock_branch                     = Normalize-Null $hasLockBranch
+                        blocks_creations                = Normalize-Null $hasCreation
+                        required_pull_request_reviews   = Normalize-Null $hasPullRequest
+                        required_approving_review_count = Normalize-Null $requiredApprovingReviewCount
+                        require_code_owner_reviews      = Normalize-Null $requireCodeOwnerReviews
+                        require_last_push_approval      = Normalize-Null $requireLastPushApproval
+                        push_restrictions               = Normalize-Null $hasUpdate
+                        requires_status_checks          = Normalize-Null $requiresStatusChecks
+                        requires_strict_status_checks   = Normalize-Null $requiresStrictStatusChecks
+                        dismisses_stale_reviews         = Normalize-Null $dismissesStaleReviews
+                        allows_force_pushes             = Normalize-Null (-not $hasNonFastForward)
+                        allows_deletions                = Normalize-Null (-not $hasDeletion)
+                        # Ruleset-specific Properties
+                        source_type                     = Normalize-Null 'ruleset'
+                        source_level                    = Normalize-Null $sourceLevel
+                        enforcement                     = Normalize-Null $enforcement
+                        ruleset_name                    = Normalize-Null $ruleset.name
+                        # Accordion Panel Queries
+                        query_user_exceptions           = "MATCH p=()-[]->(:GH_BranchProtectionRule {node_id:'$nodeId'}) RETURN p"
+                        query_branches                  = "MATCH p=(:GH_BranchProtectionRule {node_id:'$nodeId'})-[:GH_ProtectedBy]->(:GH_Branch) RETURN p"
+                    }
+
+                    $null = $nodes.Add((New-GitHoundNode -Id $nodeId -Kind GH_BranchProtectionRule -Properties $props))
+
+                    # GH_Contains edge: source container → ruleset node
+                    $containerId = if ($sourceLevel -eq 'organization' -and $sourceContainerId) {
+                        $sourceContainerId
+                    } else {
+                        $rulesetRepo.id
+                    }
+                    $null = $edges.Add((New-GitHoundEdge -Kind GH_Contains -StartId $containerId -EndId $nodeId -Properties @{ traversable = $false }))
+
+                    # ── Create GH_ProtectedBy edges via ref-name pattern matching ──
+                    $defaultBranch = $rulesetRepo.defaultBranch
+                    $branches = $repoBranchList[$rulesetRepo.id]
+
+                    if ($branches) {
+                        foreach ($branch in $branches) {
+                            if (Test-RefNameMatch -BranchName $branch.shortName -Include $refInclude -Exclude $refExclude -DefaultBranch $defaultBranch) {
+                                $null = $edges.Add((New-GitHoundEdge -Kind GH_ProtectedBy -StartId $nodeId -EndId $branch.id -Properties @{ traversable = $false }))
+                            }
+                        }
+                    }
+
+                    # ── Create bypass actor edges ──
+                    foreach ($ba in $ruleset.bypassActors.nodes) {
+                        # Skip organizationAdmin-only entries (handled via enforce_admins property)
+                        if ($ba.organizationAdmin -eq $true -and -not $ba.actor -and -not $ba.repositoryRoleName) { continue }
+
+                        $bypassMode = $ba.bypassMode  # ALWAYS, PULL_REQUEST, or EXEMPT
+
+                        # Determine the actor ID(s) for this bypass entry
+                        $actorIds = @()
+
+                        if ($ba.actor -and $ba.actor.id) {
+                            # Direct actor: User, Team, or App
+                            $actorIds += $ba.actor.id
+                        }
+
+                        if ($ba.repositoryRoleName) {
+                            # Resolve repo role by short_name for this specific repo
+                            if ($repoRoleLookup.ContainsKey($rulesetRepo.id) -and
+                                $repoRoleLookup[$rulesetRepo.id].ContainsKey($ba.repositoryRoleName)) {
+                                $actorIds += $repoRoleLookup[$rulesetRepo.id][$ba.repositoryRoleName]
+                            }
+                        }
+
+                        foreach ($actorId in $actorIds) {
+                            switch ($bypassMode) {
+                                'PULL_REQUEST' {
+                                    $null = $edges.Add((New-GitHoundEdge -Kind GH_BypassPullRequestAllowances -StartId $actorId -EndId $nodeId -Properties @{ traversable = $false }))
+                                }
+                                'ALWAYS' {
+                                    $null = $edges.Add((New-GitHoundEdge -Kind GH_BypassPullRequestAllowances -StartId $actorId -EndId $nodeId -Properties @{ traversable = $false }))
+                                    $null = $edges.Add((New-GitHoundEdge -Kind GH_RestrictionsCanPush -StartId $actorId -EndId $nodeId -Properties @{ traversable = $false }))
+                                }
+                                'EXEMPT' {
+                                    $null = $edges.Add((New-GitHoundEdge -Kind GH_BypassPullRequestAllowances -StartId $actorId -EndId $nodeId -Properties @{ traversable = $false }))
+                                    $null = $edges.Add((New-GitHoundEdge -Kind GH_RestrictionsCanPush -StartId $actorId -EndId $nodeId -Properties @{ traversable = $false }))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        # Phase 4 checkpoint
+        $phase4Payload = [PSCustomObject]@{
+            metadata = [PSCustomObject]@{
+                source_kind = "GitHub"
+                phase       = "branches_phase4"
+                timestamp   = (Get-Date -Format "o")
+            }
+            graph = [PSCustomObject]@{
+                nodes = @($nodes)
+                edges = @($edges)
+            }
+        }
+        $phase4File = Join-Path $CheckpointPath "githound_Branch_phase4.json"
+        $phase4Payload | ConvertTo-Json -Depth 10 | Out-File -FilePath $phase4File
+
+        Write-Host "[+] Phase 4 complete. $($rulesetIds.Count) rulesets processed."
+    }
+    else {
+        Write-Host "[*] Phase 4: No rulesets found, skipping ruleset fetch."
+    }
+
+    # ── Fix up branch 'protected' property from GH_ProtectedBy edges ──────
+    # The Phase 1 property only reflects classic BPRs. Now that Phase 3 and 4 have
+    # created all GH_ProtectedBy edges (BPRs + rulesets), derive the definitive value.
+    $protectedBranchIds = New-Object System.Collections.Generic.HashSet[string]
+    foreach ($edge in $edges) {
+        if ($edge.kind -eq 'GH_ProtectedBy') {
+            $null = $protectedBranchIds.Add($edge.end.value)
+        }
+    }
+    $fixedCount = 0
+    foreach ($node in $nodes) {
+        if ($node.kinds -contains 'GH_Branch') {
+            $shouldBeProtected = $protectedBranchIds.Contains($node.id)
+            if ([string]$node.properties.protected -ne [string]$shouldBeProtected) {
+                $node.properties.protected = $shouldBeProtected
+                $fixedCount++
+            }
+        }
+    }
+    if ($fixedCount -gt 0) {
+        Write-Host "[+] Updated 'protected' property on $fixedCount branch nodes from GH_ProtectedBy edges."
+    }
+
     # Final checkpoint
     $finalPayload = [PSCustomObject]@{
         metadata = [PSCustomObject]@{
@@ -3904,6 +4351,8 @@ query ProtectionRulesByIds($ids: [ID!]!) {
     $intermediateFiles = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Branch_page_*.json" -ErrorAction SilentlyContinue)
     $phase2File = Join-Path $CheckpointPath "githound_Branch_phase2.json"
     if (Test-Path $phase2File) { $intermediateFiles += Get-Item $phase2File }
+    $phase4File = Join-Path $CheckpointPath "githound_Branch_phase4.json"
+    if (Test-Path $phase4File) { $intermediateFiles += Get-Item $phase4File }
     if ($intermediateFiles.Count -gt 0) {
         $intermediateFiles | Remove-Item -Force
         Write-Host "[+] Cleaned up $($intermediateFiles.Count) intermediate checkpoint files."
@@ -4018,22 +4467,28 @@ function Compute-GitHoundBranchAccess
     }
 
     # Branch -> BPR mapping (from GH_ProtectedBy edges: BPR -> Branch)
-    $branchToBPR = @{}
+    # 1:many — a branch can be protected by multiple rules (BPRs + rulesets)
+    $branchToBPRs = @{}
     foreach ($edge in $Edges) {
         if ($edge.kind -eq 'GH_ProtectedBy') {
-            $branchToBPR[$edge.end.value] = $edge.start.value
+            $branchId = $edge.end.value
+            if (-not $branchToBPRs.ContainsKey($branchId)) {
+                $branchToBPRs[$branchId] = New-Object System.Collections.ArrayList
+            }
+            $null = $branchToBPRs[$branchId].Add($edge.start.value)
         }
     }
 
     # BPR -> Repo mapping (derived: BPR -> ProtectedBy -> Branch -> HasBranch -> Repo)
     $bprToRepo = @{}
-    foreach ($branchId in $branchToBPR.Keys) {
-        $bprId = $branchToBPR[$branchId]
-        if (-not $bprToRepo.ContainsKey($bprId)) {
-            # Find which repo this branch belongs to via inbound GH_HasBranch
-            $hasBranchKey = "GH_HasBranch|$branchId"
-            if ($inbound.ContainsKey($hasBranchKey)) {
-                $bprToRepo[$bprId] = $inbound[$hasBranchKey][0]
+    foreach ($branchId in $branchToBPRs.Keys) {
+        foreach ($bprId in $branchToBPRs[$branchId]) {
+            if (-not $bprToRepo.ContainsKey($bprId)) {
+                # Find which repo this branch belongs to via inbound GH_HasBranch
+                $hasBranchKey = "GH_HasBranch|$branchId"
+                if ($inbound.ContainsKey($hasBranchKey)) {
+                    $bprToRepo[$bprId] = $inbound[$hasBranchKey][0]
+                }
             }
         }
     }
@@ -4097,7 +4552,7 @@ function Compute-GitHoundBranchAccess
         }
     }
 
-    Write-Host "[*]   Phase 1 complete. $($repoIds.Count) repos, $($repoBranches.Count) repos with branches, $($branchToBPR.Count) protected branches."
+    Write-Host "[*]   Phase 1 complete. $($repoIds.Count) repos, $($repoBranches.Count) repos with branches, $($branchToBPRs.Count) protected branches."
 
     # ── Phase 2: Build role full permission sets ─────────────────────────
 
@@ -4262,12 +4717,14 @@ function Compute-GitHoundBranchAccess
     }
 
     # Helper: Evaluate branch gates for a permission set (role-level, no per-actor allowances)
+    # Handles multiple protection rules per branch (BPRs + rulesets). Actor must pass ALL rules.
+    # Evaluate-mode rulesets are skipped (they don't block access).
     # Returns: hashtable { accessible = [branchIds]; reasons = @{ branchId = reason } }
     function Invoke-RoleGateEvaluation {
         param(
             [System.Collections.Generic.HashSet[string]]$Perms,
             [System.Collections.ArrayList]$Branches,
-            [hashtable]$BranchToBPR
+            [hashtable]$BranchToBPRs
         )
 
         $hasAdmin = $Perms.Contains('GH_AdminTo')
@@ -4278,78 +4735,80 @@ function Compute-GitHoundBranchAccess
         $reasons = @{}
 
         foreach ($branchId in $Branches) {
-            $bprId = if ($BranchToBPR.ContainsKey($branchId)) { $BranchToBPR[$branchId] } else { $null }
+            $bprIds = if ($BranchToBPRs.ContainsKey($branchId)) { $BranchToBPRs[$branchId] } else { $null }
 
-            if (-not $bprId) {
+            if (-not $bprIds -or $bprIds.Count -eq 0) {
                 $null = $accessible.Add($branchId)
                 $reasons[$branchId] = 'no_protection'
                 continue
             }
 
-            $bprNode = $nodeById[$bprId]
-            if (-not $bprNode) {
+            # Evaluate each protection rule independently — ALL must pass
+            $allRulesPass = $true
+            $branchReason = $null
+
+            foreach ($bprId in $bprIds) {
+                $bprNode = $nodeById[$bprId]
+                if (-not $bprNode) { continue }
+                $bp = $bprNode.properties
+
+                # Skip evaluate-mode rulesets (they don't enforce)
+                if ($bp.enforcement -eq 'evaluate') { continue }
+
+                $enforceAdmins = Test-BPRProperty $bp.enforce_admins
+                $hasPRReviews = Test-BPRProperty $bp.required_pull_request_reviews
+                $hasLockBranch = Test-BPRProperty $bp.lock_branch
+                $hasPushRestrictions = Test-BPRProperty $bp.push_restrictions
+
+                # ── Evaluate merge gate for this rule ──
+                $mergeGateBlocked = $hasPRReviews -or $hasLockBranch
+                $passesMergeGate = $false
+                $mergeReason = $null
+
+                if (-not $mergeGateBlocked) {
+                    $passesMergeGate = $true
+                }
+                elseif ($hasAdmin -and -not $enforceAdmins) {
+                    $passesMergeGate = $true
+                    $mergeReason = 'admin'
+                }
+                elseif ($hasBypassBranch -and -not $enforceAdmins) {
+                    $passesMergeGate = $true
+                    $mergeReason = 'bypass_branch_protection'
+                }
+                # Note: bypassPRAllowances is per-actor, not evaluated here (handled in Phase 3b)
+
+                # ── Evaluate push gate for this rule ──
+                $pushGateBlocked = $hasPushRestrictions
+                $passesPushGate = $false
+                $pushReason = $null
+
+                if (-not $pushGateBlocked) {
+                    $passesPushGate = $true
+                }
+                elseif ($hasAdmin) {
+                    $passesPushGate = $true
+                    $pushReason = 'admin'
+                }
+                elseif ($hasPushProtected) {
+                    $passesPushGate = $true
+                    $pushReason = 'push_protected_branch'
+                }
+                # Note: pushAllowances is per-actor, not evaluated here (handled in Phase 3b)
+
+                if (-not ($passesMergeGate -and $passesPushGate)) {
+                    $allRulesPass = $false
+                    break
+                }
+
+                # Track the most significant reason across rules
+                if ($mergeReason -and -not $branchReason) { $branchReason = $mergeReason }
+                if ($pushReason -and -not $branchReason) { $branchReason = $pushReason }
+            }
+
+            if ($allRulesPass) {
                 $null = $accessible.Add($branchId)
-                $reasons[$branchId] = 'no_protection'
-                continue
-            }
-            $bp = $bprNode.properties
-
-            $enforceAdmins = Test-BPRProperty $bp.enforce_admins
-            $hasPRReviews = Test-BPRProperty $bp.required_pull_request_reviews
-            $hasLockBranch = Test-BPRProperty $bp.lock_branch
-            $hasPushRestrictions = Test-BPRProperty $bp.push_restrictions
-
-            # ── Evaluate merge gate ──
-            $mergeGateBlocked = $hasPRReviews -or $hasLockBranch
-            $passesMergeGate = $false
-            $mergeReason = $null
-
-            if (-not $mergeGateBlocked) {
-                $passesMergeGate = $true
-            }
-            elseif ($hasAdmin -and -not $enforceAdmins) {
-                $passesMergeGate = $true
-                $mergeReason = 'admin'
-            }
-            elseif ($hasBypassBranch -and -not $enforceAdmins) {
-                $passesMergeGate = $true
-                $mergeReason = 'bypass_branch_protection'
-            }
-            # Note: bypassPRAllowances is per-actor, not evaluated here (handled in Phase 3b)
-
-            # ── Evaluate push gate ──
-            $pushGateBlocked = $hasPushRestrictions
-            $passesPushGate = $false
-            $pushReason = $null
-
-            if (-not $pushGateBlocked) {
-                $passesPushGate = $true
-            }
-            elseif ($hasAdmin) {
-                $passesPushGate = $true
-                $pushReason = 'admin'
-            }
-            elseif ($hasPushProtected) {
-                $passesPushGate = $true
-                $pushReason = 'push_protected_branch'
-            }
-            # Note: pushAllowances is per-actor, not evaluated here (handled in Phase 3b)
-
-            # ── Combined result ──
-            if ($passesMergeGate -and $passesPushGate) {
-                $null = $accessible.Add($branchId)
-                if ($mergeReason -and $pushReason) {
-                    $reasons[$branchId] = $mergeReason
-                }
-                elseif ($mergeReason) {
-                    $reasons[$branchId] = $mergeReason
-                }
-                elseif ($pushReason) {
-                    $reasons[$branchId] = $pushReason
-                }
-                else {
-                    $reasons[$branchId] = 'no_protection'
-                }
+                $reasons[$branchId] = if ($branchReason) { $branchReason } else { 'no_protection' }
             }
         }
 
@@ -4367,15 +4826,15 @@ function Compute-GitHoundBranchAccess
         if ($repoBranches.ContainsKey($repoId)) { $branches = $repoBranches[$repoId] } else { $branches = @() }
         if ($repoBPRs.ContainsKey($repoId)) { $bprs = $repoBPRs[$repoId] } else { $bprs = @() }
 
-        # Find the wildcard (*) BPR with push_restrictions + blocks_creations
-        $wildcardBlockingBPR = $null
+        # Find wildcard (*) BPRs with push_restrictions + blocks_creations (skip evaluate-mode)
+        $wildcardBlockingBPRs = New-Object System.Collections.ArrayList
         foreach ($bprId in $bprs) {
             $bprNode = $nodeById[$bprId]
             if (-not $bprNode) { continue }
             $p = $bprNode.properties
+            if ($p.enforcement -eq 'evaluate') { continue }
             if ($p.pattern -eq '*' -and (Test-BPRProperty $p.push_restrictions) -and (Test-BPRProperty $p.blocks_creations)) {
-                $wildcardBlockingBPR = $bprNode
-                break
+                $null = $wildcardBlockingBPRs.Add($bprNode)
             }
         }
 
@@ -4395,7 +4854,7 @@ function Compute-GitHoundBranchAccess
                             query_composition = "MATCH p=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[:GH_EditRepoProtections|GH_AdminTo]->(:GH_Repository {objectid:'$($repoId.ToUpper())'})-[:GH_HasBranch]->(:GH_Branch)<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule) RETURN p" }
                 }
                 foreach ($branchId in $branches) {
-                    if ($branchToBPR.ContainsKey($branchId)) {
+                    if ($branchToBPRs.ContainsKey($branchId)) {
                         Add-ComputedEdge -Kind 'GH_CanEditProtection' -StartId $roleId -EndId $branchId `
                             -Properties @{ traversable = $true; reason = $reason;
                                 query_composition = "MATCH p=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[:GH_EditRepoProtections|GH_AdminTo]->(:GH_Repository)-[:GH_HasBranch]->(:GH_Branch {objectid:'$($branchId.ToUpper())'})<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule) RETURN p" }
@@ -4404,31 +4863,40 @@ function Compute-GitHoundBranchAccess
             }
 
             # ── GH_CanCreateBranch (role -> repo) ──
+            # Must pass ALL wildcard blocking rules to create branches
             $roleCanCreate[$roleId] = $false
-            if (-not $wildcardBlockingBPR) {
+            if ($wildcardBlockingBPRs.Count -eq 0) {
                 Add-ComputedEdge -Kind 'GH_CanCreateBranch' -StartId $roleId -EndId $repoId `
                     -Properties @{ traversable = $true; reason = 'no_protection';
                         query_composition = "MATCH p=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[]->(:GH_Repository {objectid:'$($repoId.ToUpper())'}) RETURN p" }
                 $roleCanCreate[$roleId] = $true
             }
             else {
-                $wildcardBPRId = $wildcardBlockingBPR.properties.id
-                if ($hasAdmin) {
-                    Add-ComputedEdge -Kind 'GH_CanCreateBranch' -StartId $roleId -EndId $repoId `
-                        -Properties @{ traversable = $true; reason = 'admin';
-                            query_composition = "MATCH p1=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[]->(r:GH_Repository {objectid:'$($repoId.ToUpper())'}) OPTIONAL MATCH p2=(r)-[:GH_HasBranch]->(:GH_Branch)<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule {pattern:'*'}) RETURN p1, p2" }
-                    $roleCanCreate[$roleId] = $true
+                # Role must bypass ALL wildcard blocking rules
+                $canBypassAll = $true
+                $createReason = $null
+                foreach ($wcBPR in $wildcardBlockingBPRs) {
+                    if ($hasAdmin) {
+                        $createReason = 'admin'
+                    }
+                    elseif ($hasPushProtected) {
+                        $createReason = 'push_protected_branch'
+                    }
+                    else {
+                        $canBypassAll = $false
+                        break
+                    }
                 }
-                elseif ($hasPushProtected) {
+                if ($canBypassAll) {
                     Add-ComputedEdge -Kind 'GH_CanCreateBranch' -StartId $roleId -EndId $repoId `
-                        -Properties @{ traversable = $true; reason = 'push_protected_branch';
+                        -Properties @{ traversable = $true; reason = $createReason;
                             query_composition = "MATCH p1=(:GH_RepoRole {objectid:'$($roleId.ToUpper())'})-[]->(r:GH_Repository {objectid:'$($repoId.ToUpper())'}) OPTIONAL MATCH p2=(r)-[:GH_HasBranch]->(:GH_Branch)<-[:GH_ProtectedBy]-(:GH_BranchProtectionRule {pattern:'*'}) RETURN p1, p2" }
                     $roleCanCreate[$roleId] = $true
                 }
             }
 
             # ── GH_CanWriteBranch (role -> branch or repo) ──
-            $gateResult = Invoke-RoleGateEvaluation -Perms $perms -Branches $branches -BranchToBPR $branchToBPR
+            $gateResult = Invoke-RoleGateEvaluation -Perms $perms -Branches $branches -BranchToBPRs $branchToBPRs
             $accessibleBranches = $gateResult.accessible
             $branchReasons = $gateResult.reasons
 
@@ -4468,15 +4936,15 @@ function Compute-GitHoundBranchAccess
         if ($repoBPRs.ContainsKey($repoId)) { $bprs = $repoBPRs[$repoId] } else { $bprs = @() }
         if ($branches.Count -eq 0 -and $bprs.Count -eq 0) { continue }
 
-        # Find the wildcard (*) BPR
-        $wildcardBlockingBPR = $null
+        # Find wildcard (*) BPRs (skip evaluate-mode)
+        $wildcardBlockingBPRs3b = New-Object System.Collections.ArrayList
         foreach ($bprId in $bprs) {
             $bprNode = $nodeById[$bprId]
             if (-not $bprNode) { continue }
             $p = $bprNode.properties
+            if ($p.enforcement -eq 'evaluate') { continue }
             if ($p.pattern -eq '*' -and (Test-BPRProperty $p.push_restrictions) -and (Test-BPRProperty $p.blocks_creations)) {
-                $wildcardBlockingBPR = $bprNode
-                break
+                $null = $wildcardBlockingBPRs3b.Add($bprNode)
             }
         }
 
@@ -4524,11 +4992,19 @@ function Compute-GitHoundBranchAccess
             }
             if (-not $actorHasWrite) { continue }
 
-            # ── GH_CanCreateBranch: delta for pushAllowances on wildcard BPR ──
-            if ($wildcardBlockingBPR -and -not $actorRoleCanCreate) {
-                $wildcardBPRId = $wildcardBlockingBPR.properties.id
-                $inPushAllowances = $pushAllowanceActors.ContainsKey($wildcardBPRId) -and $pushAllowanceActors[$wildcardBPRId].Contains($actorId)
-                if ($inPushAllowances) {
+            # ── GH_CanCreateBranch: delta for pushAllowances on wildcard BPRs ──
+            if ($wildcardBlockingBPRs3b.Count -gt 0 -and -not $actorRoleCanCreate) {
+                # Actor must have push allowance on ALL wildcard blocking rules
+                $canBypassAllWildcards = $true
+                foreach ($wcBPR in $wildcardBlockingBPRs3b) {
+                    $wcId = $wcBPR.id
+                    $inPushAllowances = $pushAllowanceActors.ContainsKey($wcId) -and $pushAllowanceActors[$wcId].Contains($actorId)
+                    if (-not $inPushAllowances) {
+                        $canBypassAllWildcards = $false
+                        break
+                    }
+                }
+                if ($canBypassAllWildcards) {
                     Add-ComputedEdge -Kind 'GH_CanCreateBranch' -StartId $actorId -EndId $repoId `
                         -Properties @{ traversable = $true; reason = 'push_allowance';
                             query_composition = "MATCH p1=(a:GitHub {objectid:'$($actorId.ToUpper())'})-[:GH_RestrictionsCanPush]->(:GH_BranchProtectionRule {pattern:'*'})-[:GH_ProtectedBy]->(:GH_Branch)<-[:GH_HasBranch]-(r:GH_Repository {objectid:'$($repoId.ToUpper())'}) MATCH p2=(a)-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_WriteRepoContents]->(r) RETURN p1, p2" }
@@ -4542,55 +5018,70 @@ function Compute-GitHoundBranchAccess
             foreach ($branchId in $branches) {
                 if ($coveredBranches.Contains($branchId)) { continue }
 
-                $bprId = if ($branchToBPR.ContainsKey($branchId)) { $branchToBPR[$branchId] } else { $null }
-                if (-not $bprId) { continue } # Unprotected branches are always covered at role level
+                $bprIds = if ($branchToBPRs.ContainsKey($branchId)) { $branchToBPRs[$branchId] } else { $null }
+                if (-not $bprIds -or $bprIds.Count -eq 0) { continue } # Unprotected branches are always covered at role level
 
-                $bprNode = $nodeById[$bprId]
-                if (-not $bprNode) { continue }
-                $bp = $bprNode.properties
+                # Evaluate ALL protection rules for this branch — actor must pass each one
+                $allRulesPass = $true
+                $branchReason = $null
 
-                $enforceAdmins = Test-BPRProperty $bp.enforce_admins
-                $hasPRReviews = Test-BPRProperty $bp.required_pull_request_reviews
-                $hasLockBranch = Test-BPRProperty $bp.lock_branch
-                $hasPushRestrictions = Test-BPRProperty $bp.push_restrictions
+                foreach ($bprId in $bprIds) {
+                    $bprNode = $nodeById[$bprId]
+                    if (-not $bprNode) { continue }
+                    $bp = $bprNode.properties
 
-                # Re-evaluate merge gate considering bypassPRAllowances
-                $mergeGateBlocked = $hasPRReviews -or $hasLockBranch
-                $passesMergeGate = $false
-                $mergeReason = $null
+                    # Skip evaluate-mode rulesets
+                    if ($bp.enforcement -eq 'evaluate') { continue }
 
-                if (-not $mergeGateBlocked) {
-                    $passesMergeGate = $true
-                }
-                elseif (-not $hasLockBranch -and -not $enforceAdmins) {
-                    $inBypassPR = $bypassPRActors.ContainsKey($bprId) -and $bypassPRActors[$bprId].Contains($actorId)
-                    if ($inBypassPR) {
+                    $enforceAdmins = Test-BPRProperty $bp.enforce_admins
+                    $hasPRReviews = Test-BPRProperty $bp.required_pull_request_reviews
+                    $hasLockBranch = Test-BPRProperty $bp.lock_branch
+                    $hasPushRestrictions = Test-BPRProperty $bp.push_restrictions
+
+                    # Re-evaluate merge gate considering per-actor bypassPRAllowances for this rule
+                    $mergeGateBlocked = $hasPRReviews -or $hasLockBranch
+                    $passesMergeGate = $false
+                    $mergeReason = $null
+
+                    if (-not $mergeGateBlocked) {
                         $passesMergeGate = $true
-                        $mergeReason = 'bypass_pr_allowance'
                     }
-                }
+                    elseif (-not $hasLockBranch -and -not $enforceAdmins) {
+                        $inBypassPR = $bypassPRActors.ContainsKey($bprId) -and $bypassPRActors[$bprId].Contains($actorId)
+                        if ($inBypassPR) {
+                            $passesMergeGate = $true
+                            $mergeReason = 'bypass_pr_allowance'
+                        }
+                    }
 
-                # Re-evaluate push gate considering pushAllowances
-                $pushGateBlocked = $hasPushRestrictions
-                $passesPushGate = $false
-                $pushReason = $null
+                    # Re-evaluate push gate considering per-actor pushAllowances for this rule
+                    $pushGateBlocked = $hasPushRestrictions
+                    $passesPushGate = $false
+                    $pushReason = $null
 
-                if (-not $pushGateBlocked) {
-                    $passesPushGate = $true
-                }
-                else {
-                    $inPushAllow = $pushAllowanceActors.ContainsKey($bprId) -and $pushAllowanceActors[$bprId].Contains($actorId)
-                    if ($inPushAllow) {
+                    if (-not $pushGateBlocked) {
                         $passesPushGate = $true
-                        $pushReason = 'push_allowance'
                     }
+                    else {
+                        $inPushAllow = $pushAllowanceActors.ContainsKey($bprId) -and $pushAllowanceActors[$bprId].Contains($actorId)
+                        if ($inPushAllow) {
+                            $passesPushGate = $true
+                            $pushReason = 'push_allowance'
+                        }
+                    }
+
+                    if (-not ($passesMergeGate -and $passesPushGate)) {
+                        $allRulesPass = $false
+                        break
+                    }
+
+                    if ($mergeReason -and -not $branchReason) { $branchReason = $mergeReason }
+                    if ($pushReason -and -not $branchReason) { $branchReason = $pushReason }
                 }
 
-                if ($passesMergeGate -and $passesPushGate) {
+                if ($allRulesPass -and $branchReason) {
                     $null = $deltaAccessible.Add($branchId)
-                    if ($mergeReason) { $deltaReasons[$branchId] = $mergeReason }
-                    elseif ($pushReason) { $deltaReasons[$branchId] = $pushReason }
-                    else { $deltaReasons[$branchId] = 'no_protection' }
+                    $deltaReasons[$branchId] = $branchReason
                 }
             }
 
