@@ -7,7 +7,7 @@
 
 ## General Information
 
-The non-traversable [GH_DeploysTo](GH_DeploysTo.md) edge links a workflow job to the GitHub Environment it targets via the `environment:` key. Created by `Parse-GitHoundWorkflow`, this edge records which jobs deploy to which environments. Environments can gate deployments with protection rules (required reviewers, wait timers, deployment branch policies) and can expose environment-scoped secrets.
+The non-traversable [GH_DeploysTo](GH_DeploysTo.md) edge links a workflow job to the GitHub Environment it targets via the `environment:` key. Created during the integrated workflow-analysis step in `Invoke-GitHound`, this edge records which jobs deploy to which environments. Environments can gate deployments with protection rules (required reviewers, wait timers, deployment branch policies) and can expose environment-scoped secrets.
 
 ```mermaid
 graph LR

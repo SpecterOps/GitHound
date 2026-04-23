@@ -7,7 +7,7 @@
 
 ## General Information
 
-The non-traversable [GH_CanDispatchTo](GH_CanDispatchTo.md) edge indicates that a workflow job's `runs-on` declaration matches a specific self-hosted runner that the owning repository is already allowed to use. It is computed by `Get-WorkflowRunnerDispatchEdges` from three pieces of evidence:
+The non-traversable [GH_CanDispatchTo](GH_CanDispatchTo.md) edge indicates that a workflow job's `runs-on` declaration matches a specific self-hosted runner that the owning repository is already allowed to use. It is computed during the integrated workflow-analysis step in `Invoke-GitHound` from three pieces of evidence:
 
 - the job declares `self-hosted` in `runs_on`
 - the repository has a [GH_CanUseRunner](GH_CanUseRunner.md) edge to the runner

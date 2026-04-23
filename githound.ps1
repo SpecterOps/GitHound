@@ -739,6 +739,1012 @@ function ConvertTo-PascalCase
     return $pascalCaseString
 }
 
+function New-BHOGPropertyMatcher
+{
+    Param(
+        [Parameter(Mandatory)]
+        [string]$Key,
+
+        [Parameter(Mandatory)]
+        $Value,
+
+        [Parameter()]
+        [ValidateSet('equals')]
+        [string]$Operator = 'equals'
+    )
+
+    @{ key = $Key; operator = $Operator; value = $Value }
+}
+
+function Add-GitHoundSecretEdges
+{
+    param(
+        [System.Collections.ArrayList]$Edges,
+        [string]$SourceId,
+        [string]$SecretName,
+        [string]$Context,
+        [string]$RepoId,
+        [string]$EnvId
+    )
+
+    $props = @{ traversable = $false; context = $Context }
+
+    if ($RepoId -or $EnvId) {
+        if ($RepoId) {
+            $null = $Edges.Add((New-GitHoundEdge -Kind 'GH_UsesSecret' `
+                -StartId $SourceId `
+                -EndKind 'GH_RepoSecret' `
+                -EndPropertyMatchers @(
+                    (New-BHOGPropertyMatcher -Key 'name' -Value $SecretName),
+                    (New-BHOGPropertyMatcher -Key 'repository_id' -Value $RepoId)
+                ) `
+                -Properties $props))
+        }
+        if ($EnvId) {
+            $null = $Edges.Add((New-GitHoundEdge -Kind 'GH_UsesSecret' `
+                -StartId $SourceId `
+                -EndKind 'GH_OrgSecret' `
+                -EndPropertyMatchers @(
+                    (New-BHOGPropertyMatcher -Key 'name' -Value $SecretName),
+                    (New-BHOGPropertyMatcher -Key 'environmentid' -Value $EnvId)
+                ) `
+                -Properties $props))
+        }
+    } else {
+        $null = $Edges.Add((New-GitHoundEdge -Kind 'GH_UsesSecret' `
+            -StartId $SourceId -EndId $SecretName `
+            -EndKind 'GH_Secret' -EndMatchBy 'name' `
+            -Properties $props))
+    }
+}
+
+function Add-GitHoundVariableEdges
+{
+    param(
+        [System.Collections.ArrayList]$Edges,
+        [string]$SourceId,
+        [string]$VariableName,
+        [string]$Context,
+        [string]$RepoId,
+        [string]$EnvId
+    )
+
+    $props = @{ traversable = $false; context = $Context }
+
+    if ($RepoId -or $EnvId) {
+        if ($RepoId) {
+            $null = $Edges.Add((New-GitHoundEdge -Kind 'GH_UsesVariable' `
+                -StartId $SourceId `
+                -EndKind 'GH_RepoVariable' `
+                -EndPropertyMatchers @(
+                    (New-BHOGPropertyMatcher -Key 'name' -Value $VariableName),
+                    (New-BHOGPropertyMatcher -Key 'repository_id' -Value $RepoId)
+                ) `
+                -Properties $props))
+        }
+        if ($EnvId) {
+            $null = $Edges.Add((New-GitHoundEdge -Kind 'GH_UsesVariable' `
+                -StartId $SourceId `
+                -EndKind 'GH_OrgVariable' `
+                -EndPropertyMatchers @(
+                    (New-BHOGPropertyMatcher -Key 'name' -Value $VariableName),
+                    (New-BHOGPropertyMatcher -Key 'environmentid' -Value $EnvId)
+                ) `
+                -Properties $props))
+        }
+    } else {
+        $null = $Edges.Add((New-GitHoundEdge -Kind 'GH_UsesVariable' `
+            -StartId $SourceId -EndId $VariableName `
+            -EndKind 'GH_Variable' -EndMatchBy 'name' `
+            -Properties $props))
+    }
+}
+
+function Get-WorkflowRunsOnLabels
+{
+    param(
+        [Parameter()]
+        $RunsOn
+    )
+
+    if (-not $RunsOn) { return @() }
+
+    if ($RunsOn -is [System.Collections.IList]) {
+        return @($RunsOn | ForEach-Object { "$_".Trim() } | Where-Object { $_ })
+    }
+
+    if ($RunsOn -isnot [string]) {
+        return @("$RunsOn".Trim() | Where-Object { $_ })
+    }
+
+    $trimmed = $RunsOn.Trim()
+    if (-not $trimmed) { return @() }
+
+    if ($trimmed.StartsWith('[') -or $trimmed.StartsWith('{')) {
+        $parsed = try { $trimmed | ConvertFrom-Json -ErrorAction SilentlyContinue } catch { $null }
+        if ($parsed -is [System.Collections.IList]) {
+            return @($parsed | ForEach-Object { "$_".Trim() } | Where-Object { $_ })
+        }
+    }
+
+    return @($trimmed)
+}
+
+function Get-RunnerLabelNames
+{
+    param(
+        [Parameter()]
+        $Labels
+    )
+
+    if (-not $Labels) { return @() }
+
+    $parsed = $Labels
+    if ($Labels -is [string]) {
+        $parsed = try { $Labels | ConvertFrom-Json -ErrorAction SilentlyContinue } catch { $Labels }
+    }
+
+    if ($parsed -is [System.Collections.IList]) {
+        return @($parsed | ForEach-Object {
+            if ($_ -is [string]) { "$_".Trim() }
+            elseif ($_ -and $_.name) { "$($_.name)".Trim() }
+        } | Where-Object { $_ })
+    }
+
+    return @()
+}
+
+function Get-GitHoundWorkflowDispatchEdges
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory)]
+        [PSObject]$GraphData,
+
+        [Parameter(Mandatory)]
+        [PSObject]$WorkflowData
+    )
+
+    $edges = New-Object System.Collections.ArrayList
+
+    $graphNodes = @($GraphData.graph.nodes ?? @())
+    $graphEdges = @($GraphData.graph.edges ?? @())
+    $workflowNodes = @($WorkflowData.Nodes ?? @())
+    $workflowEdges = @($WorkflowData.Edges ?? @())
+
+    $jobNodes = @($workflowNodes | Where-Object { $_.kinds -contains 'GH_WorkflowJob' })
+    $jobEdges = @($workflowEdges | Where-Object { $_.kind -eq 'GH_HasJob' })
+    $repoWorkflowEdges = @($graphEdges | Where-Object { $_.kind -eq 'GH_HasWorkflow' })
+    $repoRunnerEdges = @($graphEdges | Where-Object { $_.kind -eq 'GH_CanUseRunner' })
+    $runnerNodes = @($graphNodes | Where-Object { $_.kinds -contains 'GH_Runner' })
+
+    $workflowToRepoId = @{}
+    foreach ($edge in $repoWorkflowEdges) {
+        if (-not $edge.start.value -or -not $edge.end.value) { continue }
+        $workflowToRepoId[$edge.end.value] = $edge.start.value
+    }
+
+    $jobToWorkflowId = @{}
+    foreach ($edge in $jobEdges) {
+        if (-not $edge.start.value -or -not $edge.end.value) { continue }
+        $jobToWorkflowId[$edge.end.value] = $edge.start.value
+    }
+
+    $repoToRunnerIds = @{}
+    foreach ($edge in $repoRunnerEdges) {
+        $repoId = $edge.start.value
+        $runnerId = $edge.end.value
+        if (-not $repoId -or -not $runnerId) { continue }
+        if (-not $repoToRunnerIds.ContainsKey($repoId)) {
+            $repoToRunnerIds[$repoId] = New-Object System.Collections.ArrayList
+        }
+        $null = $repoToRunnerIds[$repoId].Add($runnerId)
+    }
+
+    $runnerById = @{}
+    foreach ($runner in $runnerNodes) {
+        $runnerById[$runner.id] = $runner
+    }
+
+    foreach ($job in $jobNodes) {
+        $requiredLabels = @(Get-WorkflowRunsOnLabels -RunsOn $job.properties.runs_on)
+        if ($requiredLabels.Count -eq 0 -or $requiredLabels -notcontains 'self-hosted') { continue }
+
+        $workflowId = $jobToWorkflowId[$job.id]
+        if (-not $workflowId) { continue }
+
+        $repoId = $workflowToRepoId[$workflowId]
+        if (-not $repoId -or -not $repoToRunnerIds.ContainsKey($repoId)) { continue }
+
+        foreach ($runnerId in $repoToRunnerIds[$repoId]) {
+            if (-not $job.id -or -not $runnerId) { continue }
+            if (-not $runnerById.ContainsKey($runnerId)) { continue }
+            $runner = $runnerById[$runnerId]
+            $runnerLabels = @(Get-RunnerLabelNames -Labels $runner.properties.labels)
+            if ($runnerLabels.Count -eq 0) { continue }
+
+            $allMatched = $true
+            foreach ($label in $requiredLabels) {
+                if ($runnerLabels -notcontains $label) {
+                    $allMatched = $false
+                    break
+                }
+            }
+            if (-not $allMatched) { continue }
+
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanDispatchTo' -StartId $job.id -EndId $runnerId -Properties @{
+                traversable = $false
+                required_labels = ($requiredLabels | ConvertTo-Json -Compress)
+                matched_labels = ($runnerLabels | Where-Object { $requiredLabels -contains $_ } | ConvertTo-Json -Compress)
+                runner_scope = $runner.properties.scope
+            }))
+        }
+    }
+
+    [PSCustomObject]@{
+        Nodes = @()
+        Edges = $edges
+    }
+}
+
+function Test-PwnRequestable
+{
+    Param(
+        [System.Collections.ArrayList]$TriggerEventNames,
+        [System.Collections.ArrayList]$StepNodes
+    )
+
+    if ($TriggerEventNames -notcontains 'pull_request_target') { return $false }
+
+    $pwnRefPatterns = @(
+        'github.event.pull_request.head.sha',
+        'github.event.pull_request.head.ref',
+        'github.head_ref'
+    )
+
+    foreach ($step in $StepNodes)
+    {
+        if ($step.properties.action_slug -ne 'actions/checkout') { continue }
+        if (-not $step.properties.with_args) { continue }
+
+        $withArgs = try { $step.properties.with_args | ConvertFrom-Json -AsHashtable -ErrorAction SilentlyContinue } catch { $null }
+        if (-not $withArgs -or -not $withArgs['ref']) { continue }
+
+        $refVal = "$($withArgs['ref'])"
+        foreach ($pattern in $pwnRefPatterns) {
+            if ($refVal -like "*$pattern*") { return $true }
+        }
+    }
+
+    return $false
+}
+
+function Expand-GitHoundWorkflowGraph
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSObject[]]
+        $Workflows
+    )
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+
+    $parsed = 0
+    $skipped = 0
+
+    foreach ($wf in $Workflows)
+    {
+        $contents = $wf.properties.contents
+        if (-not $contents -or $contents.Trim().Length -eq 0)
+        {
+            $skipped = $skipped + 1
+            continue
+        }
+
+        $wfId = $wf.id
+        $wfNodeId = $wf.properties.node_id
+        $repoName = $wf.properties.repository_name
+        $repoId   = $wf.properties.repository_id
+        $envId    = $wf.properties.environmentid
+
+        $yaml = $null
+        try {
+            $yaml = ConvertFrom-Yaml $contents
+        }
+        catch {
+            Write-Warning "Expand-GitHoundWorkflowGraph: Failed to parse YAML for workflow '$($wf.properties.name)': $_"
+            $skipped = $skipped + 1
+            continue
+        }
+
+        if (-not $yaml) {
+            $skipped = $skipped + 1
+            continue
+        }
+
+        $on = $yaml['on']
+        $triggerEventNames = [System.Collections.ArrayList]@()
+        $triggerEvents = @{}
+
+        if ($on)
+        {
+            if ($on -is [string])
+            {
+                $triggerEvents[$on] = @{}
+            }
+            elseif ($on -is [System.Collections.IList])
+            {
+                foreach ($t in $on) { $triggerEvents[$t] = @{} }
+            }
+            elseif ($on -is [System.Collections.IDictionary] -or $on -is [hashtable])
+            {
+                foreach ($key in $on.Keys) {
+                    $triggerEvents[$key] = if ($on[$key]) { $on[$key] } else { @{} }
+                }
+            }
+
+            foreach ($eventName in $triggerEvents.Keys) {
+                $null = $triggerEventNames.Add($eventName)
+            }
+        }
+
+        $wf.properties | Add-Member -NotePropertyName 'triggers' -NotePropertyValue (@($triggerEventNames) | ConvertTo-Json -Compress) -Force
+
+        $dispatchConfig = $triggerEvents['workflow_dispatch']
+        if ($dispatchConfig -and $dispatchConfig['inputs']) {
+            $wf.properties | Add-Member -NotePropertyName 'trigger_dispatch_inputs' -NotePropertyValue (@($dispatchConfig['inputs'].Keys) | ConvertTo-Json -Compress) -Force
+        }
+
+        $null = $nodes.Add($wf)
+
+        $wfPermissions = $null
+        if ($yaml['permissions'])
+        {
+            $wfPermissions = $yaml['permissions']
+        }
+
+        $jobs = $yaml['jobs']
+        $wfStepNodes = New-Object System.Collections.ArrayList
+        if (-not $jobs) {
+            $wf.properties | Add-Member -NotePropertyName 'is_pwn_requestable' -NotePropertyValue $false -Force
+            $parsed = $parsed + 1
+            continue
+        }
+
+        $jobIdMap = @{}
+        foreach ($jobKey in $jobs.Keys) {
+            $jobIdMap[$jobKey] = "GH_WorkflowJob_${wfNodeId}_${jobKey}"
+        }
+
+        foreach ($jobKey in $jobs.Keys)
+        {
+            $job = $jobs[$jobKey]
+            $jobId = $jobIdMap[$jobKey]
+
+            $jobEnvironment = $null
+            if ($job['environment'])
+            {
+                if ($job['environment'] -is [string]) {
+                    $jobEnvironment = $job['environment']
+                }
+                elseif ($job['environment'] -is [System.Collections.IDictionary] -or $job['environment'] -is [hashtable]) {
+                    $jobEnvironment = $job['environment']['name']
+                }
+            }
+
+            $runsOn = $null
+            if ($job['runs-on'])
+            {
+                if ($job['runs-on'] -is [string]) {
+                    $runsOn = $job['runs-on']
+                } else {
+                    $runsOn = $job['runs-on'] | ConvertTo-Json -Compress
+                }
+            }
+
+            $jobPermissions = $null
+            if ($job['permissions']) {
+                $jobPermissions = $job['permissions'] | ConvertTo-Json -Compress
+            } elseif ($wfPermissions) {
+                $jobPermissions = $wfPermissions | ConvertTo-Json -Compress
+            }
+
+            $usesReusable = $null
+            if ($job['uses']) {
+                $usesReusable = $job['uses']
+            }
+
+            $isSelfHosted = $false
+            if ($runsOn) {
+                if ($runsOn -eq 'self-hosted') {
+                    $isSelfHosted = $true
+                } else {
+                    $parsedRunsOn = try { $runsOn | ConvertFrom-Json -ErrorAction SilentlyContinue } catch { $null }
+                    if ($parsedRunsOn -and ($parsedRunsOn -contains 'self-hosted')) { $isSelfHosted = $true }
+                }
+            }
+
+            $jobProps = @{
+                name             = "$repoName\$jobKey"
+                node_id          = $jobId
+                job_key          = $jobKey
+                runs_on          = Normalize-Null $runsOn
+                is_self_hosted   = $isSelfHosted
+                container        = Normalize-Null ($job['container'] -is [string] ? $job['container'] : ($job['container'] | ConvertTo-Json -Compress -ErrorAction SilentlyContinue))
+                environment      = Normalize-Null $jobEnvironment
+                permissions      = Normalize-Null $jobPermissions
+                uses_reusable    = Normalize-Null $usesReusable
+                workflow_node_id = $wfNodeId
+            }
+
+            $null = $nodes.Add((New-GitHoundNode -Id $jobId -Kind 'GH_WorkflowJob' -Properties $jobProps))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasJob' -StartId $wfId -EndId $jobId -Properties @{ traversable = $false }))
+
+            if ($job['needs'])
+            {
+                $needsList = if ($job['needs'] -is [string]) { @($job['needs']) } else { @($job['needs']) }
+                foreach ($dep in $needsList)
+                {
+                    if ($jobIdMap.ContainsKey($dep)) {
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_DependsOn' -StartId $jobId -EndId $jobIdMap[$dep] -Properties @{ traversable = $false }))
+                    }
+                }
+            }
+
+            if ($jobEnvironment -and $repoName)
+            {
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_DeploysTo' `
+                    -StartId $jobId `
+                    -EndId "$repoName\$jobEnvironment" `
+                    -EndKind 'GH_Environment' `
+                    -EndMatchBy 'name' `
+                    -Properties @{ traversable = $false }
+                ))
+            }
+
+            if ($usesReusable)
+            {
+                if ($usesReusable -match '^\./\.github/workflows/(.+)$')
+                {
+                    $calledWorkflowFile = $Matches[1]
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CallsWorkflow' `
+                        -StartId $jobId `
+                        -EndId "$repoName\$calledWorkflowFile" `
+                        -EndKind 'GH_Workflow' `
+                        -EndMatchBy 'name' `
+                        -Properties @{ traversable = $false; reusable_ref = $usesReusable }
+                    ))
+                }
+                else
+                {
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CallsWorkflow' `
+                        -StartId $jobId `
+                        -EndId $usesReusable `
+                        -EndKind 'GH_Workflow' `
+                        -EndMatchBy 'name' `
+                        -Properties @{ traversable = $false; reusable_ref = $usesReusable }
+                    ))
+                }
+            }
+
+            if ($job['secrets'] -and $job['secrets'] -is [System.Collections.IDictionary])
+            {
+                foreach ($secretKey in $job['secrets'].Keys)
+                {
+                    $secretVal = $job['secrets'][$secretKey]
+                    $referencedSecrets = Extract-SecretReferences $secretVal
+                    foreach ($secretName in $referencedSecrets)
+                    {
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_UsesSecret' `
+                            -StartId $jobId `
+                            -EndId $secretName `
+                            -EndKind 'GH_Secret' `
+                            -EndMatchBy 'name' `
+                            -Properties @{ traversable = $false; context = "secrets:$secretKey" }
+                        ))
+                    }
+                }
+            }
+            elseif ($job['secrets'] -eq 'inherit')
+            {
+                $jobProps['secrets_inherit'] = $true
+            }
+
+            if ($job['env'] -and ($job['env'] -is [System.Collections.IDictionary] -or $job['env'] -is [hashtable]))
+            {
+                foreach ($envKey in $job['env'].Keys)
+                {
+                    $envVal = "$($job['env'][$envKey])"
+                    foreach ($secretName in (Extract-SecretReferences $envVal)) {
+                        Add-GitHoundSecretEdges -Edges $edges -SourceId $jobId -SecretName $secretName -Context "env:$envKey" -RepoId $repoId -EnvId $envId
+                    }
+                    foreach ($varName in (Extract-VariableReferences $envVal)) {
+                        Add-GitHoundVariableEdges -Edges $edges -SourceId $jobId -VariableName $varName -Context "env:$envKey" -RepoId $repoId -EnvId $envId
+                    }
+                }
+            }
+
+            $steps = $job['steps']
+            if (-not $steps) { continue }
+
+            $stepIndex = 0
+            foreach ($step in $steps)
+            {
+                $stepId = "GH_WorkflowStep_${wfNodeId}_${jobKey}_${stepIndex}"
+
+                $stepName = $null
+                if ($step['name']) {
+                    $stepName = $step['name']
+                } elseif ($step['uses']) {
+                    $stepName = $step['uses']
+                } elseif ($step['run']) {
+                    $firstLine = ($step['run'] -split "`n")[0].Trim()
+                    $stepName = if ($firstLine.Length -gt 80) { $firstLine.Substring(0, 80) + "..." } else { $firstLine }
+                }
+
+                $action = $null
+                $actionOwner = $null
+                $actionName = $null
+                $authProvider = $null
+                $actionRef = $null
+                $isPinned = $false
+
+                if ($step['uses'])
+                {
+                    $action = $step['uses']
+
+                    if ($action -match '^(?<owner>[^/]+)/(?<name>[^@]+)@(?<ref>.+)$')
+                    {
+                        $actionOwner = $Matches['owner']
+                        $actionName = $Matches['name']
+                        $actionRef = $Matches['ref']
+                        $isPinned = $actionRef -match '^[0-9a-f]{40}$'
+                    }
+
+                    $actionKey = "$actionOwner/$actionName".ToLower()
+                    $authProvider = switch ($actionKey) {
+                        'aws-actions/configure-aws-credentials' { 'AWS' }
+                        'azure/login' { 'Azure' }
+                        'azure/webapps-deploy' { 'Azure' }
+                        'azure/arm-deploy' { 'Azure' }
+                        'google-github-actions/auth' { 'GCP' }
+                        'google-github-actions/setup-gcloud' { 'GCP' }
+                        'hashicorp/vault-action' { 'Vault' }
+                        'docker/login-action' { 'Docker' }
+                        default { $null }
+                    }
+                }
+
+                $stepType = if ($step['uses']) { 'uses' } elseif ($step['run']) { 'run' } else { 'unknown' }
+
+                $injectionRisks = $null
+                $injectionPattern = '\$\{\{\s*(github\.event\.inputs\.\w+|github\.event\.issue\.title|github\.event\.issue\.body|github\.event\.comment\.body|github\.event\.pull_request\.title|github\.event\.pull_request\.body|github\.event\.discussion\.title|github\.event\.discussion\.body|github\.head_ref|github\.event\.pages\.[^}]*\.page_name)\s*\}\}'
+                $allRiskyMatches = New-Object System.Collections.ArrayList
+
+                if ($step['run'])
+                {
+                    foreach ($m in [regex]::Matches($step['run'], $injectionPattern)) {
+                        $null = $allRiskyMatches.Add($m.Groups[1].Value)
+                    }
+                }
+
+                if ($step['with'] -and ($step['with'] -is [System.Collections.IDictionary] -or $step['with'] -is [hashtable]))
+                {
+                    foreach ($withKey in $step['with'].Keys)
+                    {
+                        $withVal = "$($step['with'][$withKey])"
+                        foreach ($m in [regex]::Matches($withVal, $injectionPattern)) {
+                            $null = $allRiskyMatches.Add($m.Groups[1].Value)
+                        }
+                    }
+                }
+
+                if ($allRiskyMatches.Count -gt 0)
+                {
+                    $injectionRisks = @($allRiskyMatches | Select-Object -Unique) | ConvertTo-Json -Compress
+                }
+
+                $localScriptRefs = $null
+                if ($step['run'])
+                {
+                    $scriptMatches = New-Object System.Collections.ArrayList
+                    $localScriptPattern = '(?m)(?:^|\s|&&|\|\||;)\s*(?:(?:bash|sh|zsh|python3?|node|ruby|perl|pwsh|powershell)\s+|(?:source|\.)\s+|go\s+run\s+)?(\./[^\s;|&\r\n]+|\.github/[^\s;|&\r\n]+)'
+                    foreach ($m in [regex]::Matches($step['run'], $localScriptPattern)) {
+                        $scriptPath = $m.Groups[1].Value
+                        if ($scriptPath -notmatch '^\$\{\{' -and $scriptPath -match '\.\w+$') {
+                            $null = $scriptMatches.Add($scriptPath)
+                        }
+                    }
+                    if ($scriptMatches.Count -gt 0) {
+                        $localScriptRefs = @($scriptMatches | Select-Object -Unique) | ConvertTo-Json -Compress
+                    }
+                }
+
+                $actionSlug = if ($actionOwner -and $actionName) { "$actionOwner/$actionName" } else { $null }
+
+                $withArgs = $null
+                if ($step['with'] -and ($step['with'] -is [System.Collections.IDictionary] -or $step['with'] -is [hashtable]))
+                {
+                    $withArgs = $step['with'] | ConvertTo-Json -Compress -Depth 5 -ErrorAction SilentlyContinue
+                }
+
+                $stepProps = @{
+                    name               = Normalize-Null $stepName
+                    node_id            = $stepId
+                    step_index         = $stepIndex
+                    type               = $stepType
+                    action             = Normalize-Null $action
+                    action_slug        = Normalize-Null $actionSlug
+                    auth_provider      = Normalize-Null $authProvider
+                    action_owner       = Normalize-Null $actionOwner
+                    action_name        = Normalize-Null $actionName
+                    action_ref         = Normalize-Null $actionRef
+                    is_pinned          = $isPinned
+                    has_injection_risk = [bool]$injectionRisks
+                    runs_local_script  = [bool]$localScriptRefs
+                    run                = Normalize-Null $step['run']
+                    with_args          = Normalize-Null $withArgs
+                    contents           = Normalize-Null (($step | ConvertTo-Json -Compress -Depth 5 -ErrorAction SilentlyContinue) -replace '\r?\n', '')
+                    injection_risks    = Normalize-Null $injectionRisks
+                    local_script_refs  = Normalize-Null $localScriptRefs
+                    job_node_id        = $jobId
+                }
+
+                $stepNode = New-GitHoundNode -Id $stepId -Kind 'GH_WorkflowStep' -Properties $stepProps
+                $null = $nodes.Add($stepNode)
+                $null = $wfStepNodes.Add($stepNode)
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasStep' -StartId $jobId -EndId $stepId -Properties @{ traversable = $false }))
+
+                if ($step['with'] -and ($step['with'] -is [System.Collections.IDictionary] -or $step['with'] -is [hashtable]))
+                {
+                    foreach ($withKey in $step['with'].Keys)
+                    {
+                        $withVal = "$($step['with'][$withKey])"
+                        foreach ($secretName in (Extract-SecretReferences $withVal)) {
+                            Add-GitHoundSecretEdges -Edges $edges -SourceId $stepId -SecretName $secretName -Context "with:$withKey" -RepoId $repoId -EnvId $envId
+                        }
+                        foreach ($varName in (Extract-VariableReferences $withVal)) {
+                            Add-GitHoundVariableEdges -Edges $edges -SourceId $stepId -VariableName $varName -Context "with:$withKey" -RepoId $repoId -EnvId $envId
+                        }
+                    }
+                }
+
+                if ($step['run'])
+                {
+                    $runStr = "$($step['run'])"
+                    foreach ($secretName in (Extract-SecretReferences $runStr)) {
+                        Add-GitHoundSecretEdges -Edges $edges -SourceId $stepId -SecretName $secretName -Context "run" -RepoId $repoId -EnvId $envId
+                    }
+                    foreach ($varName in (Extract-VariableReferences $runStr)) {
+                        Add-GitHoundVariableEdges -Edges $edges -SourceId $stepId -VariableName $varName -Context "run" -RepoId $repoId -EnvId $envId
+                    }
+                }
+
+                if ($step['env'] -and ($step['env'] -is [System.Collections.IDictionary] -or $step['env'] -is [hashtable]))
+                {
+                    foreach ($envKey in $step['env'].Keys)
+                    {
+                        $envVal = "$($step['env'][$envKey])"
+                        foreach ($secretName in (Extract-SecretReferences $envVal)) {
+                            Add-GitHoundSecretEdges -Edges $edges -SourceId $stepId -SecretName $secretName -Context "env:$envKey" -RepoId $repoId -EnvId $envId
+                        }
+                        foreach ($varName in (Extract-VariableReferences $envVal)) {
+                            Add-GitHoundVariableEdges -Edges $edges -SourceId $stepId -VariableName $varName -Context "env:$envKey" -RepoId $repoId -EnvId $envId
+                        }
+                    }
+                }
+
+                $stepIndex++
+            }
+        }
+
+        $isPwnRequestable = Test-PwnRequestable -TriggerEventNames $triggerEventNames -StepNodes $wfStepNodes
+        $wf.properties | Add-Member -NotePropertyName 'is_pwn_requestable' -NotePropertyValue $isPwnRequestable -Force
+
+        $prtBranches = $null
+        if ($isPwnRequestable) {
+            $prtConfig = $triggerEvents['pull_request_target']
+            if ($prtConfig -and $prtConfig['branches']) {
+                $prtBranches = @($prtConfig['branches']) | ConvertTo-Json -Compress
+            }
+        }
+        $wf.properties | Add-Member -NotePropertyName 'prt_branches' -NotePropertyValue (Normalize-Null $prtBranches) -Force
+
+        $parsed = $parsed + 1
+        Write-Verbose "Parsed [$parsed]: $($wf.properties.name) — pwn_requestable=$isPwnRequestable"
+    }
+
+    Write-Host "[*] Expand-GitHoundWorkflowGraph: Parsed $parsed workflow(s), skipped $skipped. Created $($nodes.Count) nodes, $($edges.Count) edges."
+
+    Write-Output ([PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    })
+}
+
+function Get-GitHoundPwnRequestEdges
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory)]
+        [PSObject]$GraphData,
+
+        [Parameter(Mandatory)]
+        [PSObject]$WorkflowData
+    )
+
+    $edges = New-Object System.Collections.ArrayList
+
+    $allNodes = $GraphData.graph.nodes
+    $allEdges = $GraphData.graph.edges
+
+    $orgNode = $allNodes | Where-Object { $_.kinds -contains 'GH_Organization' } | Select-Object -First 1
+    $orgAllowsFork = $orgNode -and $orgNode.properties.members_can_fork_private_repositories -eq $true
+
+    $repoMap = @{}
+    foreach ($r in ($allNodes | Where-Object { $_.kinds -contains 'GH_Repository' })) {
+        $repoMap[$r.properties.node_id] = $r
+    }
+
+    $repoBranches = @{}
+    foreach ($e in ($allEdges | Where-Object { $_.kind -eq 'GH_HasBranch' })) {
+        $repoId = if ($e.start.value) { $e.start.value } else { $e.start }
+        $branchId = if ($e.end.value) { $e.end.value } else { $e.end }
+        if (-not $repoBranches.ContainsKey($repoId)) { $repoBranches[$repoId] = [System.Collections.ArrayList]@() }
+        $null = $repoBranches[$repoId].Add($branchId)
+    }
+
+    $branchMap = @{}
+    foreach ($b in ($allNodes | Where-Object { $_.kinds -contains 'GH_Branch' })) {
+        $branchMap[$b.id] = $b
+        if ($b.properties.node_id) { $branchMap[$b.properties.node_id] = $b }
+    }
+
+    $readEdges = @{}
+    foreach ($e in ($allEdges | Where-Object { $_.kind -eq 'GH_ReadRepoContents' })) {
+        $roleId = if ($e.start.value) { $e.start.value } else { $e.start }
+        $repoId = if ($e.end.value) { $e.end.value } else { $e.end }
+        if (-not $readEdges.ContainsKey($repoId)) { $readEdges[$repoId] = [System.Collections.ArrayList]@() }
+        $null = $readEdges[$repoId].Add($roleId)
+    }
+
+    $repoWorkflows = @{}
+    foreach ($e in ($allEdges | Where-Object { $_.kind -eq 'GH_HasWorkflow' })) {
+        $repoId = if ($e.start.value) { $e.start.value } else { $e.start }
+        $wfId = if ($e.end.value) { $e.end.value } else { $e.end }
+        if (-not $repoWorkflows.ContainsKey($wfId)) { $repoWorkflows[$wfId] = $repoId }
+    }
+
+    $pwnWorkflows = @($WorkflowData.Nodes | Where-Object {
+        $_.kinds -contains 'GH_Workflow' -and $_.properties.is_pwn_requestable -eq $true
+    })
+
+    $edgeCount = 0
+    foreach ($wf in $pwnWorkflows)
+    {
+        $repoId = $repoWorkflows[$wf.id]
+        if (-not $repoId) { $repoId = $repoWorkflows[$wf.properties.node_id] }
+        if (-not $repoId -and $wf.properties.repository_id) { $repoId = $wf.properties.repository_id }
+        if (-not $repoId) {
+            Write-Warning "Get-GitHoundPwnRequestEdges: Could not find repo for workflow '$($wf.properties.name)'"
+            continue
+        }
+
+        $repo = $repoMap[$repoId]
+        if (-not $repo) {
+            Write-Warning "Get-GitHoundPwnRequestEdges: Repo node not found for id '$repoId'"
+            continue
+        }
+
+        $isPublic = $repo.properties.visibility -eq 'public'
+        if (-not $isPublic) {
+            if (-not $orgAllowsFork) { continue }
+            if ($repo.properties.allow_forking -ne $true) { continue }
+        }
+
+        $roleIds = $readEdges[$repoId]
+        if (-not $roleIds -or $roleIds.Count -eq 0) { continue }
+
+        $prtBranches = $null
+        if ($wf.properties.prt_branches) {
+            $prtBranches = try { $wf.properties.prt_branches | ConvertFrom-Json } catch { $null }
+        }
+
+        $targetBranchIds = [System.Collections.ArrayList]@()
+        $branches = $repoBranches[$repoId]
+        if ($branches) {
+            if ($prtBranches) {
+                foreach ($branchId in $branches) {
+                    $branch = $branchMap[$branchId]
+                    if ($branch) {
+                        $branchName = $branch.properties.name -replace '^.*\\', ''
+                        foreach ($pattern in $prtBranches) {
+                            if ($branchName -like $pattern) {
+                                $null = $targetBranchIds.Add($branchId)
+                                break
+                            }
+                        }
+                    }
+                }
+            } else {
+                $targetBranchIds.AddRange(@($branches))
+            }
+        }
+
+        $edgeProps = @{ traversable = $true; workflow = $wf.properties.name }
+
+        foreach ($roleId in $roleIds) {
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanPwnRequest' -StartId $roleId -EndId $repoId -Properties $edgeProps))
+            $edgeCount = $edgeCount + 1
+
+            foreach ($branchId in $targetBranchIds) {
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_CanPwnRequest' -StartId $roleId -EndId $branchId -Properties $edgeProps))
+                $edgeCount = $edgeCount + 1
+            }
+        }
+    }
+
+    Write-Host "[*] Get-GitHoundPwnRequestEdges: $($pwnWorkflows.Count) pwn-requestable workflow(s), $edgeCount edges created."
+
+    Write-Output ([PSCustomObject]@{
+        Nodes = @()
+        Edges = $edges
+    })
+}
+
+function Extract-SecretReferences
+{
+    Param(
+        [Parameter(Position = 0)]
+        [string]$Text
+    )
+
+    if (-not $Text) { return @() }
+
+    $matches = [regex]::Matches($Text, '\$\{\{\s*secrets\.(\w+)\s*\}\}')
+    @($matches | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
+}
+
+function Extract-VariableReferences
+{
+    Param(
+        [Parameter(Position = 0)]
+        [string]$Text
+    )
+
+    if (-not $Text) { return @() }
+
+    $matches = [regex]::Matches($Text, '\$\{\{\s*vars\.(\w+)\s*\}\}')
+    @($matches | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
+}
+
+function Get-GitHoundWorkflowAnalysis
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory)]
+        [PSObject]$GraphData
+    )
+
+    $workflowNodes = @($GraphData.graph.nodes | Where-Object {
+        $_.kinds -contains 'GH_Workflow' -and $_.properties.contents -and $_.properties.contents.Trim().Length -gt 0
+    })
+
+    if ($workflowNodes.Count -eq 0) {
+        Write-Warning "No workflow nodes with contents found. Ensure workflow content collection is enabled."
+        return [PSCustomObject]@{
+            Nodes = (New-Object System.Collections.ArrayList)
+            Edges = (New-Object System.Collections.ArrayList)
+        }
+    }
+
+    Write-Host "[*] Found $($workflowNodes.Count) workflow(s) with contents."
+
+    $wfResult = Expand-GitHoundWorkflowGraph -Workflows $workflowNodes
+    $pwnResult = Get-GitHoundPwnRequestEdges -GraphData $GraphData -WorkflowData $wfResult
+    $dispatchResult = Get-GitHoundWorkflowDispatchEdges -GraphData $GraphData -WorkflowData $wfResult
+
+    $analysisNodes = New-Object System.Collections.ArrayList
+    $analysisEdges = New-Object System.Collections.ArrayList
+    if ($wfResult.Nodes) { $null = $analysisNodes.AddRange(@($wfResult.Nodes)) }
+    if ($wfResult.Edges) { $null = $analysisEdges.AddRange(@($wfResult.Edges)) }
+    if ($pwnResult.Edges) { $null = $analysisEdges.AddRange(@($pwnResult.Edges)) }
+    if ($dispatchResult.Edges) { $null = $analysisEdges.AddRange(@($dispatchResult.Edges)) }
+
+    $pwnCount = @($wfResult.Nodes | Where-Object {
+        $_.kinds -contains 'GH_Workflow' -and $_.properties.is_pwn_requestable -eq $true
+    }).Count
+    $dispatchCount = @($dispatchResult.Edges).Count
+    Write-Host "[+] Workflow analysis summary: $($analysisNodes.Count) nodes, $($analysisEdges.Count) edges, $pwnCount pwn-requestable workflow(s), $dispatchCount job-to-runner dispatch edge(s)"
+
+    [PSCustomObject]@{
+        Nodes = $analysisNodes
+        Edges = $analysisEdges
+    }
+}
+
+function Merge-GitHoundWorkflowAnalysis
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory)]
+        [System.Collections.ArrayList]$GraphNodes,
+
+        [Parameter(Mandatory)]
+        [System.Collections.ArrayList]$GraphEdges,
+
+        [Parameter(Mandatory)]
+        [PSCustomObject]$AnalysisResult
+    )
+
+    $existingNodesById = @{}
+    foreach ($node in $GraphNodes) {
+        if ($null -ne $node -and $node.id) {
+            $existingNodesById[$node.id] = $node
+        }
+    }
+
+    foreach ($analysisNode in @($AnalysisResult.Nodes)) {
+        if ($null -eq $analysisNode) { continue }
+
+        if (($analysisNode.kinds -contains 'GH_Workflow') -and $existingNodesById.ContainsKey($analysisNode.id)) {
+            $existingNode = $existingNodesById[$analysisNode.id]
+            $existingNode.kinds = $analysisNode.kinds
+            $existingNode.properties = $analysisNode.properties
+            continue
+        }
+
+        $null = $GraphNodes.Add($analysisNode)
+        if ($analysisNode.id) {
+            $existingNodesById[$analysisNode.id] = $analysisNode
+        }
+    }
+
+    if ($AnalysisResult.Edges) {
+        $null = $GraphEdges.AddRange(@($AnalysisResult.Edges))
+    }
+}
+
+function Export-GitHoundWorkflowAnalysis
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory)]
+        [string]$Path,
+
+        [Parameter()]
+        [string]$OutputPath
+    )
+
+    if (-not (Test-Path $Path)) {
+        Write-Error "File not found: $Path"
+        return
+    }
+
+    Write-Host "[*] Loading collected data from $Path..."
+    $data = Get-Content $Path -Raw | ConvertFrom-Json
+    $analysisResult = Get-GitHoundWorkflowAnalysis -GraphData $data
+
+    if (-not $OutputPath) {
+        $dir = Split-Path $Path -Parent
+        $base = [System.IO.Path]::GetFileNameWithoutExtension($Path)
+        $OutputPath = Join-Path $dir "${base}_workflows.json"
+    }
+
+    $payload = [PSCustomObject]@{
+        '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
+        graph = [PSCustomObject]@{
+            nodes = @($analysisResult.Nodes | Where-Object { $_ -ne $null })
+            edges = @($analysisResult.Edges | Where-Object { $_ -ne $null })
+        }
+    }
+
+    $payload | ConvertTo-Json -Depth 10 | Out-File $OutputPath
+    Write-Host "[+] Workflow analysis complete. Output written to $OutputPath"
+}
+
 function Git-HoundOrganization
 {
     <#
@@ -6376,6 +7382,29 @@ function Invoke-GitHound
         Write-Host "[*] Skipping Repository Variables (use -CollectAll to include)"
     }
 
+    # ── Step 10.75: Workflow Analysis (requires -CollectAll) ─────────────
+    if ($CollectAll) {
+        $stepFile = Join-Path $CheckpointPath "githound_WorkflowAnalysis_$orgId.json"
+        if ($Resume -and (Test-Path $stepFile)) {
+            Write-Host "[*] Resuming: Loaded Workflow Analysis from githound_WorkflowAnalysis_$orgId.json"
+            $workflowAnalysis = Import-GitHoundStepOutput -FilePath $stepFile
+        } else {
+            Write-Host "[*] Analyzing Workflows"
+            $workflowGraphData = [PSCustomObject]@{
+                graph = [PSCustomObject]@{
+                    nodes = @($nodes | Where-Object { $_ -ne $null })
+                    edges = @($edges | Where-Object { $_ -ne $null })
+                }
+            }
+            $workflowAnalysis = Get-GitHoundWorkflowAnalysis -GraphData $workflowGraphData
+            Export-GitHoundStepOutput -StepResult $workflowAnalysis -FilePath $stepFile
+            Write-Host "[+] Saved: githound_WorkflowAnalysis_$orgId.json"
+        }
+        Merge-GitHoundWorkflowAnalysis -GraphNodes $nodes -GraphEdges $edges -AnalysisResult $workflowAnalysis
+    } else {
+        Write-Host "[*] Skipping Workflow Analysis (use -CollectAll to include)"
+    }
+
     # ── Step 11: Secret Scanning Alerts ─────────────────────────────────
     $stepFile = Join-Path $CheckpointPath "githound_SecretAlerts_$orgId.json"
     if ($Resume -and (Test-Path $stepFile)) {
@@ -6482,6 +7511,7 @@ function Invoke-GitHound
             "githound_RepoRole_$orgId.json",
             "githound_Branch_$orgId.json",
             "githound_Workflow_$orgId.json",
+            "githound_WorkflowAnalysis_$orgId.json",
             "githound_Environment_$orgId.json",
             "githound_OrgSecret_$orgId.json",
             "githound_Secret_$orgId.json",

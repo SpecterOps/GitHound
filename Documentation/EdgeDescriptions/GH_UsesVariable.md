@@ -7,7 +7,7 @@
 
 ## General Information
 
-The non-traversable [GH_UsesVariable](GH_UsesVariable.md) edge links a workflow step to the variable it references via a `${{ vars.NAME }}` expression. Created by `Parse-GitHoundWorkflow`, this edge maps variable consumption within workflows. Unlike secrets, variable values are readable via the API, making them lower sensitivity — but they can still influence workflow behavior (e.g., controlling target environments or feature flags).
+The non-traversable [GH_UsesVariable](GH_UsesVariable.md) edge links a workflow step to the variable it references via a `${{ vars.NAME }}` expression. Created during the integrated workflow-analysis step in `Invoke-GitHound`, this edge maps variable consumption within workflows. Unlike secrets, variable values are readable via the API, making them lower sensitivity, but they can still influence workflow behavior such as controlling target environments or feature flags.
 
 ### Matching strategy
 

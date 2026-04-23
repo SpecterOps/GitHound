@@ -7,7 +7,7 @@
 
 ## General Information
 
-The traversable [GH_UsesSecret](GH_UsesSecret.md) edge links a workflow step to the secret it references via a `${{ secrets.NAME }}` expression. Created by `Parse-GitHoundWorkflow`, this edge reveals which secrets a step can access at runtime, enabling analysts to trace the blast radius of a compromised workflow.
+The traversable [GH_UsesSecret](GH_UsesSecret.md) edge links a workflow step to the secret it references via a `${{ secrets.NAME }}` expression. Created during the integrated workflow-analysis step in `Invoke-GitHound`, this edge reveals which secrets a step can access at runtime, enabling analysts to trace the blast radius of a compromised workflow.
 
 ### Matching strategy
 

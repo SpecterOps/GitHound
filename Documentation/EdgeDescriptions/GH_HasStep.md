@@ -7,7 +7,7 @@
 
 ## General Information
 
-The traversable [GH_HasStep](GH_HasStep.md) edge links a job to each of its steps in execution order. Created by `Parse-GitHoundWorkflow`, this edge enables analysts to enumerate all actions and shell commands executed by a job, including which secrets and variables each step consumes.
+The traversable [GH_HasStep](GH_HasStep.md) edge links a job to each of its steps in execution order. Created during the integrated workflow-analysis step in `Invoke-GitHound`, this edge enables analysts to enumerate all actions and shell commands executed by a job, including which secrets and variables each step consumes.
 
 ```mermaid
 graph LR
