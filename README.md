@@ -111,6 +111,11 @@ That collector currently creates:
 - lightweight `GH_Organization` stub nodes for member organizations
 - `GH_Contains` edges from the enterprise to its organizations
 
+Enterprise user collection through `Git-HoundEnterpriseUser` adds:
+
+- `GH_User`
+- `GH_HasMember` edges from the enterprise to those users
+
 These organization stubs are intentionally emitted with `collected = false`. They represent
 structural discovery from the enterprise context and are meant to be enriched later by normal
 organization collection.

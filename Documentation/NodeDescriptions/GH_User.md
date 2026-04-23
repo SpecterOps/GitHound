@@ -1,8 +1,8 @@
 # <img src="../Icons/gh_user.png" width="50"/> GH_User
 
-Represents a GitHub user who is a member of the organization. Users are associated with organization roles (Owner or Member) and can be assigned to repository roles and team roles.
+Represents a GitHub user who is a member of one or more GitHub organizations or enterprises. Users are associated with organization roles (Owner or Member), can be assigned to repository roles and team roles, and may also be linked directly to `GH_Enterprise` through `GH_HasMember`.
 
-Created by: `Git-HoundUser`
+Created by: `Git-HoundUser`, `Git-HoundEnterpriseUser`
 
 ## Properties
 
@@ -16,13 +16,14 @@ Created by: `Git-HoundUser`
 | full_name        | string    | The user's full name from their profile.                               |
 | id               | integer   | The numeric GitHub ID of the user.                                     |
 | node_id          | string    | The GitHub GraphQL node ID. Redundant with objectid.                   |
-| environment_name | string    | The name of the environment (GitHub organization) the user belongs to. |
-| environmentid    | string    | The node_id of the environment (GitHub organization).                  |
+| environment_name | string    | The name of the environment where the user was collected, such as a GitHub organization or enterprise. |
+| environmentid    | string    | The node_id of the environment where the user was collected. |
 
 ## Diagram
 
 ```mermaid
 flowchart TD
+    GH_Enterprise[fa:fa-globe GH_Enterprise]
     GH_User[fa:fa-user GH_User]
     GH_OrgRole[fa:fa-user-tie GH_OrgRole]
     GH_RepoRole[fa:fa-user-tie GH_RepoRole]
@@ -42,6 +43,7 @@ flowchart TD
     GH_Repository[fa:fa-box-archive GH_Repository]
 
 
+    GH_Enterprise -.->|GH_HasMember| GH_User
     GH_User -->|GH_HasRole| GH_OrgRole
     GH_User -->|GH_HasRole| GH_TeamRole
     GH_User -->|GH_HasRole| GH_RepoRole

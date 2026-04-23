@@ -1,6 +1,6 @@
 # <img src="../Icons/gh_organization.png" width="50"/> GH_Organization
 
-Represents a GitHub organization. In organization-scoped collections this is typically the top-level container for repositories, teams, users, and organization-scoped settings. In enterprise-aware collections, a `GH_Organization` may also appear as a child of `GH_Enterprise` via `GH_Contains`. Organization-level settings such as default repository permissions, Actions configuration, and security features are captured as properties on this node.
+Represents a GitHub organization. In organization-scoped collections this is typically the top-level container for repositories, teams, roles, and organization-scoped settings. In enterprise-aware collections, a `GH_Organization` may also appear as a child of `GH_Enterprise` via `GH_Contains`. Organization-level settings such as default repository permissions, Actions configuration, and security features are captured as properties on this node. Organization membership itself is modeled through role assignments rather than `GH_Contains`.
 
 Created by: `Git-HoundOrganization`
 
