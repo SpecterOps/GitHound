@@ -20,6 +20,7 @@
 | ![GH_AppInstallation](Icons/gh_appinstallation.png) | [GH_AppInstallation](NodeDescriptions/GH_AppInstallation.md) | GitHub App Installation |
 | ![GH_Branch](Icons/gh_branch.png) | [GH_Branch](NodeDescriptions/GH_Branch.md) | GitHub Branch |
 | ![GH_BranchProtectionRule](Icons/gh_branchprotectionrule.png) | [GH_BranchProtectionRule](NodeDescriptions/GH_BranchProtectionRule.md) | GitHub Branch Protection Rule |
+| ![GH_Enterprise](Icons/gh_enterprise.png) | [GH_Enterprise](NodeDescriptions/GH_Enterprise.md) | GitHub Enterprise |
 | ![GH_Environment](Icons/gh_environment.png) | [GH_Environment](NodeDescriptions/GH_Environment.md) | GitHub Environment |
 | ![GH_EnvironmentSecret](Icons/gh_environmentsecret.png) | [GH_EnvironmentSecret](NodeDescriptions/GH_EnvironmentSecret.md) | GitHub Environment Secret |
 | ![GH_EnvironmentVariable](Icons/gh_environmentvariable.png) | [GH_EnvironmentVariable](NodeDescriptions/GH_EnvironmentVariable.md) | GitHub Environment Variable |
@@ -70,7 +71,7 @@
 | [GH_CloseDiscussion](EdgeDescriptions/GH_CloseDiscussion.md) | ❌ | [Repository] Repo role can close discussions |
 | [GH_CloseIssue](EdgeDescriptions/GH_CloseIssue.md) | ❌ | [Repository] Repo role can close issues |
 | [GH_ClosePullRequest](EdgeDescriptions/GH_ClosePullRequest.md) | ❌ | [Repository] Repo role can close pull requests |
-| [GH_Contains](EdgeDescriptions/GH_Contains.md) | ❌ | Container relationship for organizational hierarchy (org contains secrets/variables, repo contains secrets/variables, environment contains secrets/variables) |
+| [GH_Contains](EdgeDescriptions/GH_Contains.md) | ❌ | Container relationship for organizational hierarchy (enterprise contains orgs, org contains secrets/variables, repo contains secrets/variables, environment contains secrets/variables) |
 | [GH_ConvertIssuesToDiscussions](EdgeDescriptions/GH_ConvertIssuesToDiscussions.md) | ❌ | [Repository] Repo role can convert issues to discussions |
 | [GH_CreateDiscussionCategory](EdgeDescriptions/GH_CreateDiscussionCategory.md) | ❌ | [Repository] Repo role can create discussion categories |
 | [GH_CreateRepository](EdgeDescriptions/GH_CreateRepository.md) | ❌ | [Organization] Org role can create repositories in the organization |

@@ -186,6 +186,18 @@ LIMIT 1000
 
 This query can be imported into BloodHound from the [dangerous-branch-perms.json](../saved-queries/dangerous-branch-perms.json) file.
 
+## Enterprise to Organization Hierarchy
+
+Returns enterprises and the organizations they structurally contain.
+
+```cypher
+MATCH p=(enterprise:GH_Enterprise)-[:GH_Contains]->(org:GH_Organization)
+RETURN p
+LIMIT 1000
+```
+
+This query is helpful for validating enterprise discovery before running full organization collection.
+
 ## Organizations with default repository permission
 
 Returns organizations that have a default repository permission other than 'none'.

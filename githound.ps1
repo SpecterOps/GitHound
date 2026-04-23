@@ -347,6 +347,10 @@ function Invoke-GitHubGraphQL
         $Variables
     )
 
+    if (-not $Headers) {
+        $Headers = $Session.Headers
+    }
+
     $Body = @{
         query = $Query
         variables = $Variables
@@ -854,6 +858,153 @@ function ConvertTo-PascalCase
     $pascalCaseString = (Get-Culture).TextInfo.ToTitleCase($cleanedString).Replace(' ', '')
 
     return $pascalCaseString
+}
+
+function Git-HoundEnterprise
+{
+    <#
+    .SYNOPSIS
+        Fetches and processes a GitHub Enterprise node and its member organizations.
+
+    .DESCRIPTION
+        This function retrieves enterprise profile details and enumerates the organizations
+        that belong to the enterprise. It creates a GH_Enterprise node, minimal GH_Organization
+        stub nodes for discovered member organizations, and GH_Contains edges from the enterprise
+        to each organization.
+
+        The organization nodes emitted here are intentionally lightweight. They are meant to
+        establish the enterprise-to-organization structure and can later be enriched by the
+        normal organization collection path.
+
+    .PARAMETER Session
+        A GitHound.Session object with EnterpriseName set.
+
+    .EXAMPLE
+        $enterprise = Git-HoundEnterprise -Session $session
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session
+    )
+
+    if (-not $Session.EnterpriseName) {
+        throw "Git-HoundEnterprise requires Session.EnterpriseName to be set."
+    }
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+
+    $enterpriseSlug = $Session.EnterpriseName
+    $enterprise = $null
+    $allOrganizations = New-Object System.Collections.ArrayList
+    $cursor = $null
+
+    Write-Host "[*] Git-HoundEnterprise: Collecting enterprise '$enterpriseSlug'"
+
+    do {
+        $query = @'
+query($slug: String!, $after: String) {
+  enterprise(slug: $slug) {
+    id
+    databaseId
+    name
+    slug
+    description
+    location
+    url
+    websiteUrl
+    createdAt
+    updatedAt
+    billingEmail
+    securityContactEmail
+    viewerIsAdmin
+    organizations(first: 100, after: $after) {
+      nodes {
+        id
+        login
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+'@
+
+        $variables = @{
+            slug = $enterpriseSlug
+            after = $cursor
+        }
+
+        $result = Invoke-GitHubGraphQL -Session $Session -Query $query -Variables $variables
+        $enterpriseResult = $result.data.enterprise
+
+        if (-not $enterpriseResult) {
+            throw "Enterprise '$enterpriseSlug' was not returned by the GraphQL API."
+        }
+
+        if (-not $enterprise) {
+            $enterprise = $enterpriseResult
+        }
+
+        foreach ($org in @($enterpriseResult.organizations.nodes)) {
+            $null = $allOrganizations.Add($org)
+        }
+
+        if ($enterpriseResult.organizations.pageInfo.hasNextPage) {
+            $cursor = $enterpriseResult.organizations.pageInfo.endCursor
+        } else {
+            $cursor = $null
+        }
+    } while ($cursor)
+
+    $enterpriseNodeId = $enterprise.id
+    $enterpriseProps = [pscustomobject]@{
+        name                   = Normalize-Null $enterprise.slug
+        node_id                = Normalize-Null $enterprise.id
+        collected              = $true
+        environmentid          = Normalize-Null $enterprise.id
+        environment_name       = Normalize-Null $enterprise.slug
+        slug                   = Normalize-Null $enterprise.slug
+        enterprise_name        = Normalize-Null $enterprise.name
+        description            = Normalize-Null $enterprise.description
+        location               = Normalize-Null $enterprise.location
+        url                    = Normalize-Null $enterprise.url
+        website_url            = Normalize-Null $enterprise.websiteUrl
+        created_at             = Normalize-Null $enterprise.createdAt
+        updated_at             = Normalize-Null $enterprise.updatedAt
+        billing_email          = Normalize-Null $enterprise.billingEmail
+        security_contact_email = Normalize-Null $enterprise.securityContactEmail
+        viewer_is_admin        = Normalize-Null $enterprise.viewerIsAdmin
+        query_organizations    = "MATCH p=(:GH_Enterprise {node_id:'$($enterprise.id)'})-[:GH_Contains]->(:GH_Organization) RETURN p"
+    }
+
+    $null = $nodes.Add((New-GitHoundNode -Id $enterpriseNodeId -Kind 'GH_Enterprise' -Properties $enterpriseProps))
+
+    foreach ($org in @($allOrganizations)) {
+        $orgProps = [pscustomobject]@{
+            name             = Normalize-Null $org.login
+            node_id          = Normalize-Null $org.id
+            collected        = $false
+            environmentid    = Normalize-Null $org.id
+            environment_name = Normalize-Null $org.login
+            login            = Normalize-Null $org.login
+            query_enterprise = "MATCH p=(:GH_Enterprise {node_id:'$($enterprise.id)'})-[:GH_Contains]->(:GH_Organization {node_id:'$($org.id)'}) RETURN p"
+        }
+
+        $null = $nodes.Add((New-GitHoundNode -Id $org.id -Kind 'GH_Organization' -Properties $orgProps))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $enterpriseNodeId -EndId $org.id -Properties @{ traversable = $false }))
+    }
+
+    Write-Host "[+] Git-HoundEnterprise complete. 1 enterprise, $($allOrganizations.Count) organization stub(s), $($edges.Count) containment edge(s)."
+
+    [PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    }
 }
 
 function New-BHOGPropertyMatcher
