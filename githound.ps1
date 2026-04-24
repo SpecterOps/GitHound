@@ -10,7 +10,9 @@ function Get-GitHoundFunctionBundle {
         'Wait-GithubRestRateLimit',
         'Wait-GithubRateLimitReached',
         'Get-RateLimitInformation',
-        'ConvertTo-PascalCase'
+        'ConvertTo-PascalCase',
+        'New-BHOGPropertyMatcher',
+        'Get-GitHoundOrganizationTeamPropertyMatchers'
     )
     
     # Register each function
@@ -67,7 +69,11 @@ function New-GithubSession {
 
         [Parameter(Mandatory = $false)]
         [string]
-        $InstallationId
+        $InstallationId,
+
+        [Parameter(Mandatory = $false)]
+        [string]
+        $PrivateKeyPath
     )
 
     if($Headers['Accept']) {
@@ -108,6 +114,7 @@ function New-GithubSession {
         PatHeaders = $PatHeaders
         ClientId = $ClientId
         InstallationId = $InstallationId
+        PrivateKeyPath = $PrivateKeyPath
         HasPersonalAccessToken = ($null -ne $PatHeaders)
         TargetType = if ($EnterpriseName) { 'Enterprise' } elseif ($OrganizationName) { 'Organization' } else { 'Application' }
     }
@@ -210,7 +217,8 @@ function New-GitHubJwtSession
         -JwtHeaders $jwtHeaders `
         -PatHeaders $patHeaders `
         -ClientId $ClientId `
-        -InstallationId $InstallationId
+        -InstallationId $InstallationId `
+        -PrivateKeyPath $PrivateKeyPath
     
     Write-Output $session
 }
@@ -754,7 +762,7 @@ function Get-GitHoundOrganizationTeamNodeId
         [Parameter(Mandatory = $true)]
         [string]$TeamNodeId,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string]$TeamSlug
     )
 
@@ -4749,10 +4757,76 @@ function Compute-GitHoundBranchAccess
         }
     }
 
+    function Test-GitHoundNodeMatchesPropertyMatchers {
+        param(
+            [Parameter(Mandatory = $true)]
+            $Node,
+
+            [Parameter(Mandatory = $true)]
+            [array]$PropertyMatchers
+        )
+
+        foreach ($matcher in $PropertyMatchers) {
+            if ($matcher.operator -ne 'equals') { return $false }
+
+            $nodeValue = $null
+            if ($Node.properties -and $null -ne $Node.properties.PSObject.Properties[$matcher.key]) {
+                $nodeValue = $Node.properties.$($matcher.key)
+            }
+
+            if ($null -eq $nodeValue -and $null -eq $matcher.value) { continue }
+            if ([string]$nodeValue -ne [string]$matcher.value) { return $false }
+        }
+
+        return $true
+    }
+
+    function Resolve-GitHoundEdgeEndpointIds {
+        param(
+            [Parameter(Mandatory = $true)]
+            $Endpoint
+        )
+
+        if ($Endpoint.match_by -eq 'property' -and $Endpoint.property_matchers) {
+            $matches = New-Object System.Collections.ArrayList
+            foreach ($node in $Nodes) {
+                if ($Endpoint.kind -and ($node.kinds -notcontains $Endpoint.kind)) { continue }
+                if (Test-GitHoundNodeMatchesPropertyMatchers -Node $node -PropertyMatchers $Endpoint.property_matchers) {
+                    $null = $matches.Add($node.id)
+                }
+            }
+            return @($matches | Where-Object { $_ })
+        }
+
+        if ($Endpoint.value) {
+            return @($Endpoint.value)
+        }
+
+        return @()
+    }
+
+    $resolvedEdges = New-Object System.Collections.ArrayList
+    foreach ($edge in $Edges) {
+        $resolvedStartIds = Resolve-GitHoundEdgeEndpointIds -Endpoint $edge.start
+        $resolvedEndIds = Resolve-GitHoundEdgeEndpointIds -Endpoint $edge.end
+
+        foreach ($startId in $resolvedStartIds) {
+            foreach ($endId in $resolvedEndIds) {
+                if ([string]::IsNullOrWhiteSpace([string]$startId) -or [string]::IsNullOrWhiteSpace([string]$endId)) { continue }
+                $null = $resolvedEdges.Add([PSCustomObject]@{
+                    kind = $edge.kind
+                    start = [PSCustomObject]@{ value = $startId }
+                    end = [PSCustomObject]@{ value = $endId }
+                    properties = $edge.properties
+                })
+            }
+        }
+    }
+
     # Edge direction indexes: outbound["kind|startId"] -> [endIds], inbound["kind|endId"] -> [startIds]
     $outbound = @{}
     $inbound = @{}
-    foreach ($edge in $Edges) {
+    foreach ($edge in $resolvedEdges) {
         $startId = $edge.start.value
         $endId = $edge.end.value
         $kind = $edge.kind
@@ -4772,7 +4846,7 @@ function Compute-GitHoundBranchAccess
 
     # Repo -> Branches mapping (from GH_HasBranch edges)
     $repoBranches = @{}
-    foreach ($edge in $Edges) {
+    foreach ($edge in $resolvedEdges) {
         if ($edge.kind -eq 'GH_HasBranch') {
             $repoId = $edge.start.value
             if (-not $repoBranches.ContainsKey($repoId)) {
@@ -4784,7 +4858,7 @@ function Compute-GitHoundBranchAccess
 
     # Branch -> BPR mapping (from GH_ProtectedBy edges: BPR -> Branch)
     $branchToBPR = @{}
-    foreach ($edge in $Edges) {
+    foreach ($edge in $resolvedEdges) {
         if ($edge.kind -eq 'GH_ProtectedBy') {
             $branchToBPR[$edge.end.value] = $edge.start.value
         }
@@ -4808,7 +4882,7 @@ function Compute-GitHoundBranchAccess
     $roleToRepo = @{}
     $permissionEdgeKinds = @('GH_WriteRepoContents', 'GH_AdminTo', 'GH_PushProtectedBranch',
                               'GH_BypassBranchProtection', 'GH_EditRepoProtections')
-    foreach ($edge in $Edges) {
+    foreach ($edge in $resolvedEdges) {
         if ($edge.kind -in $permissionEdgeKinds) {
             $roleId = $edge.start.value
             if (-not $rolePermissions.ContainsKey($roleId)) {
@@ -4822,7 +4896,7 @@ function Compute-GitHoundBranchAccess
     # Per-rule allowance actors (from GH_RestrictionsCanPush and GH_BypassPullRequestAllowances edges)
     $pushAllowanceActors = @{}
     $bypassPRActors = @{}
-    foreach ($edge in $Edges) {
+    foreach ($edge in $resolvedEdges) {
         if ($edge.kind -eq 'GH_RestrictionsCanPush') {
             $bprId = $edge.end.value
             if (-not $pushAllowanceActors.ContainsKey($bprId)) {
@@ -4978,6 +5052,9 @@ function Compute-GitHoundBranchAccess
             if (-not $inbound.ContainsKey($hasRoleKey)) { continue }
 
             foreach ($actorId in $inbound[$hasRoleKey]) {
+                if ([string]::IsNullOrWhiteSpace([string]$actorId)) { continue }
+                if (-not $nodeById.ContainsKey($actorId)) { continue }
+
                 $actorNode = $nodeById[$actorId]
                 if (-not $actorNode) { continue }
                 if ($actorNode.kinds -notcontains 'GH_User' -and $actorNode.kinds -notcontains 'GH_Team') { continue }
@@ -5923,6 +6000,30 @@ function Git-HoundRunner
         $nodes = New-Object System.Collections.ArrayList
         $edges = New-Object System.Collections.ArrayList
         $repoNodes = New-Object System.Collections.ArrayList
+
+        function Get-GitHoundRunnerApiErrorInfo {
+            param(
+                [Parameter(Mandatory = $true)]
+                $ErrorRecord
+            )
+
+            $message = $null
+            $status = $null
+
+            try {
+                $httpException = $ErrorRecord.ErrorDetails | ConvertFrom-Json
+                $message = $httpException.message
+                $status = $httpException.status
+            }
+            catch {
+                $message = $ErrorRecord.Exception.Message
+            }
+
+            [PSCustomObject]@{
+                Status = $status
+                Message = $message
+            }
+        }
     }
 
     process
@@ -5956,7 +6057,13 @@ function Git-HoundRunner
         try {
             $runnerGroups = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/runner-groups").runner_groups)
         } catch {
-            Write-Warning "Could not enumerate organization runner groups for ${orgLogin}: $_"
+            $errorInfo = Get-GitHoundRunnerApiErrorInfo -ErrorRecord $_
+            if (($errorInfo.Status -eq "403" -and $errorInfo.Message -match "Resource not accessible by integration") -or $errorInfo.Status -eq "404") {
+                Write-Warning "Skipping organization self-hosted runner groups for '${orgLogin}': $($errorInfo.Message)"
+                Write-Host "[*] This usually means self-hosted runners are not enabled for the organization, or the GitHub App does not have access to that feature."
+            } else {
+                Write-Warning "Could not enumerate organization runner groups for ${orgLogin}: $_"
+            }
         }
 
         foreach ($group in $runnerGroups) {
@@ -5994,7 +6101,12 @@ function Git-HoundRunner
                         $selectedRepos = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/runner-groups/$($group.id)/repositories").repositories)
                         $accessibleRepoIds = @($selectedRepos | Where-Object { $repoByNodeId.ContainsKey($_.node_id) } | ForEach-Object { $repoByNodeId[$_.node_id].id })
                     } catch {
-                        Write-Warning "Could not enumerate selected repository access for runner group '$($group.name)' in ${orgLogin}: $_"
+                        $errorInfo = Get-GitHoundRunnerApiErrorInfo -ErrorRecord $_
+                        if (($errorInfo.Status -eq "403" -and $errorInfo.Message -match "Resource not accessible by integration") -or $errorInfo.Status -eq "404") {
+                            Write-Warning "Skipping selected repository access for runner group '$($group.name)' in '${orgLogin}': $($errorInfo.Message)"
+                        } else {
+                            Write-Warning "Could not enumerate selected repository access for runner group '$($group.name)' in ${orgLogin}: $_"
+                        }
                     }
                 }
                 default {
@@ -6006,7 +6118,12 @@ function Git-HoundRunner
             try {
                 $groupRunners = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/runner-groups/$($group.id)/runners").runners)
             } catch {
-                Write-Warning "Could not enumerate runners for runner group '$($group.name)' in ${orgLogin}: $_"
+                $errorInfo = Get-GitHoundRunnerApiErrorInfo -ErrorRecord $_
+                if (($errorInfo.Status -eq "403" -and $errorInfo.Message -match "Resource not accessible by integration") -or $errorInfo.Status -eq "404") {
+                    Write-Warning "Skipping runners for runner group '$($group.name)' in '${orgLogin}': $($errorInfo.Message)"
+                } else {
+                    Write-Warning "Could not enumerate runners for runner group '$($group.name)' in ${orgLogin}: $_"
+                }
             }
 
             foreach ($runner in $groupRunners) {
@@ -6055,7 +6172,12 @@ function Git-HoundRunner
             try {
                 $repoRunners = @((Invoke-GithubRestMethod -Session $Session -Path "repos/$($repoNode.properties.full_name)/actions/runners").runners)
             } catch {
-                Write-Warning "Could not enumerate repository runners for $($repoNode.properties.full_name): $_"
+                $errorInfo = Get-GitHoundRunnerApiErrorInfo -ErrorRecord $_
+                if (($errorInfo.Status -eq "403" -and $errorInfo.Message -match "Resource not accessible by integration") -or $errorInfo.Status -eq "404") {
+                    Write-Warning "Skipping repository runners for '$($repoNode.properties.full_name)': $($errorInfo.Message)"
+                } else {
+                    Write-Warning "Could not enumerate repository runners for $($repoNode.properties.full_name): $_"
+                }
             }
 
             foreach ($runner in $repoRunners) {
@@ -7537,7 +7659,42 @@ function Git-HoundScimUser
 
     do
     {
-        $result = [System.Text.Encoding]::ASCII.GetString((Invoke-GithubRestMethod -Session $Session -Path "scim/v2/organizations/$($Session.OrganizationName)/Users?startIndex=$($startIndex)")) | ConvertFrom-Json
+        $scimRequestError = $null
+        $responseBytes = Invoke-GithubRestMethod `
+            -Session $Session `
+            -Path "scim/v2/organizations/$($Session.OrganizationName)/Users?startIndex=$($startIndex)" `
+            -ErrorAction SilentlyContinue `
+            -ErrorVariable scimRequestError
+
+        if ($scimRequestError) {
+            $errorRecord = $scimRequestError[0]
+            $errorText = @(
+                $errorRecord.ToString()
+                $errorRecord.Exception.Message
+                $errorRecord.ErrorDetails.Message
+            ) -join " "
+
+            if ($errorText -match "SCIM is not enabled for this organization" -and $errorText -match "configured on the enterprise account") {
+                Write-Warning "Skipping organization SCIM for '$($Session.OrganizationName)': $errorText"
+                Write-Host "[*] This usually means federated auth is configured at the enterprise level rather than directly on the organization."
+                return [PSCustomObject]@{
+                    Nodes = $nodes
+                    Edges = $edges
+                }
+            }
+
+            throw $errorRecord
+        }
+
+        if (-not $responseBytes) {
+            Write-Warning "Skipping organization SCIM for '$($Session.OrganizationName)': GitHub returned an empty response."
+            return [PSCustomObject]@{
+                Nodes = $nodes
+                Edges = $edges
+            }
+        }
+
+        $result = [System.Text.Encoding]::ASCII.GetString($responseBytes) | ConvertFrom-Json
         foreach($scimIdentity in $result.Resources)
         {
             $props = [pscustomobject]@{
@@ -8503,4 +8660,254 @@ function Invoke-GitHound
     }
 
     Write-Host "[+] GitHound collection complete for $($Session.OrganizationName)."
+}
+
+function Invoke-GitHoundEnterprise
+{
+    <#
+    .SYNOPSIS
+        Orchestrates enterprise-first GitHound collection and then runs organization collection for related org installations.
+
+    .DESCRIPTION
+        This wrapper keeps enterprise collection intentionally thin. It collects the currently
+        supported enterprise-scoped data, enumerates GitHub App installations, filters them
+        down to active organization installations that belong to the enterprise, and then
+        invokes the existing Invoke-GitHound organization workflow for each related org.
+
+        Enterprise collection currently includes:
+        - GH_Enterprise and org containment (Git-HoundEnterprise)
+        - enterprise members (Git-HoundEnterpriseUser)
+        - enterprise teams (Git-HoundEnterpriseTeam)
+        - enterprise SAML provider and external identities (Git-HoundEnterpriseSamlProvider, when PAT-backed)
+
+        Organization collection is delegated unchanged to Invoke-GitHound by creating a normal
+        organization-scoped New-GitHubJwtSession for each related org installation.
+
+    .PARAMETER Session
+        A GitHound.Session with EnterpriseName set. JwtHeaders must be present so the wrapper
+        can enumerate installations. PrivateKeyPath and ClientId must also be present so the
+        wrapper can create organization-scoped New-GitHubJwtSession objects.
+
+    .PARAMETER CheckpointPath
+        Root directory for enterprise output and per-organization subdirectories.
+
+    .PARAMETER Resume
+        Reuses existing enterprise step files and passes the flag through to Invoke-GitHound.
+
+    .PARAMETER CleanupIntermediates
+        Cleans up enterprise step files after enterprise consolidation and passes the flag
+        through to organization collection.
+
+    .PARAMETER CollectAll
+        Passed through to organization collection.
+
+    .PARAMETER WorkflowsAllBranches
+        Passed through to organization collection.
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session,
+
+        [Parameter()]
+        [string]
+        $CheckpointPath = ".",
+
+        [Parameter()]
+        [switch]
+        $Resume,
+
+        [Parameter()]
+        [switch]
+        $CleanupIntermediates,
+
+        [Parameter()]
+        [switch]
+        $CollectAll,
+
+        [Parameter()]
+        [switch]
+        $WorkflowsAllBranches
+    )
+
+    if (-not $Session.EnterpriseName) {
+        throw "Invoke-GitHoundEnterprise requires Session.EnterpriseName to be set."
+    }
+
+    if (-not $Session.JwtHeaders) {
+        throw "Invoke-GitHoundEnterprise requires a session with JwtHeaders so organization installations can be enumerated."
+    }
+
+    if (-not $Session.ClientId) {
+        throw "Invoke-GitHoundEnterprise requires Session.ClientId to create organization-scoped sessions."
+    }
+
+    if (-not $Session.PrivateKeyPath) {
+        throw "Invoke-GitHoundEnterprise requires Session.PrivateKeyPath to create organization-scoped sessions."
+    }
+
+    $enterpriseSlug = $Session.EnterpriseName
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+
+    Write-Host "[*] Starting GitHound enterprise wrapper for $enterpriseSlug"
+
+    # ── Step 1: Enterprise ───────────────────────────────────────────────
+    $entId = $null
+    if ($Resume) {
+        $enterpriseFiles = @(Get-ChildItem -Path $CheckpointPath -Filter "githound_Enterprise_*.json" -ErrorAction SilentlyContinue)
+        if ($enterpriseFiles.Count -eq 1) {
+            $enterprise = Import-GitHoundStepOutput -FilePath $enterpriseFiles[0].FullName
+            if ($enterprise) {
+                $entId = $enterprise.Nodes[0].id
+                Write-Host "[*] Resuming: Loaded Enterprise from $($enterpriseFiles[0].Name)"
+            }
+        }
+    }
+
+    if (-not $entId) {
+        Write-Host "[*] Enumerating Enterprise"
+        $enterprise = Git-HoundEnterprise -Session $Session
+        $entId = $enterprise.Nodes[0].id
+        Export-GitHoundStepOutput -StepResult $enterprise -FilePath (Join-Path $CheckpointPath "githound_Enterprise_$entId.json")
+        Write-Host "[+] Saved: githound_Enterprise_$entId.json"
+    }
+    if($enterprise.Nodes) { $nodes.AddRange(@($enterprise.Nodes)) }
+    if($enterprise.Edges) { $edges.AddRange(@($enterprise.Edges)) }
+
+    # ── Step 2: Enterprise Users ─────────────────────────────────────────
+    $stepFile = Join-Path $CheckpointPath "githound_EnterpriseUser_$entId.json"
+    if ($Resume -and (Test-Path $stepFile)) {
+        Write-Host "[*] Resuming: Loaded Enterprise Users from githound_EnterpriseUser_$entId.json"
+        $enterpriseUsers = Import-GitHoundStepOutput -FilePath $stepFile
+    } else {
+        Write-Host "[*] Enumerating Enterprise Users"
+        $enterpriseUsers = Git-HoundEnterpriseUser -Session $Session -Enterprise $enterprise.Nodes[0]
+        Export-GitHoundStepOutput -StepResult $enterpriseUsers -FilePath $stepFile
+        Write-Host "[+] Saved: githound_EnterpriseUser_$entId.json"
+    }
+    if($enterpriseUsers.Nodes) { $nodes.AddRange(@($enterpriseUsers.Nodes)) }
+    if($enterpriseUsers.Edges) { $edges.AddRange(@($enterpriseUsers.Edges)) }
+
+    # ── Step 3: Enterprise Teams ─────────────────────────────────────────
+    $stepFile = Join-Path $CheckpointPath "githound_EnterpriseTeam_$entId.json"
+    if ($Resume -and (Test-Path $stepFile)) {
+        Write-Host "[*] Resuming: Loaded Enterprise Teams from githound_EnterpriseTeam_$entId.json"
+        $enterpriseTeams = Import-GitHoundStepOutput -FilePath $stepFile
+    } else {
+        Write-Host "[*] Enumerating Enterprise Teams"
+        $enterpriseTeams = Git-HoundEnterpriseTeam -Session $Session -Enterprise $enterprise.Nodes[0]
+        Export-GitHoundStepOutput -StepResult $enterpriseTeams -FilePath $stepFile
+        Write-Host "[+] Saved: githound_EnterpriseTeam_$entId.json"
+    }
+    if($enterpriseTeams.Nodes) { $nodes.AddRange(@($enterpriseTeams.Nodes)) }
+    if($enterpriseTeams.Edges) { $edges.AddRange(@($enterpriseTeams.Edges)) }
+
+    # ── Step 4: Enterprise SAML (separate output) ────────────────────────
+    if ($Session.HasPersonalAccessToken) {
+        $stepFile = Join-Path $CheckpointPath "githound_EnterpriseSaml_$entId.json"
+        if ($Resume -and (Test-Path $stepFile)) {
+            Write-Host "[*] Resuming: Loaded Enterprise SAML from githound_EnterpriseSaml_$entId.json"
+            $enterpriseSaml = Import-GitHoundStepOutput -FilePath $stepFile
+        } else {
+            Write-Host "[*] Enumerating Enterprise SAML"
+            $enterpriseSaml = Git-HoundEnterpriseSamlProvider -Session $Session
+            Export-GitHoundStepOutput -StepResult $enterpriseSaml -FilePath $stepFile
+            Write-Host "[+] Saved: githound_EnterpriseSaml_$entId.json"
+        }
+
+        $enterpriseSamlPayload = [PSCustomObject]@{
+            '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
+            graph = [PSCustomObject]@{
+                nodes = @($enterpriseSaml.Nodes | Where-Object { $_ -ne $null })
+                edges = @($enterpriseSaml.Edges | Where-Object { $_ -ne $null })
+            }
+        }
+        $enterpriseSamlPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_enterprise_saml_$entId.json")
+    } else {
+        Write-Host "[*] Skipping Enterprise SAML (session does not contain a PAT)"
+    }
+
+    # ── Enterprise Consolidation ─────────────────────────────────────────
+    $filteredNodes = @($nodes | Where-Object { $_ -ne $null })
+    $filteredEdges = @($edges | Where-Object { $_ -ne $null })
+
+    $enterprisePayload = [PSCustomObject]@{
+        '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
+        metadata = [PSCustomObject]@{
+            source_kind = "GitHub"
+        }
+        graph = [PSCustomObject]@{
+            nodes = $filteredNodes
+            edges = $filteredEdges
+        }
+    }
+    $enterprisePayload | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_enterprise_$entId.json")
+    Write-Host "[+] Enterprise payload: githound_enterprise_$entId.json ($($filteredNodes.Count) nodes, $($filteredEdges.Count) edges)"
+
+    # ── Related Org Installations ────────────────────────────────────────
+    Write-Host "[*] Enumerating GitHub App installations"
+    $allInstallations = @(Get-GitHubAppInstallation -Session $Session)
+    $relatedOrgLogins = @(
+        $enterprise.Nodes |
+            Where-Object { $_.kinds -contains 'GH_Organization' } |
+            ForEach-Object { $_.properties.login } |
+            Where-Object { $_ }
+    ) | Sort-Object -Unique
+
+    $orgInstallations = @(
+        $allInstallations |
+            Where-Object {
+                $_.TargetType -eq 'Organization' -and
+                -not $_.SuspendedAt -and
+                $_.Login -in $relatedOrgLogins
+            }
+    )
+
+    Write-Host "[*] Found $($orgInstallations.Count) active related organization installation(s)"
+
+    foreach ($installation in $orgInstallations) {
+        $orgName = $installation.Login
+        $orgCheckpointPath = Join-Path $CheckpointPath $orgName
+        if (-not (Test-Path $orgCheckpointPath)) {
+            $null = New-Item -ItemType Directory -Path $orgCheckpointPath -Force
+        }
+
+        Write-Host "[*] Running Invoke-GitHound for organization '$orgName'"
+        $orgSession = New-GitHubJwtSession `
+            -OrganizationName $orgName `
+            -ClientId $Session.ClientId `
+            -PrivateKeyPath $Session.PrivateKeyPath `
+            -InstallationId $installation.InstallationId
+
+        $invokeParams = @{
+            Session               = $orgSession
+            CheckpointPath        = $orgCheckpointPath
+            Resume                = $Resume
+            CleanupIntermediates  = $CleanupIntermediates
+            CollectAll            = $CollectAll
+            WorkflowsAllBranches  = $WorkflowsAllBranches
+        }
+
+        Invoke-GitHound @invokeParams
+    }
+
+    if ($CleanupIntermediates) {
+        $enterpriseStepFiles = @(
+            "githound_Enterprise_$entId.json",
+            "githound_EnterpriseUser_$entId.json",
+            "githound_EnterpriseTeam_$entId.json",
+            "githound_EnterpriseSaml_$entId.json"
+        )
+
+        foreach ($fileName in $enterpriseStepFiles) {
+            $filePath = Join-Path $CheckpointPath $fileName
+            if (Test-Path $filePath) {
+                Remove-Item $filePath -Force
+            }
+        }
+    }
+
+    Write-Host "[+] GitHound enterprise wrapper complete for $enterpriseSlug."
 }

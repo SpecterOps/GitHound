@@ -137,6 +137,24 @@ The `GH_Organization` stubs emitted by enterprise collection are intentionally m
 `collected = false`. They represent structural discovery from the enterprise context and are
 meant to be enriched later by normal organization collection.
 
+For enterprise-first orchestration, `Invoke-GitHoundEnterprise` will collect the supported
+enterprise-scoped data, enumerate related organization installations, and then run the
+existing `Invoke-GitHound` workflow for each organization in its own subdirectory under the
+chosen checkpoint path.
+
+Example:
+
+```powershell
+$session = New-GitHubJwtSession `
+  -EnterpriseName "your-enterprise-slug" `
+  -ClientId $clientId `
+  -PrivateKeyPath $privateKeyPath `
+  -InstallationId $enterpriseInstallationId `
+  -PersonalAccessToken $pat
+
+Invoke-GitHoundEnterprise -Session $session -CheckpointPath "./output/your-enterprise" -CollectAll
+```
+
 ## Schema
 
 ![Mermaid Schema](./Documentation/images/GitHound-Mermaid.png)
