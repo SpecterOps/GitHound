@@ -210,6 +210,18 @@ LIMIT 1000
 
 This query is useful for validating enterprise member discovery and Enterprise Managed Users handling.
 
+### Enterprise Team Assignments and Projections
+
+Returns enterprise teams, the organizations they are assigned to, and any projected `ent:` organization teams linked back to them.
+
+```cypher
+MATCH p=(entTeam:GH_EnterpriseTeam)-[:GH_AssignedTo]->(org:GH_Organization)
+OPTIONAL MATCH p2=(entTeam)-[:GH_MemberOf]->(team:GH_Team)
+RETURN p, p2
+```
+
+This query is useful for validating enterprise team collection and confirming that projected organization teams were linked back to their enterprise teams.
+
 ## Organizations with default repository permission
 
 Returns organizations that have a default repository permission other than 'none'.
