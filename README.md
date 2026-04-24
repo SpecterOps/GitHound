@@ -116,6 +116,16 @@ Enterprise user collection through `Git-HoundEnterpriseUser` adds:
 - `GH_User`
 - `GH_HasMember` edges from the enterprise to those users
 
+Enterprise SAML collection through `Git-HoundEnterpriseSamlProvider` adds:
+
+- `GH_SamlIdentityProvider`
+- `GH_ExternalIdentity`
+- `GH_HasSamlIdentityProvider` from the enterprise to the provider
+- the same identity-correlation edges used by the organization SAML collector
+
+This path requires a PAT-backed session because GitHub exposes enterprise SAML through
+`enterprise.ownerInfo`.
+
 These organization stubs are intentionally emitted with `collected = false`. They represent
 structural discovery from the enterprise context and are meant to be enriched later by normal
 organization collection.

@@ -589,7 +589,7 @@ Finds SAML Identity Providers, their external identities, and mapped users.
 
 ```cypher
 MATCH p=(OIP:GH_SamlIdentityProvider)-[:GH_HasExternalIdentity]->(EI:GH_ExternalIdentity)
-MATCH p1=(OIP)<-[:GH_HasSamlIdentityProvider]-(:GH_Organization)
+MATCH p1=(OIP)<-[:GH_HasSamlIdentityProvider]-(:GH_Organization|GH_Enterprise)
 MATCH p2=(EI)-[:GH_MapsToUser]->()
 RETURN p,p1,p2
 LIMIT 1000

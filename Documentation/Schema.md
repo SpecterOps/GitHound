@@ -101,7 +101,7 @@
 | [GH_HasPersonalAccessToken](EdgeDescriptions/GH_HasPersonalAccessToken.md) | ❌ | User owns this personal access token that has been granted access to the organization |
 | [GH_HasPersonalAccessTokenRequest](EdgeDescriptions/GH_HasPersonalAccessTokenRequest.md) | ❌ | User has a pending personal access token request for the organization |
 | [GH_HasRole](EdgeDescriptions/GH_HasRole.md) | ✅ | User or team has a role assignment (org role, team role, or repo role) |
-| [GH_HasSamlIdentityProvider](EdgeDescriptions/GH_HasSamlIdentityProvider.md) | ❌ | Organization has this SAML identity provider configured |
+| [GH_HasSamlIdentityProvider](EdgeDescriptions/GH_HasSamlIdentityProvider.md) | ❌ | Organization or enterprise has this SAML identity provider configured |
 | [GH_HasSecret](EdgeDescriptions/GH_HasSecret.md) | ✅ | Repository or environment has access to this secret |
 | [GH_HasStep](EdgeDescriptions/GH_HasStep.md) | ✅ | Job contains this step |
 | [GH_HasVariable](EdgeDescriptions/GH_HasVariable.md) | ✅ | Repository has access to this variable (org-level or repo-level) |
