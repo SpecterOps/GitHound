@@ -155,6 +155,12 @@ $session = New-GitHubJwtSession `
 Invoke-GitHoundEnterprise -Session $session -CheckpointPath "./output/your-enterprise" -CollectAll
 ```
 
+For enterprise-only testing without enumerating the related organizations:
+
+```powershell
+Invoke-GitHoundEnterprise -Session $session -CheckpointPath "./output/your-enterprise" -EnterpriseOnly
+```
+
 ## Schema
 
 ![Mermaid Schema](./Documentation/images/GitHound-Mermaid.png)
