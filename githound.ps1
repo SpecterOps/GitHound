@@ -14,7 +14,8 @@ function Get-GitHoundFunctionBundle {
         'Get-RateLimitInformation',
         'ConvertTo-PascalCase',
         'New-BHOGPropertyMatcher',
-        'Get-GitHoundOrganizationTeamPropertyMatchers'
+        'Get-GitHoundOrganizationTeamPropertyMatchers',
+        'Get-GitHoundScimExternalIdentityPropertyMatchers'
     )
     
     # Register each function
@@ -913,6 +914,22 @@ function Get-GitHoundOrganizationTeamPropertyMatchers
     @(
         (New-BHOGPropertyMatcher -Key 'environmentid' -Value $OrganizationId),
         (New-BHOGPropertyMatcher -Key 'slug' -Value $TeamSlug)
+    )
+}
+
+function Get-GitHoundScimExternalIdentityPropertyMatchers
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Guid,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Username
+    )
+
+    @(
+        (New-BHOGPropertyMatcher -Key 'guid' -Value $Guid),
+        (New-BHOGPropertyMatcher -Key 'scim_identity_username' -Value $Username)
     )
 }
 
@@ -7927,7 +7944,11 @@ function Git-HoundScimUser
             }
             
             $null = $nodes.Add((New-GitHoundNode -Kind SCIM_User -Id $scimIdentity.id -Properties $props))
-            $null = $edges.Add((New-GitHoundEdge -Kind SCIM_Provisioned -StartId $scimIdentity.id -EndId $scimIdentity.id -EndKind GH_ExternalIdentity -EndMatchBy name -Properties @{ traversable = $true }))
+
+            if (($props.enabled -eq $true) -and -not [string]::IsNullOrWhiteSpace($scimIdentity.externalId) -and -not [string]::IsNullOrWhiteSpace($scimIdentity.userName)) {
+                $externalIdentityMatchers = Get-GitHoundScimExternalIdentityPropertyMatchers -Guid $scimIdentity.id -Username $scimIdentity.userName
+                $null = $edges.Add((New-GitHoundEdge -Kind SCIM_Provisioned -StartId $scimIdentity.id -EndKind GH_ExternalIdentity -EndPropertyMatchers $externalIdentityMatchers -Properties @{ traversable = $true }))
+            }
         }
 
         $startIndex = $result.startIndex + $result.itemsPerPage
@@ -7939,6 +7960,91 @@ function Git-HoundScimUser
     }
 
     Write-Output $output
+}
+
+function Git-HoundEnterpriseScimUser
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session
+    )
+
+    if (-not $Session.EnterpriseName) {
+        throw "Git-HoundEnterpriseScimUser requires Session.EnterpriseName to be set."
+    }
+
+    if (-not $Session.PatHeaders) {
+        throw "Git-HoundEnterpriseScimUser requires a PAT-backed session."
+    }
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+
+    $enterpriseSlug = $Session.EnterpriseName
+    $startIndex = 1
+
+    do
+    {
+        try {
+            $responseBytes = Invoke-GithubRestMethod `
+                -Session $Session `
+                -Headers $Session.PatHeaders `
+                -Path "scim/v2/enterprises/$enterpriseSlug/Users?startIndex=$($startIndex)" `
+                -ErrorMode Stop
+        }
+        catch {
+            $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path "scim/v2/enterprises/$enterpriseSlug/Users?startIndex=$($startIndex)"
+            Write-GitHoundRestSkipWarning -Target $enterpriseSlug -Feature "enterprise SCIM users" -ErrorInfo $errorInfo
+            return [PSCustomObject]@{
+                Nodes = $nodes
+                Edges = $edges
+            }
+        }
+
+        if (-not $responseBytes) {
+            Write-Warning "Skipping enterprise SCIM users for '$enterpriseSlug': GitHub returned an empty response."
+            return [PSCustomObject]@{
+                Nodes = $nodes
+                Edges = $edges
+            }
+        }
+
+        $result = [System.Text.Encoding]::ASCII.GetString($responseBytes) | ConvertFrom-Json
+        foreach($scimIdentity in $result.Resources)
+        {
+            $props = [pscustomobject]@{
+                name          = Normalize-Null $scimIdentity.externalId
+                id            = Normalize-Null $scimIdentity.id
+                externalId    = Normalize-Null $scimIdentity.externalId
+                userName      = Normalize-Null $scimIdentity.userName
+                enabled       = Normalize-Null $scimIdentity.active
+                displayName   = Normalize-Null $scimIdentity.displayName
+                givenName     = Normalize-Null $scimIdentity.name.givenName
+                familyName    = Normalize-Null $scimIdentity.name.familyName
+                profileUrl    = Normalize-Null $scimIdentity.meta.location
+                mail          = Normalize-Null ($scimIdentity.emails | Where-Object { $_.primary -eq $true }).value
+                enterprise    = Normalize-Null $enterpriseSlug
+                environment_name = Normalize-Null $enterpriseSlug
+                environmentid    = Normalize-Null $enterpriseSlug
+            }
+
+            $null = $nodes.Add((New-GitHoundNode -Kind SCIM_User -Id $scimIdentity.id -Properties $props))
+
+            if (($props.enabled -eq $true) -and -not [string]::IsNullOrWhiteSpace($scimIdentity.externalId) -and -not [string]::IsNullOrWhiteSpace($scimIdentity.userName)) {
+                $externalIdentityMatchers = Get-GitHoundScimExternalIdentityPropertyMatchers -Guid $scimIdentity.id -Username $scimIdentity.userName
+                $null = $edges.Add((New-GitHoundEdge -Kind SCIM_Provisioned -StartId $scimIdentity.id -EndKind GH_ExternalIdentity -EndPropertyMatchers $externalIdentityMatchers -Properties @{ traversable = $true }))
+            }
+        }
+
+        $startIndex = $result.startIndex + $result.itemsPerPage
+    } while($startIndex -lt $result.totalResults)
+
+    [PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    }
 }
 
 function Parse-GitHoundOIDCSubject
@@ -8876,6 +8982,7 @@ function Invoke-GitHoundEnterprise
         - GH_Enterprise and org containment (Git-HoundEnterprise)
         - enterprise members (Git-HoundEnterpriseUser)
         - enterprise teams (Git-HoundEnterpriseTeam)
+        - enterprise SCIM users (Git-HoundEnterpriseScimUser, when PAT-backed)
         - enterprise SAML provider and external identities (Git-HoundEnterpriseSamlProvider, when PAT-backed)
 
         Organization collection is delegated unchanged to Invoke-GitHound by creating a normal
@@ -8901,6 +9008,9 @@ function Invoke-GitHoundEnterprise
 
     .PARAMETER WorkflowsAllBranches
         Passed through to organization collection.
+
+    .PARAMETER EnterpriseOnly
+        Collects only enterprise-scoped data and skips the related organization collection loop.
     #>
     [CmdletBinding()]
     Param(
@@ -8926,7 +9036,11 @@ function Invoke-GitHoundEnterprise
 
         [Parameter()]
         [switch]
-        $WorkflowsAllBranches
+        $WorkflowsAllBranches,
+
+        [Parameter()]
+        [switch]
+        $EnterpriseOnly
     )
 
     if (-not $Session.EnterpriseName) {
@@ -9002,7 +9116,26 @@ function Invoke-GitHoundEnterprise
     if($enterpriseTeams.Nodes) { $nodes.AddRange(@($enterpriseTeams.Nodes)) }
     if($enterpriseTeams.Edges) { $edges.AddRange(@($enterpriseTeams.Edges)) }
 
-    # ── Step 4: Enterprise SAML (separate output) ────────────────────────
+    # ── Step 4: Enterprise SCIM Users ────────────────────────────────────
+    if ($Session.HasPersonalAccessToken) {
+        $stepFile = Join-Path $CheckpointPath "githound_enterprise_scim_$entId.json"
+        if ($Resume -and (Test-Path $stepFile)) {
+            Write-Host "[*] Resuming: Loaded Enterprise SCIM Users from githound_enterprise_scim_$entId.json"
+            $enterpriseScimUsers = Import-GitHoundStepOutput -FilePath $stepFile
+        } else {
+            Write-Host "[*] Enumerating Enterprise SCIM Users"
+            $enterpriseScimUsers = Git-HoundEnterpriseScimUser -Session $Session
+            Export-GitHoundStepOutput -StepResult $enterpriseScimUsers -FilePath $stepFile
+            Write-Host "[+] Saved: githound_enterprise_scim_$entId.json"
+        }
+
+        if($enterpriseScimUsers.Nodes) { $nodes.AddRange(@($enterpriseScimUsers.Nodes)) }
+        if($enterpriseScimUsers.Edges) { $edges.AddRange(@($enterpriseScimUsers.Edges)) }
+    } else {
+        Write-Host "[*] Skipping Enterprise SCIM Users (session does not contain a PAT)"
+    }
+
+    # ── Step 5: Enterprise SAML (separate output) ────────────────────────
     if ($Session.HasPersonalAccessToken) {
         $stepFile = Join-Path $CheckpointPath "githound_EnterpriseSaml_$entId.json"
         if ($Resume -and (Test-Path $stepFile)) {
@@ -9043,6 +9176,28 @@ function Invoke-GitHoundEnterprise
     }
     $enterprisePayload | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_enterprise_$entId.json")
     Write-Host "[+] Enterprise payload: githound_enterprise_$entId.json ($($filteredNodes.Count) nodes, $($filteredEdges.Count) edges)"
+
+    if ($EnterpriseOnly) {
+        if ($CleanupIntermediates) {
+            $enterpriseStepFiles = @(
+                "githound_Enterprise_$entId.json",
+                "githound_EnterpriseUser_$entId.json",
+                "githound_EnterpriseTeam_$entId.json",
+                "githound_enterprise_scim_$entId.json",
+                "githound_EnterpriseSaml_$entId.json"
+            )
+
+            foreach ($fileName in $enterpriseStepFiles) {
+                $filePath = Join-Path $CheckpointPath $fileName
+                if (Test-Path $filePath) {
+                    Remove-Item $filePath -Force
+                }
+            }
+        }
+
+        Write-Host "[+] Enterprise-only collection complete for $enterpriseSlug."
+        return
+    }
 
     # ── Related Org Installations ────────────────────────────────────────
     Write-Host "[*] Enumerating GitHub App installations"
@@ -9096,6 +9251,7 @@ function Invoke-GitHoundEnterprise
             "githound_Enterprise_$entId.json",
             "githound_EnterpriseUser_$entId.json",
             "githound_EnterpriseTeam_$entId.json",
+            "githound_enterprise_scim_$entId.json",
             "githound_EnterpriseSaml_$entId.json"
         )
 

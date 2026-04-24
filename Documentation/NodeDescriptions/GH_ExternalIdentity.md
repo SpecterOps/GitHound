@@ -1,8 +1,10 @@
 # <img src="../Icons/gh_externalidentity.png" width="50"/> GH_ExternalIdentity
 
-Represents an external identity from a SAML or SCIM identity provider that is linked to a GitHub user. External identities map corporate user accounts (from providers like Okta, Azure AD, etc.) to GitHub user accounts, enabling single sign-on authentication. Each external identity can have both SAML and SCIM identity attributes and may be scoped to either an organization or an enterprise SAML provider.
+Represents an external identity from a SAML or SCIM identity provider that is linked to a GitHub user. External identities map corporate user accounts (from providers like Okta, Azure AD, etc.) to GitHub user accounts, enabling single sign-on authentication. Each external identity can have both SAML and SCIM identity attributes and may be scoped to either an organization or an enterprise SAML provider. SCIM collectors can also correlate `SCIM_User` records to this node via `SCIM_Provisioned`.
 
 Created by: `Git-HoundGraphQlSamlProvider`, `Git-HoundEnterpriseSamlProvider`
+
+Correlated by: `Git-HoundScimUser`, `Git-HoundEnterpriseScimUser`
 
 ## Properties
 
@@ -30,6 +32,7 @@ Created by: `Git-HoundGraphQlSamlProvider`, `Git-HoundEnterpriseSamlProvider`
 flowchart TD
     GH_SamlIdentityProvider[fa:fa-id-badge GH_SamlIdentityProvider]
     GH_ExternalIdentity[fa:fa-arrows-left-right GH_ExternalIdentity]
+    SCIM_User[fa:fa-user SCIM_User]
     GH_User[fa:fa-user GH_User]
     AZUser[fa:fa-user AZUser]
     Okta_User[fa:fa-user Okta_User]
@@ -37,6 +40,7 @@ flowchart TD
 
 
     GH_SamlIdentityProvider -.->|GH_HasExternalIdentity| GH_ExternalIdentity
+    SCIM_User -->|SCIM_Provisioned| GH_ExternalIdentity
     GH_ExternalIdentity -.->|GH_MapsToUser| GH_User
     GH_ExternalIdentity -.->|GH_MapsToUser| AZUser
     GH_ExternalIdentity -.->|GH_MapsToUser| Okta_User
