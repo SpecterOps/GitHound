@@ -1,6 +1,6 @@
 # <img src="../Icons/gh_team.png" width="50"/> GH_Team
 
-Represents a GitHub team within the organization. Teams can have parent-child relationships, contain members with different roles (Member, Maintainer), and be assigned to repository roles.
+Represents a GitHub team within the organization. Teams can have parent-child relationships, contain members with different roles (Member, Maintainer), and be assigned to repository roles. Some teams are enterprise-projected `ent:` teams, which are linked back to `GH_EnterpriseTeam`.
 
 Created by: `Git-HoundTeam`
 
@@ -8,13 +8,14 @@ Created by: `Git-HoundTeam`
 
 | Property Name    | Data Type | Description                                                               |
 | ---------------- | --------- | ------------------------------------------------------------------------- |
-| objectid         | string    | The GitHub GraphQL `id` of the team, used as the unique graph identifier. |
+| objectid         | string    | The GitHub team identifier used as the unique graph identifier. |
 | name             | string    | The team's display name, derived from the slug property.                  |
-| id               | string    | The GraphQL ID of the team.                                               |
-| node_id          | string    | The GitHub node ID. Redundant with objectid.                              |
+| github_team_id   | string    | The raw GitHub team id when known.                                        |
+| node_id          | string    | The GitHub team identifier. Redundant with objectid.                      |
 | slug             | string    | The team's URL-safe slug identifier.                                      |
 | description      | string    | The team's description.                                                   |
 | privacy          | string    | The team's privacy level (e.g., `visible`, `secret`).                     |
+| type             | string    | The team type. Enterprise-projected teams use `enterprise`.               |
 | permission       | string    | The team's default permission on repositories.                            |
 | environment_name | string    | The name of the environment (GitHub organization).                        |
 | environmentid    | string    | The node_id of the environment (GitHub organization).                     |
@@ -33,6 +34,7 @@ flowchart TD
 
 
     GH_Team -->|GH_MemberOf| GH_Team
+    GH_EnterpriseTeam[fa:fa-users-between-lines GH_EnterpriseTeam]
     GH_Team -->|GH_HasRole| GH_OrgRole
     GH_Team -->|GH_HasRole| GH_RepoRole
     GH_Team -.->|GH_BypassPullRequestAllowances| GH_BranchProtectionRule
@@ -41,4 +43,5 @@ flowchart TD
     GH_Team -->|GH_CanCreateBranch| GH_Repository
     GH_TeamRole -->|GH_MemberOf| GH_Team
     GH_TeamRole -->|GH_AddMember| GH_Team
+    GH_EnterpriseTeam -->|GH_MemberOf| GH_Team
 ```

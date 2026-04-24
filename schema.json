@@ -31,6 +31,14 @@
       "color": "#FF8E40"
     },
     {
+      "name": "GH_EnterpriseTeam",
+      "display_name": "GitHub Enterprise Team",
+      "description": "An enterprise-level team that can be assigned into one or more organizations and projected as organization teams",
+      "is_display_kind": true,
+      "icon": "users-between-lines",
+      "color": "#7C3AED"
+    },
+    {
       "name": "GH_Team",
       "display_name": "GitHub Team",
       "description": "A team within an organization, grouping users for shared access and collaboration",
@@ -259,6 +267,11 @@
     {
       "name": "GH_Contains",
       "description": "Container relationship for organizational hierarchy (org contains secrets/variables, repo contains secrets/variables, environment contains secrets/variables)",
+      "is_traversable": false
+    },
+    {
+      "name": "GH_AssignedTo",
+      "description": "Structural assignment relationship showing that an enterprise team is assigned to an organization",
       "is_traversable": false
     },
     {

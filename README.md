@@ -126,9 +126,16 @@ Enterprise SAML collection through `Git-HoundEnterpriseSamlProvider` adds:
 This path requires a PAT-backed session because GitHub exposes enterprise SAML through
 `enterprise.ownerInfo`.
 
-These organization stubs are intentionally emitted with `collected = false`. They represent
-structural discovery from the enterprise context and are meant to be enriched later by normal
-organization collection.
+Enterprise team collection through `Git-HoundEnterpriseTeam` adds:
+
+- `GH_EnterpriseTeam`
+- `GH_AssignedTo` edges from enterprise teams to assigned organizations
+- `GH_MemberOf` edges from enterprise teams to org-visible `ent:` `GH_Team` nodes using property matching
+- enterprise-team `members` roles and `GH_HasRole` edges from users to those roles
+
+The `GH_Organization` stubs emitted by enterprise collection are intentionally marked
+`collected = false`. They represent structural discovery from the enterprise context and are
+meant to be enriched later by normal organization collection.
 
 ## Schema
 

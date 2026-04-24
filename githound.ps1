@@ -732,6 +732,55 @@ function Normalize-Null
     
 }
 
+function Get-GitHoundEnterpriseTeamNodeId
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$EnterpriseId,
+
+        [Parameter(Mandatory = $true)]
+        [string]$TeamId
+    )
+
+    "GH_EnterpriseTeam_${EnterpriseId}_${TeamId}"
+}
+
+function Get-GitHoundOrganizationTeamNodeId
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$OrganizationId,
+
+        [Parameter(Mandatory = $true)]
+        [string]$TeamNodeId,
+
+        [Parameter(Mandatory = $true)]
+        [string]$TeamSlug
+    )
+
+    return $TeamNodeId
+}
+
+function Get-GitHoundOrganizationTeamPropertyMatchers
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$OrganizationId,
+
+        [Parameter(Mandatory = $true)]
+        [string]$TeamSlug
+    )
+
+    if ($TeamSlug -notlike 'ent:*') {
+        return $null
+    }
+
+    @(
+        (New-BHOGPropertyMatcher -Key 'environmentid' -Value $OrganizationId),
+        (New-BHOGPropertyMatcher -Key 'slug' -Value $TeamSlug)
+    )
+}
+
 function Import-GitHoundStepOutput
 {
     <#
@@ -1142,6 +1191,125 @@ query EnterpriseMembers($slug: String!, $count: Int = 100, $after: String = null
     while ($result.data.enterprise.members.pageInfo.hasNextPage)
 
     Write-Host "[+] Git-HoundEnterpriseUser complete. $($nodes.Count) nodes, $($edges.Count) edges."
+
+    [PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    }
+}
+
+function Git-HoundEnterpriseTeam
+{
+    <#
+    .SYNOPSIS
+        Retrieves enterprise-level teams for a GitHub enterprise.
+
+    .DESCRIPTION
+        This function enumerates enterprise teams from the enterprise REST API and models
+        their structural relationship to assigned organizations. For each enterprise team,
+        it creates a GH_EnterpriseTeam node, a members GH_TeamRole, GH_HasRole edges from
+        enterprise members to that role, and GH_AssignedTo edges to organizations returned
+        by the enterprise team organization assignment API.
+
+        Because GitHub projects assigned enterprise teams into organizations using the
+        `ent:` slug prefix, this function also emits GH_MemberOf edges that property-match
+        those organization-scoped teams by organization and slug once they exist in the graph.
+
+    .PARAMETER Session
+        A GitHound.Session object with EnterpriseName set.
+
+    .PARAMETER Enterprise
+        A GH_Enterprise node object from Git-HoundEnterprise.
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session,
+
+        [Parameter(Position = 1, Mandatory = $true)]
+        [PSObject]
+        $Enterprise
+    )
+
+    if (-not $Session.EnterpriseName) {
+        throw "Git-HoundEnterpriseTeam requires Session.EnterpriseName to be set."
+    }
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+
+    $enterpriseSlug = $Session.EnterpriseName
+    $enterpriseNodeId = Normalize-Null $(if ($Enterprise.id) { $Enterprise.id } elseif ($Enterprise.properties.node_id) { $Enterprise.properties.node_id } else { $null })
+
+    if (-not $enterpriseNodeId) {
+        throw "Git-HoundEnterpriseTeam requires a GH_Enterprise node object with an id or properties.node_id."
+    }
+
+    Write-Host "[*] Git-HoundEnterpriseTeam: Collecting enterprise teams for '$enterpriseSlug'"
+
+    $teams = @(Invoke-GithubRestMethod -Session $Session -Path "enterprises/$enterpriseSlug/teams")
+
+    foreach ($team in $teams) {
+        $enterpriseTeamId = Get-GitHoundEnterpriseTeamNodeId -EnterpriseId $enterpriseNodeId -TeamId $team.id
+        $projectedTeamSlug = $team.slug
+
+        $properties = [pscustomobject]@{
+            name                        = Normalize-Null $team.name
+            node_id                     = Normalize-Null $enterpriseTeamId
+            github_team_id              = Normalize-Null $team.id
+            environment_name            = Normalize-Null $enterpriseSlug
+            environmentid               = Normalize-Null $enterpriseNodeId
+            enterpriseid                = Normalize-Null $enterpriseNodeId
+            slug                        = Normalize-Null $team.slug
+            projected_slug              = Normalize-Null $projectedTeamSlug
+            description                 = Normalize-Null $team.description
+            created_at                  = Normalize-Null $team.created_at
+            updated_at                  = Normalize-Null $team.updated_at
+            query_enterprise            = "MATCH p=(:GH_Enterprise {node_id:'$enterpriseNodeId'})-[:GH_Contains]->(:GH_EnterpriseTeam {node_id:'$enterpriseTeamId'}) RETURN p"
+            query_assigned_organizations = "MATCH p=(:GH_EnterpriseTeam {node_id:'$enterpriseTeamId'})-[:GH_AssignedTo]->(:GH_Organization) RETURN p"
+            query_projected_teams       = "MATCH p=(:GH_EnterpriseTeam {node_id:'$enterpriseTeamId'})-[:GH_MemberOf]->(:GH_Team) RETURN p"
+            query_members               = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_TeamRole)-[:GH_MemberOf]->(:GH_EnterpriseTeam {node_id:'$enterpriseTeamId'}) RETURN p"
+        }
+
+        $null = $nodes.Add((New-GitHoundNode -Id $enterpriseTeamId -Kind 'GH_EnterpriseTeam' -Properties $properties))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_Contains' -StartId $enterpriseNodeId -EndId $enterpriseTeamId -Properties @{ traversable = $false }))
+
+        $membersRoleId = "${enterpriseTeamId}_members"
+        $membersRoleProps = [pscustomobject]@{
+            name             = Normalize-Null "$enterpriseSlug/$($team.slug)/members"
+            node_id          = Normalize-Null $membersRoleId
+            environment_name = Normalize-Null $enterpriseSlug
+            environmentid    = Normalize-Null $enterpriseNodeId
+            enterpriseid     = Normalize-Null $enterpriseNodeId
+            team_name        = Normalize-Null $team.name
+            team_id          = Normalize-Null $enterpriseTeamId
+            short_name       = Normalize-Null 'members'
+            type             = Normalize-Null 'team'
+            query_team       = "MATCH p=(:GH_TeamRole {node_id:'$membersRoleId'})-[:GH_MemberOf]->(:GH_EnterpriseTeam {node_id:'$enterpriseTeamId'}) RETURN p"
+            query_members    = "MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_TeamRole {node_id:'$membersRoleId'}) RETURN p"
+        }
+        $null = $nodes.Add((New-GitHoundNode -Id $membersRoleId -Kind 'GH_TeamRole', 'GH_Role' -Properties $membersRoleProps))
+        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MemberOf' -StartId $membersRoleId -EndId $enterpriseTeamId -Properties @{ traversable = $true }))
+
+        $members = @(Invoke-GithubRestMethod -Session $Session -Path "enterprises/$enterpriseSlug/teams/$($team.id)/memberships")
+        foreach ($member in $members) {
+            if ($member.node_id) {
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartId $member.node_id -EndId $membersRoleId -Properties @{ traversable = $true }))
+            }
+        }
+
+        $assignedOrganizations = @(Invoke-GithubRestMethod -Session $Session -Path "enterprises/$enterpriseSlug/teams/$($team.id)/organizations")
+        foreach ($org in $assignedOrganizations) {
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AssignedTo' -StartId $enterpriseTeamId -EndId $org.node_id -Properties @{ traversable = $false }))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MemberOf' -StartId $enterpriseTeamId -EndKind 'GH_Team' -EndPropertyMatchers @(
+                (New-BHOGPropertyMatcher -Key 'environmentid' -Value $org.node_id),
+                (New-BHOGPropertyMatcher -Key 'slug' -Value $projectedTeamSlug)
+            ) -Properties @{ traversable = $true }))
+        }
+    }
+
+    Write-Host "[+] Git-HoundEnterpriseTeam complete. $($nodes.Count) nodes, $($edges.Count) edges."
 
     [PSCustomObject]@{
         Nodes = $nodes
@@ -2579,7 +2747,15 @@ function Git-HoundOrganization
 
         foreach($team in (Invoke-GithubRestMethod -Session $session -Path "orgs/$($org.login)/organization-roles/$($customRole.id)/teams"))
         {
-            $null = $edges.Add((New-GitHoundEdge -Kind GH_HasRole -StartId $team.node_id -EndId $customRoleId -Properties @{traversable=$true}))
+            $teamMatchers = Get-GitHoundOrganizationTeamPropertyMatchers -OrganizationId $org.node_id -TeamSlug $team.slug
+            if($teamMatchers)
+            {
+                $null = $edges.Add((New-GitHoundEdge -Kind GH_HasRole -StartKind 'GH_Team' -StartPropertyMatchers $teamMatchers -EndId $customRoleId -Properties @{traversable=$true}))
+            }
+            else
+            {
+                $null = $edges.Add((New-GitHoundEdge -Kind GH_HasRole -StartId $team.node_id -EndId $customRoleId -Properties @{traversable=$true}))
+            }
         }
 
         foreach($user in (Invoke-GithubRestMethod -Session $session -Path "orgs/$($org.login)/organization-roles/$($customRole.id)/users"))
@@ -2825,12 +3001,15 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
 
         foreach($team in $result.data.organization.teams.nodes)
         {
+            $teamNodeId = Get-GitHoundOrganizationTeamNodeId -OrganizationId $Organization.properties.node_id -TeamNodeId $team.id -TeamSlug $team.slug
+
             # --- Team Node ---
             $properties = [pscustomobject]@{
                 # Common Properties
                 #id                = Normalize-Null $team.databaseId
                 name              = Normalize-Null $team.name
-                node_id           = Normalize-Null $team.id
+                node_id           = Normalize-Null $teamNodeId
+                github_team_id    = Normalize-Null $team.id
                 # Relational Properties
                 environment_name  = Normalize-Null $Organization.properties.login
                 environmentid    = Normalize-Null $Organization.properties.node_id
@@ -2838,24 +3017,26 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
                 slug              = Normalize-Null $team.slug
                 description       = Normalize-Null $team.description
                 privacy           = Normalize-Null $team.privacy
+                type              = Normalize-Null $(if ($team.slug -like 'ent:*') { 'enterprise' } else { '' })
                 # Accordion Panel Queries
-                query_first_degree_members     = "MATCH p=(:GH_User)-[:GH_HasRole]->(t:GH_TeamRole)-[:GH_MemberOf]->(:GH_Team {node_id:'$($team.id)'}) RETURN p"
-                query_unrolled_members         = "MATCH p=(teamrole:GH_TeamRole)-[:GH_MemberOf*1..]->(:GH_Team {node_id:'$($team.id)'}) MATCH p1 = (teamrole)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
-                query_first_degree_maintainers = "MATCH p=(:GH_User)-[:GH_HasRole]->(t:GH_TeamRole {short_name: 'maintainers'})-[:GH_MemberOf]->(:GH_Team {node_id:'$($team.id)'}) RETURN p"
-                query_unrolled_maintainers     = "MATCH p=(teamrole:GH_TeamRole {short_name: 'maintainers'})-[:GH_MemberOf*1..]->(:GH_Team {node_id:'$($team.id)'}) MATCH p1 = (teamrole)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
-                query_repositories             = "MATCH p=(:GH_Team {node_id:'$($team.id)'})-[:GH_HasRole]->(:GH_RepoRole)-[]->(:GH_Repository) RETURN p"
-                query_child_teams              = "MATCH p=(:GH_Team)-[:GH_MemberOf*1..]->(:GH_Team {node_id:'$($team.id)'}) RETURN p"
+                query_first_degree_members     = "MATCH p=(:GH_User)-[:GH_HasRole]->(t:GH_TeamRole)-[:GH_MemberOf]->(:GH_Team {node_id:'$teamNodeId'}) RETURN p"
+                query_unrolled_members         = "MATCH p=(teamrole:GH_TeamRole)-[:GH_MemberOf*1..]->(:GH_Team {node_id:'$teamNodeId'}) MATCH p1 = (teamrole)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
+                query_first_degree_maintainers = "MATCH p=(:GH_User)-[:GH_HasRole]->(t:GH_TeamRole {short_name: 'maintainers'})-[:GH_MemberOf]->(:GH_Team {node_id:'$teamNodeId'}) RETURN p"
+                query_unrolled_maintainers     = "MATCH p=(teamrole:GH_TeamRole {short_name: 'maintainers'})-[:GH_MemberOf*1..]->(:GH_Team {node_id:'$teamNodeId'}) MATCH p1 = (teamrole)<-[:GH_HasRole]-(:GH_User) RETURN p,p1"
+                query_repositories             = "MATCH p=(:GH_Team {node_id:'$teamNodeId'})-[:GH_HasRole]->(:GH_RepoRole)-[]->(:GH_Repository) RETURN p"
+                query_child_teams              = "MATCH p=(:GH_Team)-[:GH_MemberOf*1..]->(:GH_Team {node_id:'$teamNodeId'}) RETURN p"
             }
-            $null = $nodes.Add((New-GitHoundNode -Id $team.id -Kind 'GH_Team' -Properties $properties))
+            $null = $nodes.Add((New-GitHoundNode -Id $teamNodeId -Kind 'GH_Team' -Properties $properties))
 
             # Parent team edge
             if($null -ne $team.parentTeam)
             {
-                $null = $edges.Add((New-GitHoundEdge -Kind GH_MemberOf -StartId $team.id -EndId $team.parentTeam.id -Properties @{ traversable = $true }))
+                $parentTeamNodeId = Get-GitHoundOrganizationTeamNodeId -OrganizationId $Organization.properties.node_id -TeamNodeId $team.parentTeam.id -TeamSlug ''
+                $null = $edges.Add((New-GitHoundEdge -Kind GH_MemberOf -StartId $teamNodeId -EndId $parentTeamNodeId -Properties @{ traversable = $true }))
             }
 
             # --- Team Role Nodes (members and maintainers) ---
-            $memberId = "$($team.id)_members"
+            $memberId = "${teamNodeId}_members"
             $memberProps = [pscustomobject]@{
                 # Common Properties
                 name               = Normalize-Null "$($Organization.properties.login)/$($team.slug)/members"
@@ -2864,7 +3045,7 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
                 environment_name   = Normalize-Null $Organization.properties.login
                 environmentid     = Normalize-Null $Organization.properties.node_id
                 team_name          = Normalize-Null $team.name
-                team_id            = Normalize-Null $team.id
+                team_id            = Normalize-Null $teamNodeId
                 # Node Specific Properties
                 short_name         = Normalize-Null 'members'
                 type               = Normalize-Null 'team'
@@ -2874,9 +3055,9 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
                 query_repositories = "MATCH p=(:GH_TeamRole {node_id:'$($memberId)'})-[:GH_MemberOf]->(:GH_Team)-[:GH_HasRole|GH_HasBaseRole*1..]->(:GH_RepoRole)-[]->(:GH_Repository) RETURN p"
             }
             $null = $nodes.Add((New-GitHoundNode -Id $memberId -Kind 'GH_TeamRole','GH_Role' -Properties $memberProps))
-            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MemberOf' -StartId $memberId -EndId $team.id -Properties @{traversable=$true}))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MemberOf' -StartId $memberId -EndId $teamNodeId -Properties @{traversable=$true}))
 
-            $maintainerId = "$($team.id)_maintainers"
+            $maintainerId = "${teamNodeId}_maintainers"
             $maintainerProps = [pscustomobject]@{
                 # Common Properties
                 name               = Normalize-Null "$($Organization.properties.login)/$($team.slug)/maintainers"
@@ -2885,7 +3066,7 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
                 environment_name   = Normalize-Null $Organization.properties.login
                 environmentid     = Normalize-Null $Organization.properties.node_id
                 team_name          = Normalize-Null $team.name
-                team_id            = Normalize-Null $team.id
+                team_id            = Normalize-Null $teamNodeId
                 # Node Specific Properties
                 short_name         = Normalize-Null 'maintainers'
                 type               = Normalize-Null 'team'
@@ -2895,8 +3076,8 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
                 query_repositories = "MATCH p=(:GH_TeamRole {node_id:'$($maintainerId)'})-[:GH_MemberOf]->(:GH_Team)-[:GH_HasRole|GH_HasBaseRole*1..]->(:GH_RepoRole)-[]->(:GH_Repository) RETURN p"
             }
             $null = $nodes.Add((New-GitHoundNode -Id $maintainerId -Kind 'GH_TeamRole','GH_Role' -Properties $maintainerProps))
-            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MemberOf' -StartId $maintainerId -EndId $team.id -Properties @{traversable=$true}))
-            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddMember' -StartId $maintainerId -EndId $team.id -Properties @{traversable=$true}))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MemberOf' -StartId $maintainerId -EndId $teamNodeId -Properties @{traversable=$true}))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AddMember' -StartId $maintainerId -EndId $teamNodeId -Properties @{traversable=$true}))
 
             # --- Member Role Assignments (from first page of members) ---
             foreach($memberEdge in $team.members.edges)
@@ -2914,7 +3095,7 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
             {
                 $null = $overflowTeams.Add([PSCustomObject]@{
                     slug          = $team.slug
-                    teamId        = $team.id
+                    teamId        = $teamNodeId
                     memberId      = $memberId
                     maintainerId  = $maintainerId
                     endCursor     = $team.members.pageInfo.endCursor
@@ -2952,6 +3133,29 @@ query TeamMembersOverflow($login: String!, $slug: String!, $count: Int = 100, $a
             $overflowVars['after'] = $overflowResult.data.organization.team.members.pageInfo.endCursor
         }
         while($overflowResult.data.organization.team.members.pageInfo.hasNextPage)
+    }
+
+    # Phase 3: Enterprise-projected org teams visible via REST.
+    $restTeams = @(Invoke-GithubRestMethod -Session $Session -Path "orgs/$($Organization.properties.login)/teams")
+    foreach($team in @($restTeams | Where-Object { $_.slug -like 'ent:*' }))
+    {
+        $teamNodeId = Get-GitHoundOrganizationTeamNodeId -OrganizationId $Organization.properties.node_id -TeamNodeId $team.node_id -TeamSlug $team.slug
+
+        $properties = [pscustomobject]@{
+            name               = Normalize-Null $team.name
+            node_id            = Normalize-Null $teamNodeId
+            github_team_id     = Normalize-Null $team.node_id
+            collected          = $false
+            environment_name   = Normalize-Null $Organization.properties.login
+            environmentid      = Normalize-Null $Organization.properties.node_id
+            slug               = Normalize-Null $team.slug
+            description        = Normalize-Null $team.description
+            privacy            = Normalize-Null $team.privacy
+            type               = Normalize-Null 'enterprise'
+            query_repositories = "MATCH p=(:GH_Team {node_id:'$teamNodeId'})-[:GH_HasRole]->(:GH_RepoRole)-[]->(:GH_Repository) RETURN p"
+        }
+
+        $null = $nodes.Add((New-GitHoundNode -Id $teamNodeId -Kind 'GH_Team' -Properties $properties))
     }
 
     $output = [PSCustomObject]@{
@@ -3826,7 +4030,15 @@ function Git-HoundRepositoryRole
                         'pull'     { $repoRoleId = $repoReadId }
                         default    { $repoRoleId = "$($repo.properties.node_id)_$($team.permission)" }
                     }
-                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartId $team.node_id -EndId $repoRoleId -Properties @{traversable=$true}))
+                    $teamMatchers = Get-GitHoundOrganizationTeamPropertyMatchers -OrganizationId $repo.properties.environmentid -TeamSlug $team.slug
+                    if($teamMatchers)
+                    {
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartKind 'GH_Team' -StartPropertyMatchers $teamMatchers -EndId $repoRoleId -Properties @{traversable=$true}))
+                    }
+                    else
+                    {
+                        $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartId $team.node_id -EndId $repoRoleId -Properties @{traversable=$true}))
+                    }
                 }
             } -ThrottleLimit 25
 

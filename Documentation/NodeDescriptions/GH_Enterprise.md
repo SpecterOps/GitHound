@@ -1,6 +1,6 @@
 # <img src="../Icons/gh_enterprise.png" width="50"/> GH_Enterprise
 
-Represents a GitHub Enterprise account. This is the structural parent of member organizations and the natural container for enterprise-wide settings, role relationships, and enterprise membership.
+Represents a GitHub Enterprise account. This is the structural parent of member organizations, enterprise teams, and the natural container for enterprise-wide settings, role relationships, and enterprise membership.
 
 Created by: `Git-HoundEnterprise`
 
@@ -26,7 +26,7 @@ Created by: `Git-HoundEnterprise`
 | security_contact_email| string    | The enterprise security contact email, when available.                                          |
 | viewer_is_admin       | boolean   | Whether the authenticated principal is an enterprise admin.                                     |
 
-Enterprise collection currently emits lightweight `GH_Organization` stub nodes for member organizations and links them with `GH_Contains`. Those organization nodes are intended to be enriched later by full organization collection. Enterprise user collection adds `GH_HasMember` edges from the enterprise to discovered `GH_User` nodes.
+Enterprise collection currently emits lightweight `GH_Organization` stub nodes for member organizations and links them with `GH_Contains`. Those organization nodes are intended to be enriched later by full organization collection. Enterprise user collection adds `GH_HasMember` edges from the enterprise to discovered `GH_User` nodes. Enterprise team collection adds `GH_EnterpriseTeam` nodes, links them with `GH_Contains`, and models organization assignment separately with `GH_AssignedTo`.
 
 ## Diagram
 
@@ -34,8 +34,10 @@ Enterprise collection currently emits lightweight `GH_Organization` stub nodes f
 flowchart TD
     GH_Enterprise[fa:fa-globe GH_Enterprise]
     GH_Organization[fa:fa-building GH_Organization]
+    GH_EnterpriseTeam[fa:fa-users-between-lines GH_EnterpriseTeam]
     GH_User[fa:fa-user GH_User]
 
     GH_Enterprise -.->|GH_Contains| GH_Organization
+    GH_Enterprise -.->|GH_Contains| GH_EnterpriseTeam
     GH_Enterprise -.->|GH_HasMember| GH_User
 ```

@@ -21,6 +21,7 @@
 | ![GH_Branch](Icons/gh_branch.png) | [GH_Branch](NodeDescriptions/GH_Branch.md) | GitHub Branch |
 | ![GH_BranchProtectionRule](Icons/gh_branchprotectionrule.png) | [GH_BranchProtectionRule](NodeDescriptions/GH_BranchProtectionRule.md) | GitHub Branch Protection Rule |
 | ![GH_Enterprise](Icons/gh_enterprise.png) | [GH_Enterprise](NodeDescriptions/GH_Enterprise.md) | GitHub Enterprise |
+| ![GH_EnterpriseTeam](Icons/gh_enterpriseteam.png) | [GH_EnterpriseTeam](NodeDescriptions/GH_EnterpriseTeam.md) | GitHub Enterprise Team |
 | ![GH_Environment](Icons/gh_environment.png) | [GH_Environment](NodeDescriptions/GH_Environment.md) | GitHub Environment |
 | ![GH_EnvironmentSecret](Icons/gh_environmentsecret.png) | [GH_EnvironmentSecret](NodeDescriptions/GH_EnvironmentSecret.md) | GitHub Environment Secret |
 | ![GH_EnvironmentVariable](Icons/gh_environmentvariable.png) | [GH_EnvironmentVariable](NodeDescriptions/GH_EnvironmentVariable.md) | GitHub Environment Variable |
@@ -52,6 +53,7 @@
 | Relationship Kind | Traversable | Description |
 |-------------------|:-----------:|-------------|
 | [GH_AddAssignee](EdgeDescriptions/GH_AddAssignee.md) | ❌ | [Repository] Repo role can assign users to issues and pull requests |
+| [GH_AssignedTo](EdgeDescriptions/GH_AssignedTo.md) | ❌ | Structural assignment relationship showing that an enterprise team is assigned to an organization |
 | [GH_AddCollaborator](EdgeDescriptions/GH_AddCollaborator.md) | ❌ | [Organization] Org role can add outside collaborators |
 | [GH_AddLabel](EdgeDescriptions/GH_AddLabel.md) | ❌ | [Repository] Repo role can add labels to issues and pull requests |
 | [GH_AddMember](EdgeDescriptions/GH_AddMember.md) | ✅ | Team role can add members to the team (maintainer privilege) |
@@ -71,7 +73,7 @@
 | [GH_CloseDiscussion](EdgeDescriptions/GH_CloseDiscussion.md) | ❌ | [Repository] Repo role can close discussions |
 | [GH_CloseIssue](EdgeDescriptions/GH_CloseIssue.md) | ❌ | [Repository] Repo role can close issues |
 | [GH_ClosePullRequest](EdgeDescriptions/GH_ClosePullRequest.md) | ❌ | [Repository] Repo role can close pull requests |
-| [GH_Contains](EdgeDescriptions/GH_Contains.md) | ❌ | Container relationship for organizational hierarchy (enterprise contains orgs, org contains secrets/variables, repo contains secrets/variables, environment contains secrets/variables) |
+| [GH_Contains](EdgeDescriptions/GH_Contains.md) | ❌ | Container relationship for organizational hierarchy (enterprise contains orgs and enterprise teams, org contains secrets/variables, repo contains secrets/variables, environment contains secrets/variables) |
 | [GH_ConvertIssuesToDiscussions](EdgeDescriptions/GH_ConvertIssuesToDiscussions.md) | ❌ | [Repository] Repo role can convert issues to discussions |
 | [GH_CreateDiscussionCategory](EdgeDescriptions/GH_CreateDiscussionCategory.md) | ❌ | [Repository] Repo role can create discussion categories |
 | [GH_CreateRepository](EdgeDescriptions/GH_CreateRepository.md) | ❌ | [Organization] Org role can create repositories in the organization |
@@ -122,7 +124,7 @@
 | [GH_ManageWebhooks](EdgeDescriptions/GH_ManageWebhooks.md) | ❌ | [Repository] Repo role can manage repository webhooks |
 | [GH_MapsToUser](EdgeDescriptions/GH_MapsToUser.md) | ❌ | External identity maps to a GitHub user or identity provider user |
 | [GH_MarkAsDuplicate](EdgeDescriptions/GH_MarkAsDuplicate.md) | ❌ | [Repository] Repo role can mark issues or pull requests as duplicates |
-| [GH_MemberOf](EdgeDescriptions/GH_MemberOf.md) | ✅ | Team role is a member of a team, or team is a nested member of a parent team |
+| [GH_MemberOf](EdgeDescriptions/GH_MemberOf.md) | ✅ | Team role is a member of a team or enterprise team, or team is a nested/projection member of another team |
 | [GH_OrgBypassCodeScanningDismissalRequests](EdgeDescriptions/GH_OrgBypassCodeScanningDismissalRequests.md) | ❌ | [Organization] Org role can bypass code scanning dismissal requests |
 | [GH_OrgBypassSecretScanningClosureRequests](EdgeDescriptions/GH_OrgBypassSecretScanningClosureRequests.md) | ❌ | [Organization] Org role can bypass secret scanning closure requests |
 | [GH_OrgReviewAndManageSecretScanningBypassRequests](EdgeDescriptions/GH_OrgReviewAndManageSecretScanningBypassRequests.md) | ❌ | [Organization] Org role can review and manage secret scanning bypass requests |
