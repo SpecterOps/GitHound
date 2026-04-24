@@ -7,6 +7,8 @@ function Get-GitHoundFunctionBundle {
         'New-GitHoundNode',
         'New-GitHoundEdge',
         'Invoke-GithubRestMethod',
+        'Get-GitHoundRestErrorInfo',
+        'Write-GitHoundRestSkipWarning',
         'Wait-GithubRestRateLimit',
         'Wait-GithubRateLimitReached',
         'Get-RateLimitInformation',
@@ -253,6 +255,123 @@ function Get-GitHubAppInstallation
     }
 }
 
+function Get-GitHoundRestErrorInfo {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        $ErrorRecord,
+
+        [Parameter(Mandatory = $false)]
+        [string]
+        $Path
+    )
+
+    $responseBody = $null
+    $message = $null
+    $status = $null
+    $headers = @{}
+
+    if ($null -ne $ErrorRecord.ErrorDetails) {
+        if ($null -ne $ErrorRecord.ErrorDetails.Message) {
+            $responseBody = [string]$ErrorRecord.ErrorDetails.Message
+        } else {
+            $responseBody = [string]$ErrorRecord.ErrorDetails
+        }
+    }
+
+    $response = $null
+    try {
+        $response = $ErrorRecord.Exception.Response
+    }
+    catch { }
+
+    if ($response) {
+        try {
+            if ($null -ne $response.StatusCode) {
+                $status = [string][int]$response.StatusCode
+            }
+        }
+        catch {
+            try {
+                if ($null -ne $response.StatusCode.value__) {
+                    $status = [string]$response.StatusCode.value__
+                }
+            }
+            catch { }
+        }
+
+        try {
+            if ($response.Headers) {
+                foreach ($headerName in $response.Headers.Keys) {
+                    $headers[[string]$headerName] = [string]$response.Headers[$headerName]
+                }
+            }
+        }
+        catch { }
+    }
+
+    if ($responseBody) {
+        try {
+            $httpException = $responseBody | ConvertFrom-Json
+            if ($httpException.message) {
+                $message = [string]$httpException.message
+            }
+            if (-not $status -and $httpException.status) {
+                $status = [string]$httpException.status
+            }
+        }
+        catch { }
+    }
+
+    if (-not $message -and $ErrorRecord.Exception -and $ErrorRecord.Exception.Message) {
+        $message = [string]$ErrorRecord.Exception.Message
+    }
+
+    [PSCustomObject]@{
+        Path                     = $Path
+        Status                   = $status
+        Message                  = $message
+        ResponseBody             = $responseBody
+        Headers                  = $headers
+        AcceptedGitHubPermissions = $headers['X-Accepted-GitHub-Permissions']
+        AcceptedOAuthScopes      = $headers['X-Accepted-OAuth-Scopes']
+        OAuthScopes              = $headers['X-OAuth-Scopes']
+    }
+}
+
+function Write-GitHoundRestSkipWarning {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]
+        $Target,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $Feature,
+
+        [Parameter(Mandatory = $true)]
+        $ErrorInfo,
+
+        [Parameter()]
+        [string]
+        $FallbackHint
+    )
+
+    $permissionText = if ($ErrorInfo.AcceptedGitHubPermissions) {
+        " Required GitHub App permission(s): $($ErrorInfo.AcceptedGitHubPermissions)."
+    } elseif ($ErrorInfo.AcceptedOAuthScopes) {
+        " Accepted OAuth scope(s): $($ErrorInfo.AcceptedOAuthScopes)."
+    } else {
+        ""
+    }
+
+    Write-Warning "Skipping $Feature for '$Target': $($ErrorInfo.Message).$permissionText"
+    if ($FallbackHint) {
+        Write-Host "[*] $FallbackHint"
+    }
+}
+
 function Invoke-GithubRestMethod {
     [CmdletBinding()]
     Param(
@@ -270,7 +389,12 @@ function Invoke-GithubRestMethod {
 
         [Parameter()]
         [hashtable]
-        $Headers
+        $Headers,
+
+        [Parameter()]
+        [ValidateSet('Write', 'Stop')]
+        [string]
+        $ErrorMode = 'Write'
     )
 
     if (-not $Headers) {
@@ -294,8 +418,8 @@ function Invoke-GithubRestMethod {
                     $requestSuccessful = $true
                 }
                 catch {
-                    $httpException = $_.ErrorDetails | ConvertFrom-Json
-                    if (($httpException.status -eq "403" -and $httpException.message -match "rate limit") -or $httpException.status -eq "429") {
+                    $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path $Path
+                    if (($errorInfo.Status -eq "403" -and $errorInfo.Message -match "rate limit") -or $errorInfo.Status -eq "429") {
                         Write-Warning "Rate limit hit when doing Github RestAPI call. Retry $($retryCount + 1)/3"
                         Write-Debug $_
                         Wait-GithubRestRateLimit -Session $Session
@@ -328,6 +452,9 @@ function Invoke-GithubRestMethod {
 
         } while($LinkHeader)
     } catch {
+        if ($ErrorMode -eq 'Stop') {
+            throw
+        }
         Write-Error $_
     }
 } 
@@ -1256,7 +1383,14 @@ function Git-HoundEnterpriseTeam
 
     Write-Host "[*] Git-HoundEnterpriseTeam: Collecting enterprise teams for '$enterpriseSlug'"
 
-    $teams = @(Invoke-GithubRestMethod -Session $Session -Path "enterprises/$enterpriseSlug/teams")
+    try {
+        $teams = @(Invoke-GithubRestMethod -Session $Session -Path "enterprises/$enterpriseSlug/teams" -ErrorMode Stop)
+    }
+    catch {
+        $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path "enterprises/$enterpriseSlug/teams"
+        Write-GitHoundRestSkipWarning -Target $enterpriseSlug -Feature "enterprise teams" -ErrorInfo $errorInfo
+        $teams = @()
+    }
 
     foreach ($team in $teams) {
         $enterpriseTeamId = Get-GitHoundEnterpriseTeamNodeId -EnterpriseId $enterpriseNodeId -TeamId $team.id
@@ -1300,14 +1434,28 @@ function Git-HoundEnterpriseTeam
         $null = $nodes.Add((New-GitHoundNode -Id $membersRoleId -Kind 'GH_TeamRole', 'GH_Role' -Properties $membersRoleProps))
         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MemberOf' -StartId $membersRoleId -EndId $enterpriseTeamId -Properties @{ traversable = $true }))
 
-        $members = @(Invoke-GithubRestMethod -Session $Session -Path "enterprises/$enterpriseSlug/teams/$($team.id)/memberships")
+        try {
+            $members = @(Invoke-GithubRestMethod -Session $Session -Path "enterprises/$enterpriseSlug/teams/$($team.id)/memberships" -ErrorMode Stop)
+        }
+        catch {
+            $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path "enterprises/$enterpriseSlug/teams/$($team.id)/memberships"
+            Write-GitHoundRestSkipWarning -Target "$enterpriseSlug/$($team.slug)" -Feature "enterprise team memberships" -ErrorInfo $errorInfo
+            $members = @()
+        }
         foreach ($member in $members) {
             if ($member.node_id) {
                 $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasRole' -StartId $member.node_id -EndId $membersRoleId -Properties @{ traversable = $true }))
             }
         }
 
-        $assignedOrganizations = @(Invoke-GithubRestMethod -Session $Session -Path "enterprises/$enterpriseSlug/teams/$($team.id)/organizations")
+        try {
+            $assignedOrganizations = @(Invoke-GithubRestMethod -Session $Session -Path "enterprises/$enterpriseSlug/teams/$($team.id)/organizations" -ErrorMode Stop)
+        }
+        catch {
+            $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path "enterprises/$enterpriseSlug/teams/$($team.id)/organizations"
+            Write-GitHoundRestSkipWarning -Target "$enterpriseSlug/$($team.slug)" -Feature "enterprise team assigned organizations" -ErrorInfo $errorInfo
+            $assignedOrganizations = @()
+        }
         foreach ($org in $assignedOrganizations) {
             $null = $edges.Add((New-GitHoundEdge -Kind 'GH_AssignedTo' -StartId $enterpriseTeamId -EndId $org.node_id -Properties @{ traversable = $false }))
             $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MemberOf' -StartId $enterpriseTeamId -EndKind 'GH_Team' -EndPropertyMatchers @(
@@ -6001,29 +6149,6 @@ function Git-HoundRunner
         $edges = New-Object System.Collections.ArrayList
         $repoNodes = New-Object System.Collections.ArrayList
 
-        function Get-GitHoundRunnerApiErrorInfo {
-            param(
-                [Parameter(Mandatory = $true)]
-                $ErrorRecord
-            )
-
-            $message = $null
-            $status = $null
-
-            try {
-                $httpException = $ErrorRecord.ErrorDetails | ConvertFrom-Json
-                $message = $httpException.message
-                $status = $httpException.status
-            }
-            catch {
-                $message = $ErrorRecord.Exception.Message
-            }
-
-            [PSCustomObject]@{
-                Status = $status
-                Message = $message
-            }
-        }
     }
 
     process
@@ -6055,12 +6180,13 @@ function Git-HoundRunner
 
         $runnerGroups = @()
         try {
-            $runnerGroups = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/runner-groups").runner_groups)
+            $runnerGroups = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/runner-groups" -ErrorMode Stop).runner_groups)
         } catch {
-            $errorInfo = Get-GitHoundRunnerApiErrorInfo -ErrorRecord $_
+            $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path "orgs/$orgLogin/actions/runner-groups"
             if (($errorInfo.Status -eq "403" -and $errorInfo.Message -match "Resource not accessible by integration") -or $errorInfo.Status -eq "404") {
-                Write-Warning "Skipping organization self-hosted runner groups for '${orgLogin}': $($errorInfo.Message)"
-                Write-Host "[*] This usually means self-hosted runners are not enabled for the organization, or the GitHub App does not have access to that feature."
+                $permissionText = if ($errorInfo.AcceptedGitHubPermissions) { " Required GitHub App permission(s): $($errorInfo.AcceptedGitHubPermissions)." } else { "" }
+                Write-Warning "Skipping organization self-hosted runner groups for '${orgLogin}': $($errorInfo.Message).$permissionText"
+                Write-Host "[*] This usually means self-hosted runners are not enabled for the organization, or the GitHub App installation does not have access to that feature."
             } else {
                 Write-Warning "Could not enumerate organization runner groups for ${orgLogin}: $_"
             }
@@ -6098,12 +6224,13 @@ function Git-HoundRunner
                 }
                 'selected' {
                     try {
-                        $selectedRepos = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/runner-groups/$($group.id)/repositories").repositories)
+                        $selectedRepos = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/runner-groups/$($group.id)/repositories" -ErrorMode Stop).repositories)
                         $accessibleRepoIds = @($selectedRepos | Where-Object { $repoByNodeId.ContainsKey($_.node_id) } | ForEach-Object { $repoByNodeId[$_.node_id].id })
                     } catch {
-                        $errorInfo = Get-GitHoundRunnerApiErrorInfo -ErrorRecord $_
+                        $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path "orgs/$orgLogin/actions/runner-groups/$($group.id)/repositories"
                         if (($errorInfo.Status -eq "403" -and $errorInfo.Message -match "Resource not accessible by integration") -or $errorInfo.Status -eq "404") {
-                            Write-Warning "Skipping selected repository access for runner group '$($group.name)' in '${orgLogin}': $($errorInfo.Message)"
+                            $permissionText = if ($errorInfo.AcceptedGitHubPermissions) { " Required GitHub App permission(s): $($errorInfo.AcceptedGitHubPermissions)." } else { "" }
+                            Write-Warning "Skipping selected repository access for runner group '$($group.name)' in '${orgLogin}': $($errorInfo.Message).$permissionText"
                         } else {
                             Write-Warning "Could not enumerate selected repository access for runner group '$($group.name)' in ${orgLogin}: $_"
                         }
@@ -6116,11 +6243,12 @@ function Git-HoundRunner
 
             $groupRunners = @()
             try {
-                $groupRunners = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/runner-groups/$($group.id)/runners").runners)
+                $groupRunners = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/runner-groups/$($group.id)/runners" -ErrorMode Stop).runners)
             } catch {
-                $errorInfo = Get-GitHoundRunnerApiErrorInfo -ErrorRecord $_
+                $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path "orgs/$orgLogin/actions/runner-groups/$($group.id)/runners"
                 if (($errorInfo.Status -eq "403" -and $errorInfo.Message -match "Resource not accessible by integration") -or $errorInfo.Status -eq "404") {
-                    Write-Warning "Skipping runners for runner group '$($group.name)' in '${orgLogin}': $($errorInfo.Message)"
+                    $permissionText = if ($errorInfo.AcceptedGitHubPermissions) { " Required GitHub App permission(s): $($errorInfo.AcceptedGitHubPermissions)." } else { "" }
+                    Write-Warning "Skipping runners for runner group '$($group.name)' in '${orgLogin}': $($errorInfo.Message).$permissionText"
                 } else {
                     Write-Warning "Could not enumerate runners for runner group '$($group.name)' in ${orgLogin}: $_"
                 }
@@ -6170,11 +6298,12 @@ function Git-HoundRunner
         foreach ($repoNode in $repoRunnerCandidates) {
             $repoRunners = @()
             try {
-                $repoRunners = @((Invoke-GithubRestMethod -Session $Session -Path "repos/$($repoNode.properties.full_name)/actions/runners").runners)
+                $repoRunners = @((Invoke-GithubRestMethod -Session $Session -Path "repos/$($repoNode.properties.full_name)/actions/runners" -ErrorMode Stop).runners)
             } catch {
-                $errorInfo = Get-GitHoundRunnerApiErrorInfo -ErrorRecord $_
+                $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path "repos/$($repoNode.properties.full_name)/actions/runners"
                 if (($errorInfo.Status -eq "403" -and $errorInfo.Message -match "Resource not accessible by integration") -or $errorInfo.Status -eq "404") {
-                    Write-Warning "Skipping repository runners for '$($repoNode.properties.full_name)': $($errorInfo.Message)"
+                    $permissionText = if ($errorInfo.AcceptedGitHubPermissions) { " Required GitHub App permission(s): $($errorInfo.AcceptedGitHubPermissions)." } else { "" }
+                    Write-Warning "Skipping repository runners for '$($repoNode.properties.full_name)': $($errorInfo.Message).$permissionText"
                 } else {
                     Write-Warning "Could not enumerate repository runners for $($repoNode.properties.full_name): $_"
                 }
@@ -6324,7 +6453,17 @@ function Git-HoundEnvironment
                 # List environment secrets
                 # https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-environment-secrets
                 # "Environments" repository permissions (read)
-                foreach($secret in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/environments/$($environment.name)/secrets").secrets)
+                try {
+                    $environmentSecrets = @((Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/environments/$($environment.name)/secrets" -ErrorMode Stop).secrets)
+                }
+                catch {
+                    $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path "repos/$($repo.properties.full_name)/environments/$($environment.name)/secrets"
+                    $permissionText = if ($errorInfo.AcceptedGitHubPermissions) { " Required GitHub App permission(s): $($errorInfo.AcceptedGitHubPermissions)." } else { "" }
+                    Write-Warning "Skipping environment secrets for '$($repo.properties.full_name)' environment '$($environment.name)': $($errorInfo.Message).$permissionText"
+                    $environmentSecrets = @()
+                }
+
+                foreach($secret in $environmentSecrets)
                 {
                     $secretId = "GH_EnvironmentSecret_$($environment.node_id)_$($secret.name)"
                     $properties = @{
@@ -6350,7 +6489,17 @@ function Git-HoundEnvironment
 
                 # List environment variables
                 # https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#list-environment-variables
-                foreach($variable in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/environments/$($environment.name)/variables").variables)
+                try {
+                    $environmentVariables = @((Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/environments/$($environment.name)/variables" -ErrorMode Stop).variables)
+                }
+                catch {
+                    $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path "repos/$($repo.properties.full_name)/environments/$($environment.name)/variables"
+                    $permissionText = if ($errorInfo.AcceptedGitHubPermissions) { " Required GitHub App permission(s): $($errorInfo.AcceptedGitHubPermissions)." } else { "" }
+                    Write-Warning "Skipping environment variables for '$($repo.properties.full_name)' environment '$($environment.name)': $($errorInfo.Message).$permissionText"
+                    $environmentVariables = @()
+                }
+
+                foreach($variable in $environmentVariables)
                 {
                     $variableId = "GH_EnvironmentVariable_$($environment.node_id)_$($variable.name)"
                     $varProperties = @{
@@ -6458,7 +6607,15 @@ function Git-HoundOrganizationSecret
 
         # List organization secrets
         # https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-organization-secrets
-        $orgSecrets = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/secrets").secrets)
+        try {
+            $orgSecrets = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/secrets" -ErrorMode Stop).secrets)
+        }
+        catch {
+            $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path "orgs/$orgLogin/actions/secrets"
+            $permissionText = if ($errorInfo.AcceptedGitHubPermissions) { " Required GitHub App permission(s): $($errorInfo.AcceptedGitHubPermissions)." } else { "" }
+            Write-Warning "Skipping organization secrets for '${orgLogin}': $($errorInfo.Message).$permissionText"
+            $orgSecrets = @()
+        }
 
         $allCount = 0
         $privateCount = 0
@@ -6516,7 +6673,15 @@ function Git-HoundOrganizationSecret
                     $selectedProcessed++
                     Write-Host "[*]   Fetching selected repos for secret '$($secret.name)' ($selectedProcessed/$selectedCount)"
                     # https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-selected-repositories-for-an-organization-secret
-                    $selectedRepos = (Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/secrets/$($secret.name)/repositories").repositories
+                    try {
+                        $selectedRepos = (Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/secrets/$($secret.name)/repositories" -ErrorMode Stop).repositories
+                    }
+                    catch {
+                        $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path "orgs/$orgLogin/actions/secrets/$($secret.name)/repositories"
+                        $permissionText = if ($errorInfo.AcceptedGitHubPermissions) { " Required GitHub App permission(s): $($errorInfo.AcceptedGitHubPermissions)." } else { "" }
+                        Write-Warning "Skipping selected repository enumeration for organization secret '$($secret.name)' in '${orgLogin}': $($errorInfo.Message).$permissionText"
+                        $selectedRepos = @()
+                    }
                     foreach ($selectedRepo in $selectedRepos) {
                         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasSecret' -StartId $selectedRepo.node_id -EndId $secretId -Properties @{ traversable = $true }))
                     }
@@ -6529,7 +6694,15 @@ function Git-HoundOrganizationSecret
         # ── Organization Variables ─────────────────────────────────────────
         # https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#list-organization-variables
         # Fine Grained Permissions: "Variables" organization permissions (read)
-        $orgVariables = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/variables").variables | Where-Object { $_ })
+        try {
+            $orgVariables = @((Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/variables" -ErrorMode Stop).variables | Where-Object { $_ })
+        }
+        catch {
+            $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path "orgs/$orgLogin/actions/variables"
+            $permissionText = if ($errorInfo.AcceptedGitHubPermissions) { " Required GitHub App permission(s): $($errorInfo.AcceptedGitHubPermissions)." } else { "" }
+            Write-Warning "Skipping organization variables for '${orgLogin}': $($errorInfo.Message).$permissionText"
+            $orgVariables = @()
+        }
 
         $varAllCount = 0
         $varPrivateCount = 0
@@ -6584,7 +6757,15 @@ function Git-HoundOrganizationSecret
                     $varSelectedProcessed++
                     Write-Host "[*]   Fetching selected repos for variable '$($variable.name)' ($varSelectedProcessed/$varSelectedCount)"
                     # https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#list-selected-repositories-for-an-organization-variable
-                    $selectedRepos = (Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/variables/$($variable.name)/repositories").repositories
+                    try {
+                        $selectedRepos = (Invoke-GithubRestMethod -Session $Session -Path "orgs/$orgLogin/actions/variables/$($variable.name)/repositories" -ErrorMode Stop).repositories
+                    }
+                    catch {
+                        $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path "orgs/$orgLogin/actions/variables/$($variable.name)/repositories"
+                        $permissionText = if ($errorInfo.AcceptedGitHubPermissions) { " Required GitHub App permission(s): $($errorInfo.AcceptedGitHubPermissions)." } else { "" }
+                        Write-Warning "Skipping selected repository enumeration for organization variable '$($variable.name)' in '${orgLogin}': $($errorInfo.Message).$permissionText"
+                        $selectedRepos = @()
+                    }
                     foreach ($selectedRepo in $selectedRepos) {
                         $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasVariable' -StartId $selectedRepo.node_id -EndId $variableId -Properties @{ traversable = $true }))
                     }
@@ -6750,7 +6931,17 @@ function Git-HoundSecret
 
                 # List repository secrets
                 # https://docs.github.com/en/rest/actions/secrets?apiVersion=2022-11-28#list-repository-secrets
-                foreach($secret in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/actions/secrets").secrets)
+                try {
+                    $repoSecrets = @((Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/actions/secrets" -ErrorMode Stop).secrets)
+                }
+                catch {
+                    $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path "repos/$($repo.properties.full_name)/actions/secrets"
+                    $permissionText = if ($errorInfo.AcceptedGitHubPermissions) { " Required GitHub App permission(s): $($errorInfo.AcceptedGitHubPermissions)." } else { "" }
+                    Write-Warning "Skipping repository secrets for '$($repo.properties.full_name)': $($errorInfo.Message).$permissionText"
+                    $repoSecrets = @()
+                }
+
+                foreach($secret in $repoSecrets)
                 {
                     $secretId = "GH_Secret_$($repo.properties.node_id)_$($secret.name)"
                     $properties = @{
@@ -6993,7 +7184,17 @@ function Git-HoundVariable
 
                 # List repository variables
                 # https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#list-repository-variables
-                foreach($variable in (Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/actions/variables").variables)
+                try {
+                    $repoVariables = @((Invoke-GithubRestMethod -Session $Session -Path "repos/$($repo.properties.full_name)/actions/variables" -ErrorMode Stop).variables)
+                }
+                catch {
+                    $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path "repos/$($repo.properties.full_name)/actions/variables"
+                    $permissionText = if ($errorInfo.AcceptedGitHubPermissions) { " Required GitHub App permission(s): $($errorInfo.AcceptedGitHubPermissions)." } else { "" }
+                    Write-Warning "Skipping repository variables for '$($repo.properties.full_name)': $($errorInfo.Message).$permissionText"
+                    $repoVariables = @()
+                }
+
+                foreach($variable in $repoVariables)
                 {
                     $variableId = "GH_Variable_$($repo.properties.node_id)_$($variable.name)"
                     $properties = @{
@@ -7659,31 +7860,28 @@ function Git-HoundScimUser
 
     do
     {
-        $scimRequestError = $null
-        $responseBytes = Invoke-GithubRestMethod `
-            -Session $Session `
-            -Path "scim/v2/organizations/$($Session.OrganizationName)/Users?startIndex=$($startIndex)" `
-            -ErrorAction SilentlyContinue `
-            -ErrorVariable scimRequestError
-
-        if ($scimRequestError) {
-            $errorRecord = $scimRequestError[0]
+        try {
+            $responseBytes = Invoke-GithubRestMethod `
+                -Session $Session `
+                -Path "scim/v2/organizations/$($Session.OrganizationName)/Users?startIndex=$($startIndex)" `
+                -ErrorMode Stop
+        }
+        catch {
+            $errorInfo = Get-GitHoundRestErrorInfo -ErrorRecord $_ -Path "scim/v2/organizations/$($Session.OrganizationName)/Users?startIndex=$($startIndex)"
             $errorText = @(
-                $errorRecord.ToString()
-                $errorRecord.Exception.Message
-                $errorRecord.ErrorDetails.Message
+                $errorInfo.Message
+                $errorInfo.ResponseBody
             ) -join " "
 
             if ($errorText -match "SCIM is not enabled for this organization" -and $errorText -match "configured on the enterprise account") {
-                Write-Warning "Skipping organization SCIM for '$($Session.OrganizationName)': $errorText"
-                Write-Host "[*] This usually means federated auth is configured at the enterprise level rather than directly on the organization."
+                Write-Warning "Skipping organization SCIM for '$($Session.OrganizationName)': federated auth is configured at the enterprise level."
                 return [PSCustomObject]@{
                     Nodes = $nodes
                     Edges = $edges
                 }
             }
 
-            throw $errorRecord
+            throw
         }
 
         if (-not $responseBytes) {
