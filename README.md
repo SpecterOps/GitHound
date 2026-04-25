@@ -133,6 +133,16 @@ Enterprise team collection through `Git-HoundEnterpriseTeam` adds:
 - `GH_MemberOf` edges from enterprise teams to org-visible `ent:` `GH_Team` nodes using property matching
 - enterprise-team `members` roles and `GH_HasRole` edges from users to those roles
 
+Enterprise SCIM collection currently adds:
+
+- `SCIM_User`
+- `SCIM_Group`
+- `SCIM_Provisioned` from `SCIM_User` to `GH_ExternalIdentity`
+- `SCIM_Provisioned` from `SCIM_Group` to `GH_EnterpriseTeam` when GitHub exposes the enterprise team `group_id`
+- `SCIM_MemberOf` from `SCIM_User` to `SCIM_Group`
+
+This gives GitHound a provider-agnostic bridge from the shared SCIM schema into GitHub's native enterprise identity and team model.
+
 The `GH_Organization` stubs emitted by enterprise collection are intentionally marked
 `collected = false`. They represent structural discovery from the enterprise context and are
 meant to be enriched later by normal organization collection.
