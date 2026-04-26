@@ -210,6 +210,30 @@ LIMIT 1000
 
 This query is useful for validating enterprise member discovery and Enterprise Managed Users handling.
 
+## Enterprise Admins
+
+Returns enterprise admins through the default `owners` enterprise role.
+
+```cypher
+MATCH p=(:GH_User)-[:GH_HasRole]->(:GH_EnterpriseRole {short_name:'owners'})
+RETURN p
+LIMIT 1000
+```
+
+This query is useful for validating the `ownerInfo.admins` enterprise admin path.
+
+## Enterprise Role Assignments
+
+Returns enterprise roles and the users or enterprise teams assigned to them.
+
+```cypher
+MATCH p=(principal)-[:GH_HasRole]->(role:GH_EnterpriseRole)
+RETURN p
+LIMIT 1000
+```
+
+This query is useful for validating enterprise authorization modeling before expanding enterprise-role permissions further.
+
 ### Enterprise Team Assignments and Projections
 
 Returns enterprise teams, the organizations they are assigned to, and any projected `ent:` organization teams linked back to them.

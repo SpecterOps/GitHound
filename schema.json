@@ -47,6 +47,14 @@
       "color": "#7C3AED"
     },
     {
+      "name": "GH_EnterpriseRole",
+      "display_name": "GitHub Enterprise Role",
+      "description": "An enterprise-level role that can be assigned to users and enterprise teams",
+      "is_display_kind": true,
+      "icon": "user-tie",
+      "color": "#8FD3FF"
+    },
+    {
       "name": "GH_Team",
       "display_name": "GitHub Team",
       "description": "A team within an organization, grouping users for shared access and collaboration",
