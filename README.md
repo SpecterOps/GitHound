@@ -143,6 +143,20 @@ Enterprise SCIM collection currently adds:
 
 This gives GitHound a provider-agnostic bridge from the shared SCIM schema into GitHub's native enterprise identity and team model.
 
+When a collected `GH_SamlIdentityProvider` identifies the upstream IdP, GitHound can also add provider-aware SCIM correlation edges inside the SCIM sidecar output:
+
+- `Okta_User -> SCIM_User`
+  - matched by `Okta_User.id = SCIM_User.externalId`
+- `Okta_Group -> SCIM_Group`
+  - matched by `Okta_Group.name = SCIM_Group.externalId`
+  - and `Okta_Group.oktaDomain = GH_SamlIdentityProvider.foreign_environmentid`
+
+GitHound keeps the SCIM layer in its own sidecar output so these mappings remain visible without mixing SCIM-native nodes into the main GitHub-native enterprise graph:
+
+- `githound_<entId>.json` contains enterprise GitHub-native data
+- `githound_scim_<entId>.json` contains SCIM-native nodes and SCIM bridge edges
+- `githound_saml_<entId>.json` contains SAML and external identity data
+
 The `GH_Organization` stubs emitted by enterprise collection are intentionally marked
 `collected = false`. They represent structural discovery from the enterprise context and are
 meant to be enriched later by normal organization collection.

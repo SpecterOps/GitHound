@@ -933,6 +933,127 @@ function Get-GitHoundScimExternalIdentityPropertyMatchers
     )
 }
 
+function Get-GitHoundSamlProviderContext
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [PSObject]$SamlProviderNode
+    )
+
+    $issuer = $SamlProviderNode.properties.issuer
+    $ssoUrl = $SamlProviderNode.properties.sso_url
+    $foreignEnvironmentId = $SamlProviderNode.properties.foreign_environmentid
+    $environmentId = $SamlProviderNode.properties.environmentid
+
+    $scopeKind = if ($environmentId -like 'E_*') {
+        'enterprise'
+    } elseif ($environmentId -like 'O_*') {
+        'organization'
+    } else {
+        'unknown'
+    }
+
+    $idpKind = 'unknown'
+    $foreignUserNodeKind = $null
+    $foreignGroupNodeKind = $null
+
+    switch -Wildcard ($issuer) {
+        'https://auth.pingone.com/*' {
+            $idpKind = 'pingone'
+            $foreignUserNodeKind = 'PingOneUser'
+        }
+        'https://sts.windows.net/*' {
+            $idpKind = 'azure'
+            $foreignUserNodeKind = 'AZUser'
+        }
+        'http://www.okta.com/*' {
+            $idpKind = 'okta'
+            $foreignUserNodeKind = 'Okta_User'
+            $foreignGroupNodeKind = 'Okta_Group'
+            if (-not $foreignEnvironmentId -and $ssoUrl) {
+                $foreignEnvironmentId = $ssoUrl.Split('/')[2]
+            }
+        }
+    }
+
+    [PSCustomObject]@{
+        IdpKind              = $idpKind
+        ScopeKind            = $scopeKind
+        EnvironmentId        = $environmentId
+        EnvironmentName      = $SamlProviderNode.properties.environment_name
+        ForeignEnvironmentId = $foreignEnvironmentId
+        ForeignUserNodeKind  = $foreignUserNodeKind
+        ForeignGroupNodeKind = $foreignGroupNodeKind
+        SupportsScimUsers    = ($idpKind -ne 'unknown')
+        SupportsScimGroups   = ($idpKind -eq 'okta' -and $scopeKind -eq 'enterprise')
+    }
+}
+
+function Get-GitHoundOktaGroupPropertyMatchers
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+
+        [Parameter(Mandatory = $true)]
+        [string]$OktaDomain
+    )
+
+    @(
+        (New-BHOGPropertyMatcher -Key 'name' -Value $Name),
+        (New-BHOGPropertyMatcher -Key 'oktaDomain' -Value $OktaDomain)
+    )
+}
+
+function Resolve-GitHoundScimIdpCorrelations
+{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [PSObject]$ScimResult,
+
+        [Parameter(Mandatory = $true)]
+        [PSObject]$SamlResult
+    )
+
+    $edges = New-Object System.Collections.ArrayList
+
+    $samlProviderNodes = @($SamlResult.Nodes | Where-Object { $_.kinds -contains 'GH_SamlIdentityProvider' })
+    if (-not $samlProviderNodes) {
+        return [PSCustomObject]@{ Nodes = @(); Edges = $edges }
+    }
+
+    $contexts = @($samlProviderNodes | ForEach-Object { Get-GitHoundSamlProviderContext -SamlProviderNode $_ })
+    $oktaContexts = @($contexts | Where-Object { $_.IdpKind -eq 'okta' })
+    if (-not $oktaContexts) {
+        return [PSCustomObject]@{ Nodes = @(); Edges = $edges }
+    }
+
+    foreach ($context in $oktaContexts) {
+        if ($context.SupportsScimUsers) {
+            foreach ($scimUser in @($ScimResult.Nodes | Where-Object { $_.kinds -contains 'SCIM_User' })) {
+                if (($scimUser.properties.enabled -eq $true) -and -not [string]::IsNullOrWhiteSpace($scimUser.properties.externalId)) {
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'SCIM_Provisioned' -StartId $scimUser.properties.externalId -StartKind 'Okta_User' -EndId $scimUser.id -Properties @{ traversable = $true }))
+                }
+            }
+        }
+
+        if ($context.SupportsScimGroups -and -not [string]::IsNullOrWhiteSpace($context.ForeignEnvironmentId)) {
+            foreach ($scimGroup in @($ScimResult.Nodes | Where-Object { $_.kinds -contains 'SCIM_Group' })) {
+                if (-not [string]::IsNullOrWhiteSpace($scimGroup.properties.externalId)) {
+                    $oktaGroupMatchers = Get-GitHoundOktaGroupPropertyMatchers -Name $scimGroup.properties.externalId -OktaDomain $context.ForeignEnvironmentId
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'SCIM_Provisioned' -StartKind 'Okta_Group' -StartPropertyMatchers $oktaGroupMatchers -EndId $scimGroup.id -Properties @{ traversable = $true }))
+                }
+            }
+        }
+    }
+
+    [PSCustomObject]@{
+        Nodes = @()
+        Edges = $edges
+    }
+}
+
 function Import-GitHoundStepOutput
 {
     <#
@@ -9042,6 +9163,9 @@ function Invoke-GitHound
         if($scim.nodes) { $scimNodes.AddRange(@($scim.nodes)) }
         if($scim.edges) { $scimEdges.AddRange(@($scim.edges)) }
 
+        $scimCorrelations = Resolve-GitHoundScimIdpCorrelations -ScimResult $scim -SamlResult $saml
+        if($scimCorrelations.Edges) { $scimEdges.AddRange(@($scimCorrelations.Edges)) }
+
         $payload = [PSCustomObject]@{
             '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
             graph = [PSCustomObject]@{
@@ -9278,20 +9402,6 @@ function Invoke-GitHoundEnterprise
         Write-Host "[*] Skipping Enterprise SCIM Groups (session does not contain a PAT)"
     }
 
-    if ($Session.HasPersonalAccessToken) {
-        $scimNodes = @(@($enterpriseScimUsers.Nodes) + @($enterpriseScimGroups.Nodes) | Where-Object { $_ -ne $null })
-        $scimEdges = @(@($enterpriseScimUsers.Edges) + @($enterpriseScimGroups.Edges) | Where-Object { $_ -ne $null })
-        $scimPayload = [PSCustomObject]@{
-            '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
-            graph = [PSCustomObject]@{
-                nodes = $scimNodes
-                edges = $scimEdges
-            }
-        }
-        $scimPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_scim_$entId.json")
-        Write-Host "[+] SCIM payload: githound_scim_$entId.json ($($scimNodes.Count) nodes, $($scimEdges.Count) edges)"
-    }
-
     # ── Step 6: Enterprise SAML (separate output) ────────────────────────
     if ($Session.HasPersonalAccessToken) {
         $stepFile = Join-Path $CheckpointPath "githound_EnterpriseSaml_$entId.json"
@@ -9313,6 +9423,26 @@ function Invoke-GitHoundEnterprise
             }
         }
         $enterpriseSamlPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_saml_$entId.json")
+
+        $scimNodes = @(@($enterpriseScimUsers.Nodes) + @($enterpriseScimGroups.Nodes) | Where-Object { $_ -ne $null })
+        $scimEdges = @(@($enterpriseScimUsers.Edges) + @($enterpriseScimGroups.Edges) | Where-Object { $_ -ne $null })
+        $scimRaw = [PSCustomObject]@{
+            Nodes = $scimNodes
+            Edges = $scimEdges
+        }
+        $scimCorrelations = Resolve-GitHoundScimIdpCorrelations -ScimResult $scimRaw -SamlResult $enterpriseSaml
+        if($scimCorrelations.Edges) {
+            $scimEdges = @(@($scimEdges) + @($scimCorrelations.Edges) | Where-Object { $_ -ne $null })
+        }
+        $scimPayload = [PSCustomObject]@{
+            '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
+            graph = [PSCustomObject]@{
+                nodes = $scimNodes
+                edges = $scimEdges
+            }
+        }
+        $scimPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_scim_$entId.json")
+        Write-Host "[+] SCIM payload: githound_scim_$entId.json ($($scimNodes.Count) nodes, $($scimEdges.Count) edges)"
     } else {
         Write-Host "[*] Skipping Enterprise SAML (session does not contain a PAT)"
     }
