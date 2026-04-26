@@ -1,6 +1,6 @@
 # <img src="../Icons/gh_user.png" width="50"/> GH_User
 
-Represents a GitHub user who is a member of one or more GitHub organizations or enterprises. Users are associated with organization roles (Owner or Member), can be assigned to repository roles and team roles, and may also be linked directly to `GH_Enterprise` through `GH_HasMember`.
+Represents a GitHub user who is a member of one or more GitHub organizations or enterprises. Users are associated with organization roles (Owner or Member), can be assigned to repository roles and team roles, and may also be linked directly to `GH_Enterprise` through `GH_HasMember`. In enterprise-managed-user environments, enterprise membership may instead land on a `GH_EnterpriseManagedUser` wrapper that maps back to the underlying `GH_User` via `GH_MapsToUser`.
 
 Created by: `Git-HoundUser`, `Git-HoundEnterpriseUser`
 
@@ -24,6 +24,7 @@ Created by: `Git-HoundUser`, `Git-HoundEnterpriseUser`
 ```mermaid
 flowchart TD
     GH_Enterprise[fa:fa-globe GH_Enterprise]
+    GH_EnterpriseManagedUser[fa:fa-user-lock GH_EnterpriseManagedUser]
     GH_User[fa:fa-user GH_User]
     GH_OrgRole[fa:fa-user-tie GH_OrgRole]
     GH_RepoRole[fa:fa-user-tie GH_RepoRole]
@@ -44,6 +45,7 @@ flowchart TD
 
 
     GH_Enterprise -.->|GH_HasMember| GH_User
+    GH_EnterpriseManagedUser -.->|GH_MapsToUser| GH_User
     GH_User -->|GH_HasRole| GH_OrgRole
     GH_User -->|GH_HasRole| GH_TeamRole
     GH_User -->|GH_HasRole| GH_RepoRole

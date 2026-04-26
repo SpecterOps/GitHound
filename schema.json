@@ -31,6 +31,14 @@
       "color": "#FF8E40"
     },
     {
+      "name": "GH_EnterpriseManagedUser",
+      "display_name": "GitHub Enterprise Managed User",
+      "description": "An enterprise-managed GitHub account wrapper returned as EnterpriseUserAccount in enterprise member collection",
+      "is_display_kind": true,
+      "icon": "user-lock",
+      "color": "#F2C14E"
+    },
+    {
       "name": "GH_EnterpriseTeam",
       "display_name": "GitHub Enterprise Team",
       "description": "An enterprise-level team that can be assigned into one or more organizations and projected as organization teams",

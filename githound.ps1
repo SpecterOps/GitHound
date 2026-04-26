@@ -1388,6 +1388,7 @@ query EnterpriseMembers($slug: String!, $count: Int = 100, $after: String = null
         members(first: $count, after: $after) {
             edges {
                 node {
+                    __typename
                     ... on User {
                         id
                         databaseId
@@ -1400,6 +1401,9 @@ query EnterpriseMembers($slug: String!, $count: Int = 100, $after: String = null
                         id
                         login
                         name
+                        url
+                        createdAt
+                        updatedAt
                         user {
                             id
                             databaseId
@@ -1431,7 +1435,29 @@ query EnterpriseMembers($slug: String!, $count: Int = 100, $after: String = null
 
         foreach ($edge in @($result.data.enterprise.members.edges)) {
             $member = $edge.node
+            $isEnterpriseManagedUser = ($member.__typename -eq 'EnterpriseUserAccount')
             $user = if ($member.user) { $member.user } else { $member }
+
+            if ($isEnterpriseManagedUser) {
+                $emuProperties = @{
+                    name             = Normalize-Null $member.login
+                    node_id          = Normalize-Null $member.id
+                    environment_name = Normalize-Null $enterpriseSlug
+                    environmentid    = Normalize-Null $enterpriseNodeId
+                    login            = Normalize-Null $member.login
+                    full_name        = Normalize-Null $member.name
+                    url              = Normalize-Null $member.url
+                    created_at       = Normalize-Null $member.createdAt
+                    updated_at       = Normalize-Null $member.updatedAt
+                    github_user_id   = Normalize-Null $(if ($member.user) { $member.user.id } else { $null })
+                    github_username  = Normalize-Null $(if ($member.user) { $member.user.login } else { $null })
+                    query_enterprises = "MATCH p=(:GH_Enterprise)-[:GH_HasMember]->(:GH_EnterpriseManagedUser {node_id:'$($member.id)'}) RETURN p"
+                    query_mapped_user = "MATCH p=(:GH_EnterpriseManagedUser {node_id:'$($member.id)'})-[:GH_MapsToUser]->(:GH_User) RETURN p"
+                }
+
+                $null = $nodes.Add((New-GitHoundNode -Id $member.id -Kind 'GH_EnterpriseManagedUser' -Properties $emuProperties))
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasMember' -StartId $enterpriseNodeId -EndId $member.id -EndKind 'GH_EnterpriseManagedUser' -Properties @{ traversable = $false }))
+            }
 
             if (-not $user.id) {
                 Write-Warning "Git-HoundEnterpriseUser: Skipping member '$($member.login)' because no user id was returned."
@@ -1452,11 +1478,15 @@ query EnterpriseMembers($slug: String!, $count: Int = 100, $after: String = null
                 query_teams                  = "MATCH p=(:GH_User {node_id:'$($user.id)'})-[:GH_HasRole]->(t:GH_TeamRole)-[:GH_MemberOf*1..4]->(:GH_Team) RETURN p"
                 query_repositories           = "MATCH p=(t:GH_User {node_id:'$($user.id)'})-[:GH_HasRole|GH_HasBaseRole|GH_MemberOf*1..]->(:GH_RepoRole)-[:GH_ReadRepoContents|GH_WriteRepoContents|GH_WriteRepoPullRequests|GH_ManageWebhooks|GH_ManageDeployKeys|GH_PushProtectedBranch|GH_DeleteAlertsCodeScanning|GH_ViewSecretScanningAlerts|GH_RunOrgMigration|GH_BypassBranchProtection|GH_EditRepoProtections]->(:GH_Repository) RETURN p"
                 query_branches               = "MATCH p=(:GH_User {node_id:'$($user.id)'})-[r]->(:GH_BranchProtectionRule)-[:GH_ProtectedBy]->(:GH_Branch) RETURN p"
-                query_enterprises            = "MATCH p=(:GH_Enterprise)-[:GH_HasMember]->(:GH_User {node_id:'$($user.id)'}) RETURN p"
+                query_enterprises            = "MATCH p=(:GH_Enterprise)-[:GH_HasMember]->(:GH_User {node_id:'$($user.id)'}) RETURN p UNION MATCH p=(:GH_Enterprise)-[:GH_HasMember]->(:GH_EnterpriseManagedUser)-[:GH_MapsToUser]->(:GH_User {node_id:'$($user.id)'}) RETURN p"
             }
 
             $null = $nodes.Add((New-GitHoundNode -Id $user.id -Kind 'GH_User' -Properties $properties))
-            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasMember' -StartId $enterpriseNodeId -EndId $user.id -Properties @{ traversable = $false }))
+            if ($isEnterpriseManagedUser) {
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MapsToUser' -StartId $member.id -StartKind 'GH_EnterpriseManagedUser' -EndId $user.id -Properties @{ traversable = $false }))
+            } else {
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasMember' -StartId $enterpriseNodeId -EndId $user.id -Properties @{ traversable = $false }))
+            }
         }
 
         $Variables['after'] = $result.data.enterprise.members.pageInfo.endCursor
