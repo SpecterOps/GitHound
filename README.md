@@ -133,6 +133,15 @@ Enterprise team collection through `Git-HoundEnterpriseTeam` adds:
 - `GH_MemberOf` edges from enterprise teams to org-visible `ent:` `GH_Team` nodes using property matching
 - enterprise-team `members` roles and `GH_HasRole` edges from users to those roles
 
+Enterprise role collection through `Git-HoundEnterpriseRole` adds:
+
+- `GH_EnterpriseRole`
+- `GH_Contains` edges from the enterprise to those roles
+- `GH_HasRole` edges from directly assigned users and enterprise teams
+- a default `owners` role populated from `enterprise.ownerInfo.admins` when PAT-backed enterprise admin data is available
+
+For now, raw enterprise permission strings are preserved on the `GH_EnterpriseRole` node in its `permissions` property rather than being expanded into dedicated permission edges.
+
 Enterprise SCIM collection currently adds:
 
 - `SCIM_User`
