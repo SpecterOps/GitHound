@@ -22,6 +22,7 @@
 | ![GH_BranchProtectionRule](Icons/gh_branchprotectionrule.png) | [GH_BranchProtectionRule](NodeDescriptions/GH_BranchProtectionRule.md) | GitHub Branch Protection Rule |
 | ![GH_Enterprise](Icons/gh_enterprise.png) | [GH_Enterprise](NodeDescriptions/GH_Enterprise.md) | GitHub Enterprise |
 | ![GH_EnterpriseManagedUser](Icons/gh_enterprisemanageduser.png) | [GH_EnterpriseManagedUser](NodeDescriptions/GH_EnterpriseManagedUser.md) | GitHub Enterprise Managed User |
+| ![GH_EnterpriseRole](Icons/gh_enterpriserole.png) | [GH_EnterpriseRole](NodeDescriptions/GH_EnterpriseRole.md) | GitHub Enterprise Role |
 | ![GH_EnterpriseTeam](Icons/gh_enterpriseteam.png) | [GH_EnterpriseTeam](NodeDescriptions/GH_EnterpriseTeam.md) | GitHub Enterprise Team |
 | ![GH_Environment](Icons/gh_environment.png) | [GH_Environment](NodeDescriptions/GH_Environment.md) | GitHub Environment |
 | ![GH_EnvironmentSecret](Icons/gh_environmentsecret.png) | [GH_EnvironmentSecret](NodeDescriptions/GH_EnvironmentSecret.md) | GitHub Environment Secret |

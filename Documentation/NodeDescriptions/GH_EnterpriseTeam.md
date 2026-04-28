@@ -1,6 +1,6 @@
 # <img src="../Icons/gh_enterpriseteam.png" width="50"/> GH_EnterpriseTeam
 
-Represents a GitHub enterprise-level team. Enterprise teams are assigned into organizations from the enterprise layer and can map to organization-scoped `ent:` teams that then carry repository permissions.
+Represents a GitHub enterprise-level team. Enterprise teams are assigned into organizations from the enterprise layer, can be assigned enterprise roles directly, and can map to organization-scoped `ent:` teams that then carry repository permissions.
 
 Created by: `Git-HoundEnterpriseTeam`
 
@@ -21,7 +21,7 @@ Created by: `Git-HoundEnterpriseTeam`
 | created_at             | string    | When the enterprise team was created. |
 | updated_at             | string    | When the enterprise team was last updated. |
 
-Enterprise team membership is represented through a synthetic `GH_TeamRole` node (`members`) linked with `GH_MemberOf`. Organization assignment is represented with `GH_AssignedTo`, and the enterprise team is linked to org-visible `ent:` teams with a property-matched `GH_MemberOf` edge once those organization teams exist in the graph.
+Enterprise team membership is represented through a synthetic `GH_TeamRole` node (`members`) linked with `GH_MemberOf`. Organization assignment is represented with `GH_AssignedTo`, enterprise role assignment is represented with `GH_HasRole`, and the enterprise team is linked to org-visible `ent:` teams with a property-matched `GH_MemberOf` edge once those organization teams exist in the graph.
 
 When GitHub exposes a `group_id` on the enterprise team, GitHound can also tie the GitHub enterprise team model back to the shared SCIM schema by correlating `SCIM_Group` to `GH_EnterpriseTeam` with `SCIM_Provisioned`. That gives us a native bridge from SCIM-provisioned groups into the GitHub enterprise team model without relying on provider-specific assumptions.
 
@@ -34,11 +34,13 @@ flowchart TD
     GH_Organization[fa:fa-building GH_Organization]
     GH_Team[fa:fa-user-group GH_Team]
     GH_TeamRole[fa:fa-user-tie GH_TeamRole]
+    GH_EnterpriseRole[fa:fa-user-tie GH_EnterpriseRole]
     GH_User[fa:fa-user GH_User]
 
     GH_Enterprise -.->|GH_Contains| GH_EnterpriseTeam
     GH_EnterpriseTeam -.->|GH_AssignedTo| GH_Organization
     GH_TeamRole -->|GH_MemberOf| GH_EnterpriseTeam
+    GH_EnterpriseTeam -->|GH_HasRole| GH_EnterpriseRole
     GH_EnterpriseTeam -->|GH_MemberOf| GH_Team
     GH_User -->|GH_HasRole| GH_TeamRole
 ```

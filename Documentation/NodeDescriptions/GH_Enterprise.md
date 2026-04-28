@@ -26,7 +26,7 @@ Created by: `Git-HoundEnterprise`
 | security_contact_email| string    | The enterprise security contact email, when available.                                          |
 | viewer_is_admin       | boolean   | Whether the authenticated principal is an enterprise admin.                                     |
 
-Enterprise collection currently emits lightweight `GH_Organization` stub nodes for member organizations and links them with `GH_Contains`. Those organization nodes are intended to be enriched later by full organization collection. Enterprise user collection adds `GH_HasMember` edges from the enterprise to discovered `GH_User` nodes in traditional-account environments, and to `GH_EnterpriseManagedUser` nodes in enterprise-managed-user environments. Enterprise-managed users then map back to `GH_User` with `GH_MapsToUser`. Enterprise team collection adds `GH_EnterpriseTeam` nodes, links them with `GH_Contains`, and models organization assignment separately with `GH_AssignedTo`.
+Enterprise collection currently emits lightweight `GH_Organization` stub nodes for member organizations and links them with `GH_Contains`. Those organization nodes are intended to be enriched later by full organization collection. Enterprise user collection adds `GH_HasMember` edges from the enterprise to discovered `GH_User` nodes in traditional-account environments, and to `GH_EnterpriseManagedUser` nodes in enterprise-managed-user environments. Enterprise-managed users then map back to `GH_User` with `GH_MapsToUser`. Enterprise team collection adds `GH_EnterpriseTeam` nodes, links them with `GH_Contains`, and models organization assignment separately with `GH_AssignedTo`. Enterprise role collection adds `GH_EnterpriseRole` nodes, links them with `GH_Contains`, captures direct user and enterprise-team role assignments with `GH_HasRole`, and uses a default `owners` role to represent enterprise admins discovered through `ownerInfo.admins`.
 
 ## Diagram
 
@@ -35,12 +35,16 @@ flowchart TD
     GH_Enterprise[fa:fa-globe GH_Enterprise]
     GH_Organization[fa:fa-building GH_Organization]
     GH_EnterpriseTeam[fa:fa-users-between-lines GH_EnterpriseTeam]
+    GH_EnterpriseRole[fa:fa-user-tie GH_EnterpriseRole]
     GH_EnterpriseManagedUser[fa:fa-user-lock GH_EnterpriseManagedUser]
     GH_User[fa:fa-user GH_User]
 
     GH_Enterprise -.->|GH_Contains| GH_Organization
     GH_Enterprise -.->|GH_Contains| GH_EnterpriseTeam
+    GH_Enterprise -.->|GH_Contains| GH_EnterpriseRole
     GH_Enterprise -.->|GH_HasMember| GH_User
     GH_Enterprise -.->|GH_HasMember| GH_EnterpriseManagedUser
     GH_EnterpriseManagedUser -.->|GH_MapsToUser| GH_User
+    GH_User -->|GH_HasRole| GH_EnterpriseRole
+    GH_EnterpriseTeam -->|GH_HasRole| GH_EnterpriseRole
 ```
