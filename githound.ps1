@@ -1278,6 +1278,28 @@ function Get-GitHoundOktaGroupPropertyMatchers
     )
 }
 
+function Get-GitHoundAzureUserPropertyMatchers
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ObjectId,
+
+        [Parameter(Mandatory = $false)]
+        [string]$TenantId
+    )
+
+    $matchers = @(
+        (New-BHOGPropertyMatcher -Key 'objectid' -Value $ObjectId)
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($TenantId))
+    {
+        $matchers += (New-BHOGPropertyMatcher -Key 'tenantid' -Value $TenantId)
+    }
+
+    $matchers
+}
+
 function Resolve-GitHoundScimIdpCorrelations
 {
     [CmdletBinding()]
@@ -1297,21 +1319,29 @@ function Resolve-GitHoundScimIdpCorrelations
     }
 
     $contexts = @($samlProviderNodes | ForEach-Object { Get-GitHoundSamlProviderContext -SamlProviderNode $_ })
-    $oktaContexts = @($contexts | Where-Object { $_.IdpKind -eq 'okta' })
-    if (-not $oktaContexts) {
+    $supportedContexts = @($contexts | Where-Object { $_.IdpKind -in @('okta', 'azure') })
+    if (-not $supportedContexts) {
         return [PSCustomObject]@{ Nodes = @(); Edges = $edges }
     }
 
-    foreach ($context in $oktaContexts) {
+    foreach ($context in $supportedContexts) {
         if ($context.SupportsScimUsers) {
             foreach ($scimUser in @($ScimResult.Nodes | Where-Object { $_.kinds -contains 'SCIM_User' })) {
                 if (($scimUser.properties.enabled -eq $true) -and -not [string]::IsNullOrWhiteSpace($scimUser.properties.externalId)) {
-                    $null = $edges.Add((New-GitHoundEdge -Kind 'SCIM_Provisioned' -StartId $scimUser.properties.externalId -StartKind 'Okta_User' -EndId $scimUser.id -Properties @{ traversable = $true }))
+                    switch ($context.IdpKind) {
+                        'okta' {
+                            $null = $edges.Add((New-GitHoundEdge -Kind 'SCIM_Provisioned' -StartId $scimUser.properties.externalId -StartKind 'Okta_User' -EndId $scimUser.id -Properties @{ traversable = $true }))
+                        }
+                        'azure' {
+                            $azureUserMatchers = Get-GitHoundAzureUserPropertyMatchers -ObjectId $scimUser.properties.externalId -TenantId $context.ForeignEnvironmentId
+                            $null = $edges.Add((New-GitHoundEdge -Kind 'SCIM_Provisioned' -StartKind 'AZUser' -StartPropertyMatchers $azureUserMatchers -EndId $scimUser.id -Properties @{ traversable = $true }))
+                        }
+                    }
                 }
             }
         }
 
-        if ($context.SupportsScimGroups -and -not [string]::IsNullOrWhiteSpace($context.ForeignEnvironmentId)) {
+        if ($context.IdpKind -eq 'okta' -and $context.SupportsScimGroups -and -not [string]::IsNullOrWhiteSpace($context.ForeignEnvironmentId)) {
             foreach ($scimGroup in @($ScimResult.Nodes | Where-Object { $_.kinds -contains 'SCIM_Group' })) {
                 if (-not [string]::IsNullOrWhiteSpace($scimGroup.properties.externalId)) {
                     $oktaGroupMatchers = Get-GitHoundOktaGroupPropertyMatchers -Name $scimGroup.properties.externalId -OktaDomain $context.ForeignEnvironmentId
@@ -9658,25 +9688,35 @@ function Invoke-GitHound
     } | ConvertTo-Json -Depth 10 | Out-File -FilePath $consolidatedFile
     Write-Host "[+] Consolidated payload: $consolidatedFile ($($filteredNodes.Count) nodes, $($filteredEdges.Count) edges)"
 
-    $hexSamlPayload = Convert-GitHoundOutputWithIdMap -Nodes $filteredSamlNodes -Edges $filteredSamlEdges -IdMap $orgOutputIdMap
-    [PSCustomObject]@{
-        '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
-        graph = [PSCustomObject]@{
-            nodes = $hexSamlPayload.Nodes
-            edges = $hexSamlPayload.Edges
-        }
-    } | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_saml_$orgId.json")
-
-    if ($CollectAll) {
-        $hexScimPayload = Convert-GitHoundOutputWithIdMap -Nodes $filteredScimNodes -Edges $filteredScimEdges -IdMap $orgOutputIdMap
+    $orgSamlFilePath = Join-Path $CheckpointPath "githound_saml_$orgId.json"
+    if ($filteredSamlNodes.Count -gt 0 -or $filteredSamlEdges.Count -gt 0) {
+        $hexSamlPayload = Convert-GitHoundOutputWithIdMap -Nodes $filteredSamlNodes -Edges $filteredSamlEdges -IdMap $orgOutputIdMap
         [PSCustomObject]@{
             '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
             graph = [PSCustomObject]@{
-                nodes = $hexScimPayload.Nodes
-                edges = $hexScimPayload.Edges
+                nodes = $hexSamlPayload.Nodes
+                edges = $hexSamlPayload.Edges
             }
-        } | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_scim_$orgId.json")
-        Write-Host "[+] SCIM payload: githound_scim_$orgId.json ($($filteredScimNodes.Count) nodes, $($filteredScimEdges.Count) edges)"
+        } | ConvertTo-Json -Depth 10 | Out-File -FilePath $orgSamlFilePath
+    } elseif (Test-Path $orgSamlFilePath) {
+        Remove-Item $orgSamlFilePath -Force
+    }
+
+    if ($CollectAll) {
+        $orgScimFilePath = Join-Path $CheckpointPath "githound_scim_$orgId.json"
+        if ($filteredScimNodes.Count -gt 0 -or $filteredScimEdges.Count -gt 0) {
+            $hexScimPayload = Convert-GitHoundOutputWithIdMap -Nodes $filteredScimNodes -Edges $filteredScimEdges -IdMap $orgOutputIdMap
+            [PSCustomObject]@{
+                '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
+                graph = [PSCustomObject]@{
+                    nodes = $hexScimPayload.Nodes
+                    edges = $hexScimPayload.Edges
+                }
+            } | ConvertTo-Json -Depth 10 | Out-File -FilePath $orgScimFilePath
+            Write-Host "[+] SCIM payload: githound_scim_$orgId.json ($($filteredScimNodes.Count) nodes, $($filteredScimEdges.Count) edges)"
+        } elseif (Test-Path $orgScimFilePath) {
+            Remove-Item $orgScimFilePath -Force
+        }
     }
 
     if ($filteredOidcEdges.Count -gt 0) {
@@ -9990,26 +10030,36 @@ function Invoke-GitHoundEnterprise
     $enterpriseOutputIdMap = Get-GitHoundHexObjectIdMap -Nodes @($filteredNodes + $filteredEnterpriseSamlNodes + $scimNodes)
 
     if ($Session.HasPersonalAccessToken) {
+        $enterpriseSamlFilePath = Join-Path $CheckpointPath "githound_saml_$entId.json"
         $hexEnterpriseSamlPayload = Convert-GitHoundOutputWithIdMap -Nodes $filteredEnterpriseSamlNodes -Edges $filteredEnterpriseSamlEdges -IdMap $enterpriseOutputIdMap
-        $enterpriseSamlPayload = [PSCustomObject]@{
-            '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
-            graph = [PSCustomObject]@{
-                nodes = $hexEnterpriseSamlPayload.Nodes
-                edges = $hexEnterpriseSamlPayload.Edges
+        if ($filteredEnterpriseSamlNodes.Count -gt 0 -or $filteredEnterpriseSamlEdges.Count -gt 0) {
+            $enterpriseSamlPayload = [PSCustomObject]@{
+                '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
+                graph = [PSCustomObject]@{
+                    nodes = $hexEnterpriseSamlPayload.Nodes
+                    edges = $hexEnterpriseSamlPayload.Edges
+                }
             }
+            $enterpriseSamlPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath $enterpriseSamlFilePath
+        } elseif (Test-Path $enterpriseSamlFilePath) {
+            Remove-Item $enterpriseSamlFilePath -Force
         }
-        $enterpriseSamlPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_saml_$entId.json")
 
-        $hexEnterpriseScimPayload = Convert-GitHoundOutputWithIdMap -Nodes $scimNodes -Edges $scimEdges -IdMap $enterpriseOutputIdMap
-        $scimPayload = [PSCustomObject]@{
-            '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
-            graph = [PSCustomObject]@{
-                nodes = $hexEnterpriseScimPayload.Nodes
-                edges = $hexEnterpriseScimPayload.Edges
+        $enterpriseScimFilePath = Join-Path $CheckpointPath "githound_scim_$entId.json"
+        if ($scimNodes.Count -gt 0 -or $scimEdges.Count -gt 0) {
+            $hexEnterpriseScimPayload = Convert-GitHoundOutputWithIdMap -Nodes $scimNodes -Edges $scimEdges -IdMap $enterpriseOutputIdMap
+            $scimPayload = [PSCustomObject]@{
+                '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
+                graph = [PSCustomObject]@{
+                    nodes = $hexEnterpriseScimPayload.Nodes
+                    edges = $hexEnterpriseScimPayload.Edges
+                }
             }
+            $scimPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath $enterpriseScimFilePath
+            Write-Host "[+] SCIM payload: githound_scim_$entId.json ($($scimNodes.Count) nodes, $($scimEdges.Count) edges)"
+        } elseif (Test-Path $enterpriseScimFilePath) {
+            Remove-Item $enterpriseScimFilePath -Force
         }
-        $scimPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $CheckpointPath "githound_scim_$entId.json")
-        Write-Host "[+] SCIM payload: githound_scim_$entId.json ($($scimNodes.Count) nodes, $($scimEdges.Count) edges)"
     }
     $hexEnterprisePayload = Convert-GitHoundOutputWithIdMap -Nodes $filteredNodes -Edges $filteredEdges -IdMap $enterpriseOutputIdMap
     $enterprisePayload = [PSCustomObject]@{
