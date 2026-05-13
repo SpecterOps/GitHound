@@ -165,6 +165,16 @@ GitHound keeps the SCIM layer in its own sidecar output so these mappings remain
 - `githound_<entId>.json` contains enterprise GitHub-native data
 - `githound_scim_<entId>.json` contains SCIM-native nodes and SCIM bridge edges
 - `githound_saml_<entId>.json` contains SAML and external identity data
+- `githound_hybrid_<entId>.json` contains cross-model edges such as `SAML_Implements`, `SAML_HasAccount`, and `GH_SyncedTo`
+- `githound_saml_<entId>.json` also contains the normalized SAML topology for the GitHub service provider, including `SAML_TrustsIssuer` and `SAML_HasAssertionConsumerService`
+
+The native GitHub identity-provider model remains intact in the GitHub/SAML-native outputs:
+
+- `GH_ExternalIdentity`
+- `GH_HasExternalIdentity`
+- `GH_MapsToUser`
+
+The normalized SAML layer in `githound_hybrid_<entId>.json` now lands `SAML_HasAccount` directly on `GH_User`, while deriving `match_values` from the linked `GH_ExternalIdentity` SAML-facing properties such as `saml_identity_name_id` and `saml_identity_username`.
 
 The `GH_Organization` stubs emitted by enterprise collection are intentionally marked
 `collected = false`. They represent structural discovery from the enterprise context and are

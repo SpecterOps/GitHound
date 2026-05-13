@@ -1128,6 +1128,386 @@ function Convert-GitHoundOutputWithIdMap
     }
 }
 
+function Get-GitHoundSamlServiceProviderEntityId
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('Organization', 'Enterprise')]
+        [string]$Scope,
+
+        [Parameter(Mandatory = $true)]
+        [string]$EnvironmentName
+    )
+
+    switch ($Scope)
+    {
+        'Organization' { return "https://github.com/orgs/$EnvironmentName" }
+        'Enterprise'   { return "https://github.com/enterprises/$EnvironmentName" }
+    }
+}
+
+function Get-GitHoundSamlAssertionConsumerServiceUrls
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('Organization', 'Enterprise')]
+        [string]$Scope,
+
+        [Parameter(Mandatory = $true)]
+        [string]$EnvironmentName
+    )
+
+    switch ($Scope)
+    {
+        'Organization' { return @("https://github.com/orgs/$EnvironmentName/saml/consume") }
+        'Enterprise'   { return @("https://github.com/enterprises/$EnvironmentName/saml/consume") }
+    }
+}
+
+function Get-GitHoundSamlServiceProviderSsoUrl
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('Organization', 'Enterprise')]
+        [string]$Scope,
+
+        [Parameter(Mandatory = $true)]
+        [string]$EnvironmentName
+    )
+
+    switch ($Scope)
+    {
+        'Organization' { return "https://github.com/orgs/$EnvironmentName/sso" }
+        'Enterprise'   { return "https://github.com/enterprises/$EnvironmentName/sso" }
+    }
+}
+
+function Resolve-GitHoundNormalizedSamlServiceProviders
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [PSCustomObject]$SamlResult,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('Organization', 'Enterprise')]
+        [string]$Scope
+    )
+
+    $nodes = New-Object System.Collections.ArrayList
+    $edges = New-Object System.Collections.ArrayList
+    $seenNodeIds = @{}
+
+    foreach ($provider in @($SamlResult.Nodes | Where-Object { $_ -and $_.kinds -contains 'GH_SamlIdentityProvider' }))
+    {
+        $environmentName = [string]$provider.properties.environment_name
+        $environmentId = [string]$provider.properties.environmentid
+        $providerId = [string]$provider.id
+        $providerIssuer = [string]$provider.properties.issuer
+        $providerSsoUrl = [string]$provider.properties.sso_url
+
+        if ([string]::IsNullOrEmpty($providerId) -or [string]::IsNullOrEmpty($environmentName))
+        {
+            continue
+        }
+
+        $serviceProviderEntityId = Get-GitHoundSamlServiceProviderEntityId -Scope $Scope -EnvironmentName $environmentName
+        $assertionConsumerServiceUrls = Get-GitHoundSamlAssertionConsumerServiceUrls -Scope $Scope -EnvironmentName $environmentName
+        $serviceProviderSsoUrl = Get-GitHoundSamlServiceProviderSsoUrl -Scope $Scope -EnvironmentName $environmentName
+        $serviceProviderId = "saml-service-provider:gh_samlidentityprovider:$providerId"
+
+        $serviceProviderProps = [ordered]@{
+            name               = $environmentName
+            environmentid      = $environmentId
+            protocol           = 'SAML'
+            native_object_id   = $providerId
+            native_object_kind = 'GH_SamlIdentityProvider'
+            enabled            = $true
+            entity_id          = $serviceProviderEntityId
+            acs_urls           = $assertionConsumerServiceUrls
+            idp_entity_id      = $providerIssuer
+            idp_sso_url        = $providerSsoUrl
+            sso_url            = $serviceProviderSsoUrl
+        }
+
+        if (-not $seenNodeIds.ContainsKey($serviceProviderId))
+        {
+            $null = $nodes.Add((New-GitHoundNode -Id $serviceProviderId -Kind 'SAML_ServiceProvider' -Properties ([pscustomobject]$serviceProviderProps)))
+            $seenNodeIds[$serviceProviderId] = $true
+        }
+        $null = $edges.Add((New-GitHoundEdge -Kind 'SAML_Implements' -StartId $providerId -StartKind 'GH_SamlIdentityProvider' -EndId $serviceProviderId -EndKind 'SAML_ServiceProvider' -Properties @{ traversable = $false }))
+
+        foreach ($acsUrl in @($assertionConsumerServiceUrls | Where-Object { -not [string]::IsNullOrEmpty($_) }))
+        {
+            $acsNodeId = "saml-assertion-consumer-service:${serviceProviderEntityId}:${acsUrl}"
+            $acsProps = [ordered]@{
+                name         = $acsUrl
+                acs_url      = $acsUrl
+                sp_entity_id = $serviceProviderEntityId
+            }
+
+            if (-not $seenNodeIds.ContainsKey($acsNodeId))
+            {
+                $null = $nodes.Add((New-GitHoundNode -Id $acsNodeId -Kind 'SAML_AssertionConsumerService' -Properties ([pscustomobject]$acsProps)))
+                $seenNodeIds[$acsNodeId] = $true
+            }
+
+            $null = $edges.Add((New-GitHoundEdge -Kind 'SAML_HasAssertionConsumerService' -StartId $serviceProviderId -StartKind 'SAML_ServiceProvider' -EndId $acsNodeId -EndKind 'SAML_AssertionConsumerService' -Properties @{ traversable = $false }))
+        }
+
+        if (-not [string]::IsNullOrEmpty($providerIssuer))
+        {
+            $issuerId = "saml-issuer:$providerIssuer"
+            $issuerProps = [ordered]@{
+                name          = $providerIssuer
+                entity_id     = $providerIssuer
+                environmentid = $environmentId
+            }
+
+            if (-not $seenNodeIds.ContainsKey($issuerId))
+            {
+                $null = $nodes.Add((New-GitHoundNode -Id $issuerId -Kind 'SAML_Issuer' -Properties ([pscustomobject]$issuerProps)))
+                $seenNodeIds[$issuerId] = $true
+            }
+            $null = $edges.Add((New-GitHoundEdge -Kind 'SAML_TrustsIssuer' -StartId $serviceProviderId -StartKind 'SAML_ServiceProvider' -EndId $issuerId -EndKind 'SAML_Issuer' -Properties @{ traversable = $false }))
+        }
+    }
+
+    [PSCustomObject]@{
+        Nodes = $nodes
+        Edges = $edges
+    }
+}
+
+function Get-GitHoundNormalizedMatchValues
+{
+    param(
+        [Parameter(Mandatory = $false)]
+        [object[]]$Values
+    )
+
+    $normalizedValues = New-Object System.Collections.ArrayList
+    $seenValues = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+
+    foreach ($value in @($Values))
+    {
+        if ($null -eq $value)
+        {
+            continue
+        }
+
+        $trimmedValue = ([string]$value).Trim()
+        if ([string]::IsNullOrWhiteSpace($trimmedValue))
+        {
+            continue
+        }
+
+        if ($seenValues.Add($trimmedValue))
+        {
+            $null = $normalizedValues.Add($trimmedValue)
+        }
+    }
+
+    return @($normalizedValues)
+}
+
+function Get-GitHoundSamlExternalIdentityMatchValues
+{
+    param(
+        [Parameter(Mandatory = $false)]
+        [PSCustomObject]$ExternalIdentityNode
+    )
+
+    if ($null -eq $ExternalIdentityNode -or $null -eq $ExternalIdentityNode.properties)
+    {
+        return @()
+    }
+
+    return Get-GitHoundNormalizedMatchValues -Values @(
+        $ExternalIdentityNode.properties.saml_identity_name_id
+        $ExternalIdentityNode.properties.saml_identity_username
+    )
+}
+
+function Split-GitHoundSamlOutputs
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [PSCustomObject]$GitHubSamlResult,
+
+        [Parameter(Mandatory = $true)]
+        [PSCustomObject]$NormalizedSamlResult
+    )
+
+    $githubNodes = @($GitHubSamlResult.Nodes | Where-Object { $_ -and (@($_.kinds) | Where-Object { $_ -like 'GH_*' }) })
+    $samlNodes = @($NormalizedSamlResult.Nodes | Where-Object { $_ -and (@($_.kinds) | Where-Object { $_ -like 'SAML_*' }) })
+
+    $githubEdges = New-Object System.Collections.ArrayList
+    $hybridEdges = New-Object System.Collections.ArrayList
+    $samlEdges = New-Object System.Collections.ArrayList
+    $githubNodesById = @{}
+    $serviceProviderIdsByProviderId = @{}
+    $githubUserIdsByExternalIdentityId = @{}
+    $samlHasAccountEdgesByKey = @{}
+    $samlHasAccountEdgeKeys = New-Object System.Collections.ArrayList
+
+    foreach ($node in @($GitHubSamlResult.Nodes | Where-Object { $_ -ne $null -and -not [string]::IsNullOrWhiteSpace($_.id) }))
+    {
+        $githubNodesById[[string]$node.id] = $node
+    }
+
+    foreach ($edge in @($GitHubSamlResult.Edges | Where-Object { $_ -and [string]$_.kind -eq 'GH_MapsToUser' }))
+    {
+        $externalIdentityId = [string]$edge.start.value
+        $githubUserId = [string]$edge.end.value
+        $githubUserKind = [string]$edge.end.kind
+
+        if (
+            [string]::IsNullOrWhiteSpace($externalIdentityId) -or
+            [string]::IsNullOrWhiteSpace($githubUserId) -or
+            (-not [string]::IsNullOrWhiteSpace($githubUserKind) -and $githubUserKind -ne 'GH_User')
+        ) {
+            continue
+        }
+
+        if (-not $githubUserIdsByExternalIdentityId.ContainsKey($externalIdentityId))
+        {
+            $githubUserIdsByExternalIdentityId[$externalIdentityId] = New-Object System.Collections.ArrayList
+        }
+
+        if ($githubUserIdsByExternalIdentityId[$externalIdentityId] -notcontains $githubUserId)
+        {
+            $null = $githubUserIdsByExternalIdentityId[$externalIdentityId].Add($githubUserId)
+        }
+    }
+
+    $allEdges = @(@($GitHubSamlResult.Edges) + @($NormalizedSamlResult.Edges))
+    $allEdges = @($allEdges | Where-Object { $_ -ne $null })
+
+    foreach ($edge in $allEdges)
+    {
+        if ([string]$edge.kind -eq 'SAML_Implements')
+        {
+            $providerId = [string]$edge.start.value
+            $serviceProviderId = [string]$edge.end.value
+
+            if (-not [string]::IsNullOrWhiteSpace($providerId) -and -not [string]::IsNullOrWhiteSpace($serviceProviderId))
+            {
+                $serviceProviderIdsByProviderId[$providerId] = $serviceProviderId
+            }
+        }
+
+        switch ([string]$edge.kind)
+        {
+            'SAML_TrustsIssuer' {
+                $null = $samlEdges.Add($edge)
+                continue
+            }
+            'SAML_HasAssertionConsumerService' {
+                $null = $samlEdges.Add($edge)
+                continue
+            }
+            'SAML_Implements' {
+                $null = $hybridEdges.Add($edge)
+                continue
+            }
+            'GH_SyncedTo' {
+                $null = $hybridEdges.Add($edge)
+                continue
+            }
+            'GH_MapsToUser' {
+                $startKind = [string]$edge.start.kind
+                $endKind = [string]$edge.end.kind
+
+                if (
+                    ((-not [string]::IsNullOrEmpty($startKind)) -and -not $startKind.StartsWith('GH_')) -or
+                    ((-not [string]::IsNullOrEmpty($endKind)) -and -not $endKind.StartsWith('GH_'))
+                ) {
+                    $null = $hybridEdges.Add($edge)
+                }
+                else {
+                    $null = $githubEdges.Add($edge)
+                }
+                continue
+            }
+            default {
+                $null = $githubEdges.Add($edge)
+            }
+        }
+    }
+
+    foreach ($edge in @($GitHubSamlResult.Edges | Where-Object { $_ -and [string]$_.kind -eq 'GH_HasExternalIdentity' }))
+    {
+        $providerId = [string]$edge.start.value
+        $externalIdentityId = [string]$edge.end.value
+
+        if (
+            [string]::IsNullOrWhiteSpace($providerId) -or
+            [string]::IsNullOrWhiteSpace($externalIdentityId) -or
+            -not $serviceProviderIdsByProviderId.ContainsKey($providerId)
+        ) {
+            continue
+        }
+
+        $externalIdentityNode = if ($githubNodesById.ContainsKey($externalIdentityId)) { $githubNodesById[$externalIdentityId] } else { $null }
+        if (-not $githubUserIdsByExternalIdentityId.ContainsKey($externalIdentityId))
+        {
+            continue
+        }
+
+        $matchValues = Get-GitHoundSamlExternalIdentityMatchValues -ExternalIdentityNode $externalIdentityNode
+
+        foreach ($githubUserId in @($githubUserIdsByExternalIdentityId[$externalIdentityId]))
+        {
+            $edgeKey = "$($serviceProviderIdsByProviderId[$providerId])`n$githubUserId"
+
+            if (-not $samlHasAccountEdgesByKey.ContainsKey($edgeKey))
+            {
+                $samlHasAccountEdgesByKey[$edgeKey] = [PSCustomObject]@{
+                    ServiceProviderId = $serviceProviderIdsByProviderId[$providerId]
+                    GitHubUserId      = $githubUserId
+                    MatchValues       = @()
+                }
+                $null = $samlHasAccountEdgeKeys.Add($edgeKey)
+            }
+
+            $samlHasAccountEdgesByKey[$edgeKey].MatchValues = @(
+                Get-GitHoundNormalizedMatchValues -Values @(
+                    @($samlHasAccountEdgesByKey[$edgeKey].MatchValues) +
+                    @($matchValues)
+                )
+            )
+        }
+    }
+
+    foreach ($edgeKey in @($samlHasAccountEdgeKeys))
+    {
+        $samlHasAccountEdge = $samlHasAccountEdgesByKey[$edgeKey]
+        $edgeProperties = @{ traversable = $false }
+
+        if (@($samlHasAccountEdge.MatchValues).Count -gt 0)
+        {
+            $edgeProperties.match_values = @($samlHasAccountEdge.MatchValues)
+        }
+
+        $null = $hybridEdges.Add((New-GitHoundEdge `
+            -Kind 'SAML_HasAccount' `
+            -StartId $samlHasAccountEdge.ServiceProviderId `
+            -StartKind 'SAML_ServiceProvider' `
+            -EndId $samlHasAccountEdge.GitHubUserId `
+            -EndKind 'GH_User' `
+            -Properties $edgeProperties))
+    }
+
+    [PSCustomObject]@{
+        GitHubNodes  = $githubNodes
+        GitHubEdges  = @($githubEdges)
+        SamlNodes    = $samlNodes
+        SamlEdges    = @($samlEdges)
+        HybridNodes  = @()
+        HybridEdges  = @($hybridEdges)
+    }
+}
+
 function Get-GitHoundEnterpriseTeamNodeId
 {
     param(
@@ -9616,6 +9996,10 @@ function Invoke-GitHound
     $saml = Git-HoundGraphQlSamlProvider -Session $Session
     if($saml.nodes) { $samlNodes.AddRange(@($saml.nodes)) }
     if($saml.edges) { $samlEdges.AddRange(@($saml.edges)) }
+    $normalizedSaml = Resolve-GitHoundNormalizedSamlServiceProviders -SamlResult $saml -Scope Organization
+    $samlPartitions = Split-GitHoundSamlOutputs -GitHubSamlResult $saml -NormalizedSamlResult $normalizedSaml
+    if($samlPartitions.GitHubNodes) { $nodes.AddRange(@($samlPartitions.GitHubNodes)) }
+    if($samlPartitions.GitHubEdges) { $edges.AddRange(@($samlPartitions.GitHubEdges)) }
 
     $filteredScimNodes = @()
     $filteredScimEdges = @()
@@ -9670,9 +10054,11 @@ function Invoke-GitHound
         Write-Warning "Filtered out $nullNodes null node(s) and $nullEdges null edge(s) from payload"
     }
 
-    $filteredSamlNodes = @($samlNodes | Where-Object { $_ -ne $null })
-    $filteredSamlEdges = @($samlEdges | Where-Object { $_ -ne $null })
-    $orgOutputIdMap = Get-GitHoundHexObjectIdMap -Nodes @($filteredNodes + $filteredSamlNodes + $filteredScimNodes)
+    $filteredSamlNodes = @($samlPartitions.SamlNodes | Where-Object { $_ -ne $null })
+    $filteredSamlEdges = @($samlPartitions.SamlEdges | Where-Object { $_ -ne $null })
+    $filteredHybridNodes = @($samlPartitions.HybridNodes | Where-Object { $_ -ne $null })
+    $filteredHybridEdges = @($samlPartitions.HybridEdges | Where-Object { $_ -ne $null })
+    $orgOutputIdMap = Get-GitHoundHexObjectIdMap -Nodes @($filteredNodes + $filteredSamlNodes + $filteredScimNodes + $filteredHybridNodes)
 
     $consolidatedFile = Join-Path $CheckpointPath "githound_$orgId.json"
     $hexPayload = Convert-GitHoundOutputWithIdMap -Nodes $filteredNodes -Edges $filteredEdges -IdMap $orgOutputIdMap
@@ -9693,6 +10079,9 @@ function Invoke-GitHound
         $hexSamlPayload = Convert-GitHoundOutputWithIdMap -Nodes $filteredSamlNodes -Edges $filteredSamlEdges -IdMap $orgOutputIdMap
         [PSCustomObject]@{
             '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
+            metadata = [PSCustomObject]@{
+                source_kind = "SAML"
+            }
             graph = [PSCustomObject]@{
                 nodes = $hexSamlPayload.Nodes
                 edges = $hexSamlPayload.Edges
@@ -9700,6 +10089,20 @@ function Invoke-GitHound
         } | ConvertTo-Json -Depth 10 | Out-File -FilePath $orgSamlFilePath
     } elseif (Test-Path $orgSamlFilePath) {
         Remove-Item $orgSamlFilePath -Force
+    }
+
+    $orgHybridFilePath = Join-Path $CheckpointPath "githound_hybrid_$orgId.json"
+    if ($filteredHybridNodes.Count -gt 0 -or $filteredHybridEdges.Count -gt 0) {
+        $hexHybridPayload = Convert-GitHoundOutputWithIdMap -Nodes $filteredHybridNodes -Edges $filteredHybridEdges -IdMap $orgOutputIdMap
+        [PSCustomObject]@{
+            '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
+            graph = [PSCustomObject]@{
+                nodes = $hexHybridPayload.Nodes
+                edges = $hexHybridPayload.Edges
+            }
+        } | ConvertTo-Json -Depth 10 | Out-File -FilePath $orgHybridFilePath
+    } elseif (Test-Path $orgHybridFilePath) {
+        Remove-Item $orgHybridFilePath -Force
     }
 
     if ($CollectAll) {
@@ -10007,6 +10410,10 @@ function Invoke-GitHoundEnterprise
 
         $filteredEnterpriseSamlNodes = @($enterpriseSaml.Nodes | Where-Object { $_ -ne $null })
         $filteredEnterpriseSamlEdges = @($enterpriseSaml.Edges | Where-Object { $_ -ne $null })
+        $normalizedEnterpriseSaml = Resolve-GitHoundNormalizedSamlServiceProviders -SamlResult $enterpriseSaml -Scope Enterprise
+        $enterpriseSamlPartitions = Split-GitHoundSamlOutputs -GitHubSamlResult $enterpriseSaml -NormalizedSamlResult $normalizedEnterpriseSaml
+        if($enterpriseSamlPartitions.GitHubNodes) { $nodes.AddRange(@($enterpriseSamlPartitions.GitHubNodes)) }
+        if($enterpriseSamlPartitions.GitHubEdges) { $edges.AddRange(@($enterpriseSamlPartitions.GitHubEdges)) }
         $scimNodes = @(@($enterpriseScimUsers.Nodes) + @($enterpriseScimGroups.Nodes) | Where-Object { $_ -ne $null })
         $scimEdges = @(@($enterpriseScimUsers.Edges) + @($enterpriseScimGroups.Edges) | Where-Object { $_ -ne $null })
         $scimRaw = [PSCustomObject]@{
@@ -10020,6 +10427,12 @@ function Invoke-GitHoundEnterprise
     } else {
         $filteredEnterpriseSamlNodes = @()
         $filteredEnterpriseSamlEdges = @()
+        $enterpriseSamlPartitions = [PSCustomObject]@{
+            SamlNodes   = @()
+            SamlEdges   = @()
+            HybridNodes = @()
+            HybridEdges = @()
+        }
         $scimNodes = @()
         $scimEdges = @()
     }
@@ -10027,7 +10440,11 @@ function Invoke-GitHoundEnterprise
     # ── Enterprise Consolidation ─────────────────────────────────────────
     $filteredNodes = @($nodes | Where-Object { $_ -ne $null })
     $filteredEdges = @($edges | Where-Object { $_ -ne $null })
-    $enterpriseOutputIdMap = Get-GitHoundHexObjectIdMap -Nodes @($filteredNodes + $filteredEnterpriseSamlNodes + $scimNodes)
+    $filteredEnterpriseSamlNodes = @($enterpriseSamlPartitions.SamlNodes | Where-Object { $_ -ne $null })
+    $filteredEnterpriseSamlEdges = @($enterpriseSamlPartitions.SamlEdges | Where-Object { $_ -ne $null })
+    $filteredEnterpriseHybridNodes = @($enterpriseSamlPartitions.HybridNodes | Where-Object { $_ -ne $null })
+    $filteredEnterpriseHybridEdges = @($enterpriseSamlPartitions.HybridEdges | Where-Object { $_ -ne $null })
+    $enterpriseOutputIdMap = Get-GitHoundHexObjectIdMap -Nodes @($filteredNodes + $filteredEnterpriseSamlNodes + $scimNodes + $filteredEnterpriseHybridNodes)
 
     if ($Session.HasPersonalAccessToken) {
         $enterpriseSamlFilePath = Join-Path $CheckpointPath "githound_saml_$entId.json"
@@ -10035,6 +10452,9 @@ function Invoke-GitHoundEnterprise
         if ($filteredEnterpriseSamlNodes.Count -gt 0 -or $filteredEnterpriseSamlEdges.Count -gt 0) {
             $enterpriseSamlPayload = [PSCustomObject]@{
                 '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
+                metadata = [PSCustomObject]@{
+                    source_kind = "SAML"
+                }
                 graph = [PSCustomObject]@{
                     nodes = $hexEnterpriseSamlPayload.Nodes
                     edges = $hexEnterpriseSamlPayload.Edges
@@ -10043,6 +10463,21 @@ function Invoke-GitHoundEnterprise
             $enterpriseSamlPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath $enterpriseSamlFilePath
         } elseif (Test-Path $enterpriseSamlFilePath) {
             Remove-Item $enterpriseSamlFilePath -Force
+        }
+
+        $enterpriseHybridFilePath = Join-Path $CheckpointPath "githound_hybrid_$entId.json"
+        if ($filteredEnterpriseHybridNodes.Count -gt 0 -or $filteredEnterpriseHybridEdges.Count -gt 0) {
+            $hexEnterpriseHybridPayload = Convert-GitHoundOutputWithIdMap -Nodes $filteredEnterpriseHybridNodes -Edges $filteredEnterpriseHybridEdges -IdMap $enterpriseOutputIdMap
+            $enterpriseHybridPayload = [PSCustomObject]@{
+                '$schema' = "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json"
+                graph = [PSCustomObject]@{
+                    nodes = $hexEnterpriseHybridPayload.Nodes
+                    edges = $hexEnterpriseHybridPayload.Edges
+                }
+            }
+            $enterpriseHybridPayload | ConvertTo-Json -Depth 10 | Out-File -FilePath $enterpriseHybridFilePath
+        } elseif (Test-Path $enterpriseHybridFilePath) {
+            Remove-Item $enterpriseHybridFilePath -Force
         }
 
         $enterpriseScimFilePath = Join-Path $CheckpointPath "githound_scim_$entId.json"
