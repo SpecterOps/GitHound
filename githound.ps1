@@ -1106,7 +1106,16 @@ function Convert-GitHoundOutputWithIdMap
                     continue
                 }
 
-                $matcherPropertyName = $matcher.property_name
+                $matcherPropertyName = $null
+                if (Test-GitHoundMember -Object $matcher -Name 'property_name')
+                {
+                    $matcherPropertyName = $matcher.property_name
+                }
+                elseif (Test-GitHoundMember -Object $matcher -Name 'key')
+                {
+                    $matcherPropertyName = $matcher.key
+                }
+
                 $matcherValue = $matcher.value
 
                 if ([string]::IsNullOrEmpty($matcherPropertyName) -or [string]::IsNullOrEmpty($matcherValue))
@@ -1241,6 +1250,7 @@ function Resolve-GitHoundNormalizedSamlServiceProviders
             $acsNodeId = "saml-assertion-consumer-service:${serviceProviderEntityId}:${acsUrl}"
             $acsProps = [ordered]@{
                 name         = $acsUrl
+                environmentid = $environmentId
                 acs_url      = $acsUrl
                 sp_entity_id = $serviceProviderEntityId
             }
@@ -1325,7 +1335,33 @@ function Get-GitHoundSamlExternalIdentityMatchValues
     return Get-GitHoundNormalizedMatchValues -Values @(
         $ExternalIdentityNode.properties.saml_identity_name_id
         $ExternalIdentityNode.properties.saml_identity_username
+        $ExternalIdentityNode.properties.scim_identity_username
     )
+}
+
+# GitHub's enterprise externalIdentity.id can collide across distinct linked
+# users in EMU SAML output. Key GH_ExternalIdentity nodes and their mapping
+# edges by the stable per-record GUID instead, while retaining the GraphQL ID
+# as a diagnostic property for source-platform troubleshooting.
+function Get-GitHoundExternalIdentityNodeId
+{
+    param(
+        [Parameter(Mandatory = $false)]
+        [PSCustomObject]$Identity
+    )
+
+    if ($null -eq $Identity)
+    {
+        return $null
+    }
+
+    $guid = Normalize-Null $Identity.guid
+    if (-not [string]::IsNullOrWhiteSpace($guid))
+    {
+        return $guid
+    }
+
+    return Normalize-Null $Identity.id
 }
 
 function Split-GitHoundSamlOutputs
@@ -1482,19 +1518,25 @@ function Split-GitHoundSamlOutputs
     foreach ($edgeKey in @($samlHasAccountEdgeKeys))
     {
         $samlHasAccountEdge = $samlHasAccountEdgesByKey[$edgeKey]
-        $edgeProperties = @{ traversable = $false }
-
-        if (@($samlHasAccountEdge.MatchValues).Count -gt 0)
+        if (@($samlHasAccountEdge.MatchValues).Count -eq 0)
         {
-            $edgeProperties.match_values = @($samlHasAccountEdge.MatchValues)
+            continue
+        }
+
+        $edgeProperties = @{
+            traversable   = $false
+            account_state = 'unknown'
+            match_values  = @($samlHasAccountEdge.MatchValues)
         }
 
         $null = $hybridEdges.Add((New-GitHoundEdge `
             -Kind 'SAML_HasAccount' `
             -StartId $samlHasAccountEdge.ServiceProviderId `
             -StartKind 'SAML_ServiceProvider' `
-            -EndId $samlHasAccountEdge.GitHubUserId `
             -EndKind 'GH_User' `
+            -EndPropertyMatchers @(
+                (New-BHOGPropertyMatcher -Key 'node_id' -Value $samlHasAccountEdge.GitHubUserId)
+            ) `
             -Properties $edgeProperties))
     }
 
@@ -2677,8 +2719,15 @@ query EnterpriseSAML($slug: String!, $count: Int = 100, $after: String = null) {
         }
 
         foreach ($identity in @($samlProvider.externalIdentities.nodes)) {
+            $externalIdentityNodeId = Get-GitHoundExternalIdentityNodeId -Identity $identity
+            if ([string]::IsNullOrWhiteSpace($externalIdentityNodeId))
+            {
+                continue
+            }
+
             $EIprops = [pscustomobject]@{
-                node_id                   = Normalize-Null $identity.id
+                node_id                   = Normalize-Null $externalIdentityNodeId
+                github_external_identity_id = Normalize-Null $identity.id
                 name                      = Normalize-Null $identity.guid
                 guid                      = Normalize-Null $identity.guid
                 environmentid             = Normalize-Null $enterprise.id
@@ -2692,26 +2741,26 @@ query EnterpriseSAML($slug: String!, $count: Int = 100, $after: String = null) {
                 scim_identity_username    = Normalize-Null $identity.scimIdentity.username
                 github_username           = Normalize-Null $(if ($identity.user) { $identity.user.login } else { $null })
                 github_user_id            = Normalize-Null $(if ($identity.user) { $identity.user.id } else { $null })
-                query_mapped_users        = "MATCH p=(:GH_ExternalIdentity {objectid: '$($identity.id.ToUpper())'})-[:GH_MapsToUser]->() RETURN p"
+                query_mapped_users        = "MATCH p=(:GH_ExternalIdentity {objectid: '$($externalIdentityNodeId.ToUpper())'})-[:GH_MapsToUser]->() RETURN p"
             }
 
-            $null = $nodes.Add((New-GitHoundNode -Id $identity.id -Kind 'GH_ExternalIdentity' -Properties $EIprops))
-            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasExternalIdentity' -StartId $samlProvider.id -EndId $identity.id -Properties @{ traversable = $false }))
+            $null = $nodes.Add((New-GitHoundNode -Id $externalIdentityNodeId -Kind 'GH_ExternalIdentity' -Properties $EIprops))
+            $null = $edges.Add((New-GitHoundEdge -Kind 'GH_HasExternalIdentity' -StartId $samlProvider.id -EndId $externalIdentityNodeId -Properties @{ traversable = $false }))
 
             $foreignUsername = if ($identity.samlIdentity.username) { $identity.samlIdentity.username } elseif ($identity.scimIdentity.username) { $identity.scimIdentity.username } else { $null }
             $foreignUserMatchers = Get-GitHoundForeignUserPropertyMatchers -ForeignUserNodeKind $ForeignUserNodeKind -Username $foreignUsername -ForeignEnvironmentId $ForeignEnvironmentId
 
             if ($foreignUsername -and $ForeignUserNodeKind) {
                 if ($foreignUserMatchers) {
-                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MapsToUser' -StartId $identity.id -EndKind $ForeignUserNodeKind -EndPropertyMatchers $foreignUserMatchers -Properties @{ traversable = $false }))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MapsToUser' -StartId $externalIdentityNodeId -EndKind $ForeignUserNodeKind -EndPropertyMatchers $foreignUserMatchers -Properties @{ traversable = $false }))
                 }
                 else {
-                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MapsToUser' -StartId $identity.id -EndId $foreignUsername -EndKind $ForeignUserNodeKind -EndMatchBy 'name' -Properties @{ traversable = $false }))
+                    $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MapsToUser' -StartId $externalIdentityNodeId -EndId $foreignUsername -EndKind $ForeignUserNodeKind -EndMatchBy 'name' -Properties @{ traversable = $false }))
                 }
             }
 
             if ($identity.user -ne $null -and $identity.user.id -ne $null) {
-                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MapsToUser' -StartId $identity.id -EndId $identity.user.id -Properties @{ traversable = $false }))
+                $null = $edges.Add((New-GitHoundEdge -Kind 'GH_MapsToUser' -StartId $externalIdentityNodeId -EndId $identity.user.id -Properties @{ traversable = $false }))
 
                 $matchUsername = if ($identity.samlIdentity.username) { $identity.samlIdentity.username } elseif ($identity.scimIdentity.username) { $identity.scimIdentity.username } else { $null }
                 if ($ForeignUserNodeKind -and $matchUsername) {
@@ -9503,9 +9552,16 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                 # Create GH_ExternalIdentity Node and Connect it to GH_SamlIdentityProvider Node via GH_HasExternalIdentity Edge
                 # We may discover in the future that we need to capture more properties from the external identity
 
+                $externalIdentityNodeId = Get-GitHoundExternalIdentityNodeId -Identity $identity
+                if ([string]::IsNullOrWhiteSpace($externalIdentityNodeId))
+                {
+                    continue
+                }
+
                 $EIprops = [pscustomobject]@{
                     # Common Properties
-                    node_id                   = Normalize-Null $identity.id
+                    node_id                   = Normalize-Null $externalIdentityNodeId
+                    github_external_identity_id = Normalize-Null $identity.id
                     name                      = Normalize-Null $identity.guid
                     guid                      = Normalize-Null $identity.guid
                     # Relational Properties
@@ -9522,11 +9578,11 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                     github_username           = Normalize-Null $(if ($identity.user) { $identity.user.login } else { $null })
                     github_user_id            = Normalize-Null $(if ($identity.user) { $identity.user.id } else { $null })
                     # Accordion Panel Queries
-                    query_mapped_users = "MATCH p=(:GH_ExternalIdentity {objectid: '$($identity.id.ToUpper())'})-[:GH_MapsToUser]->() RETURN p"
+                    query_mapped_users = "MATCH p=(:GH_ExternalIdentity {objectid: '$($externalIdentityNodeId.ToUpper())'})-[:GH_MapsToUser]->() RETURN p"
                 }
 
-                $null = $nodes.Add((New-GitHoundNode -Id $identity.id -Kind 'GH_ExternalIdentity' -Properties $EIprops))
-                $null = $edges.Add((New-GitHoundEdge -Kind GH_HasExternalIdentity -StartId $result.data.organization.samlIdentityProvider.id -EndId $identity.id -Properties @{traversable=$false}))
+                $null = $nodes.Add((New-GitHoundNode -Id $externalIdentityNodeId -Kind 'GH_ExternalIdentity' -Properties $EIprops))
+                $null = $edges.Add((New-GitHoundEdge -Kind GH_HasExternalIdentity -StartId $result.data.organization.samlIdentityProvider.id -EndId $externalIdentityNodeId -Properties @{traversable=$false}))
                 
                 $foreignUsername = if($identity.samlIdentity.username) { $identity.samlIdentity.username } elseif($identity.scimIdentity.username) { $identity.scimIdentity.username } else { $null }
                 $foreignUserMatchers = Get-GitHoundForeignUserPropertyMatchers -ForeignUserNodeKind $ForeignUserNodeKind -Username $foreignUsername -ForeignEnvironmentId $ForeignEnvironmentId
@@ -9535,17 +9591,17 @@ query SAML($login: String!, $count: Int = 100, $after: String = null) {
                 {
                     if($foreignUserMatchers)
                     {
-                        $null = $edges.Add((New-GitHoundEdge -Kind GH_MapsToUser -StartId $identity.id -EndKind $ForeignUserNodeKind -EndPropertyMatchers $foreignUserMatchers -Properties @{traversable=$false}))
+                        $null = $edges.Add((New-GitHoundEdge -Kind GH_MapsToUser -StartId $externalIdentityNodeId -EndKind $ForeignUserNodeKind -EndPropertyMatchers $foreignUserMatchers -Properties @{traversable=$false}))
                     }
                     else
                     {
-                        $null = $edges.Add((New-GitHoundEdge -Kind GH_MapsToUser -StartId $identity.id -EndId $foreignUsername -EndKind $ForeignUserNodeKind -EndMatchBy name -Properties @{traversable=$false}))
+                        $null = $edges.Add((New-GitHoundEdge -Kind GH_MapsToUser -StartId $externalIdentityNodeId -EndId $foreignUsername -EndKind $ForeignUserNodeKind -EndMatchBy name -Properties @{traversable=$false}))
                     }
                 }
 
                 if($identity.user -ne $null -and $identity.user.id -ne $null)
                 {
-                    $null = $edges.Add((New-GitHoundEdge -Kind GH_MapsToUser -StartId $identity.id -EndId $identity.user.id -Properties @{traversable=$false}))
+                    $null = $edges.Add((New-GitHoundEdge -Kind GH_MapsToUser -StartId $externalIdentityNodeId -EndId $identity.user.id -Properties @{traversable=$false}))
                     
                     # Create GH_SyncedTo Edge from Foreign Identity to GH_User
                     # This might need to be something that happens during post-processing since we do not control whether the foreign user node already exists in the graph

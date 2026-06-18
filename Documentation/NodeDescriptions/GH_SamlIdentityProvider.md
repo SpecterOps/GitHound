@@ -4,7 +4,7 @@ Represents a SAML identity provider configured for either an organization or an 
 
 In GitHound's SAML and hybrid outputs, this GitHub-native node is also normalized into the shared SAML model through `GH_SamlIdentityProvider -[:SAML_Implements]-> SAML_ServiceProvider`. That normalized `SAML_ServiceProvider` carries the GitHub SP entity ID, ACS URLs, issuer trust, and SSO URL while preserving `GH_SamlIdentityProvider` as the native source record.
 
-From there, GitHound emits `SAML_ServiceProvider -[:SAML_HasAssertionConsumerService]-> SAML_AssertionConsumerService` for the GitHub ACS endpoints and `SAML_ServiceProvider -[:SAML_TrustsIssuer]-> SAML_Issuer` for the upstream IdP issuer value collected from the native provider.
+From there, GitHound emits `SAML_ServiceProvider -[:SAML_HasAssertionConsumerService]-> SAML_AssertionConsumerService` for the GitHub ACS endpoints and `SAML_ServiceProvider -[:SAML_TrustsIssuer]-> SAML_Issuer` for the upstream IdP issuer value collected from the native provider. The normalized SAML nodes all carry the GitHub organization or enterprise `environmentid`; GitHub ACS and SP entity strings are constructed from the documented GitHub route convention because the API does not return them directly.
 
 Created by: `Git-HoundGraphQlSamlProvider`, `Git-HoundEnterpriseSamlProvider`
 

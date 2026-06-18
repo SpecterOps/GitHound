@@ -1,0 +1,76 @@
+{
+  "$schema": "https://raw.githubusercontent.com/MichaelGrafnetter/EntraAuthPolicyHound/refs/heads/main/bloodhound-opengraph.schema.json",
+  "graph": {
+    "nodes": [],
+    "edges": [
+      {
+        "kind": "GH_MapsToUser",
+        "start": {
+          "value": "45495f6c41484f436f56324f6332574673344362474e64"
+        },
+        "end": {
+          "kind": "Okta_User",
+          "value": "jatkinson@specterops.io",
+          "match_by": "name"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "GH_SyncedTo",
+        "start": {
+          "kind": "Okta_User",
+          "value": "jatkinson@specterops.io",
+          "match_by": "name"
+        },
+        "end": {
+          "value": "MDQ6VXNlcjEzMjc4MjEw"
+        },
+        "properties": {
+          "composition": "MATCH p=()<-[:GH_SyncedToEnvironment]-(:GH_SamlIdentityProvider)-[:GH_HasExternalIdentity]->(:GH_ExternalIdentity)-[:GH_MapsToUser]->(n) WHERE n.objectid = 'MDQ6VXNLCJEZMJC4MJEW' OR n.name = 'JATKINSON@SPECTEROPS.IO' RETURN p",
+          "traversable": true
+        }
+      },
+      {
+        "kind": "SAML_Implements",
+        "start": {
+          "value": "4f49505f6b77444f436f56324f6332574667",
+          "kind": "GH_SamlIdentityProvider"
+        },
+        "end": {
+          "value": "saml-service-provider:gh_samlidentityprovider:OIP_kwDOCoV2Oc2WFg",
+          "kind": "SAML_ServiceProvider"
+        },
+        "properties": {
+          "traversable": false
+        }
+      },
+      {
+        "kind": "SAML_HasAccount",
+        "start": {
+          "value": "saml-service-provider:gh_samlidentityprovider:OIP_kwDOCoV2Oc2WFg",
+          "kind": "SAML_ServiceProvider"
+        },
+        "end": {
+          "kind": "GH_User",
+          "property_matchers": [
+            {
+              "key": "node_id",
+              "operator": "equals",
+              "value": "MDQ6VXNlcjEzMjc4MjEw"
+            }
+          ],
+          "match_by": "property"
+        },
+        "properties": {
+          "traversable": false,
+          "match_values": [
+            "jatkinson@specterops.io"
+          ],
+          "account_state": "unknown"
+        }
+      }
+    ]
+  }
+}

@@ -2,7 +2,9 @@
 
 Represents an external identity from a SAML or SCIM identity provider that is linked to a GitHub user. External identities map corporate user accounts (from providers like Okta, Azure AD, etc.) to GitHub user accounts, enabling single sign-on authentication. Each external identity can have both SAML and SCIM identity attributes and may be scoped to either an organization or an enterprise SAML provider. SCIM collectors can also correlate `SCIM_User` records to this node via `SCIM_Provisioned`.
 
-In the hybrid SAML output, GitHound uses this node as the correlation point for deriving `SAML_HasAccount`. Concretely, when `GH_SamlIdentityProvider -[:GH_HasExternalIdentity]-> GH_ExternalIdentity -[:GH_MapsToUser]-> GH_User` is present and the provider has been normalized with `SAML_Implements`, GitHound emits `SAML_ServiceProvider -[:SAML_HasAccount]-> GH_User`. The `match_values` on that edge come from SAML-facing properties on this node such as `saml_identity_name_id` and `saml_identity_username`.
+In the hybrid SAML output, GitHound uses this node as the correlation point for deriving `SAML_HasAccount`. Concretely, when `GH_SamlIdentityProvider -[:GH_HasExternalIdentity]-> GH_ExternalIdentity -[:GH_MapsToUser]-> GH_User` is present and the provider has been normalized with `SAML_Implements`, GitHound emits `SAML_ServiceProvider -[:SAML_HasAccount]-> GH_User`. The `match_values` on that edge come from SAML and SCIM-facing properties on this node such as `saml_identity_name_id`, `saml_identity_username`, and `scim_identity_username`; `account_state` is `unknown` when GitHub does not expose a stronger lifecycle state.
+
+GitHound keys this node by the external identity `guid` when GitHub returns one. The GitHub GraphQL `externalIdentity.id` is retained as `github_external_identity_id` for diagnostics because it is not unique enough to use as the OpenGraph object identifier in enterprise SAML collections.
 
 Created by: `Git-HoundGraphQlSamlProvider`, `Git-HoundEnterpriseSamlProvider`
 
@@ -12,9 +14,10 @@ Correlated by: `Git-HoundScimUser`, `Git-HoundEnterpriseScimUser`
 
 | Property Name             | Data Type | Description                                              |
 | ------------------------- | --------- | -------------------------------------------------------- |
-| objectid                  | string    | The GraphQL ID of the external identity.                 |
-| node_id                   | string    | The GraphQL ID of the external identity.                 |
-| name                      | string    | Same as objectid.                                        |
+| objectid                  | string    | Stable OpenGraph object identifier, using the external identity GUID when available. |
+| node_id                   | string    | Same as objectid.                                        |
+| github_external_identity_id | string    | The GitHub GraphQL ID of the external identity.          |
+| name                      | string    | The GUID of the external identity when available.        |
 | guid                      | string    | The GUID of the external identity.                       |
 | environmentid             | string    | The GraphQL ID of the environment where the identity was collected (GitHub organization or enterprise). |
 | environment_name          | string    | The name of the environment where the identity was collected (GitHub organization or enterprise). |

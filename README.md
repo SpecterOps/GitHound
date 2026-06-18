@@ -164,9 +164,10 @@ GitHound keeps the SCIM layer in its own sidecar output so these mappings remain
 
 - `githound_<entId>.json` contains enterprise GitHub-native data
 - `githound_scim_<entId>.json` contains SCIM-native nodes and SCIM bridge edges
-- `githound_saml_<entId>.json` contains SAML and external identity data
+- `githound_saml_<entId>.json` contains the normalized SAML service-provider topology: `SAML_ServiceProvider`, `SAML_Issuer`, `SAML_AssertionConsumerService`, `SAML_TrustsIssuer`, and `SAML_HasAssertionConsumerService`
 - `githound_hybrid_<entId>.json` contains cross-model edges such as `SAML_Implements`, `SAML_HasAccount`, and `GH_SyncedTo`
-- `githound_saml_<entId>.json` also contains the normalized SAML topology for the GitHub service provider, including `SAML_TrustsIssuer` and `SAML_HasAssertionConsumerService`
+
+For `openhound_saml` correlation, upload or otherwise stage both `githound_saml_<entId>.json` and `githound_hybrid_<entId>.json`. The SAML sidecar carries the issuer and ACS route facts; the hybrid sidecar carries the native-provider implementation edge and `SAML_HasAccount` account facts needed for sign-in derivation. In Enterprise Managed User tenants, organization-level SAML files can be empty by design because the SAML provider and external identities are enterprise-scoped.
 
 The native GitHub identity-provider model remains intact in the GitHub/SAML-native outputs:
 
@@ -174,7 +175,24 @@ The native GitHub identity-provider model remains intact in the GitHub/SAML-nati
 - `GH_HasExternalIdentity`
 - `GH_MapsToUser`
 
-The normalized SAML layer in `githound_hybrid_<entId>.json` now lands `SAML_HasAccount` directly on `GH_User`, while deriving `match_values` from the linked `GH_ExternalIdentity` SAML-facing properties such as `saml_identity_name_id` and `saml_identity_username`.
+The normalized SAML layer in `githound_hybrid_<entId>.json` now lands `SAML_HasAccount` directly on `GH_User`, while deriving `match_values` from the linked `GH_ExternalIdentity` SAML-facing properties such as `saml_identity_name_id`, `saml_identity_username`, and `scim_identity_username`. GitHound sets `account_state = "unknown"` when GitHub does not expose a stronger account lifecycle state for the mapped user.
+
+A temporary Enterprise EMU run for OpenHound SAML validation should use a PAT-backed enterprise session and preserve all three sidecars:
+
+```powershell
+. ./githound.ps1
+
+$session = New-GitHubJwtSession `
+  -EnterpriseName "k-nexus-global" `
+  -ClientId $clientId `
+  -PrivateKeyPath $privateKeyPath `
+  -InstallationId $installationId `
+  -PersonalAccessToken $pat
+
+Invoke-GitHoundEnterprise -Session $session -CheckpointPath "./output/k-nexus-global" -EnterpriseOnly -CollectAll
+```
+
+If `-PersonalAccessToken` is omitted, enterprise SCIM and enterprise SAML collection are skipped and the resulting output is partial coverage for SAML correlation.
 
 The `GH_Organization` stubs emitted by enterprise collection are intentionally marked
 `collected = false`. They represent structural discovery from the enterprise context and are
