@@ -23,7 +23,7 @@ With GitHound, you get a clear, interactive graph of your GitHub permissions lan
 
 ## Documentation
 
-For detailed documentation, see [BloodHound Docs - GitHound](https://bloodhound.specterops.io/opengraph/extensions/githound).
+For detailed documentation, see [BloodHound Docs - GitHound](https://bloodhound.specterops.io/opengraph/extensions/github/schema).
 
 ## Quick Start
 
