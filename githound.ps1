@@ -6,7 +6,10 @@ function Get-GitHoundFunctionBundle {
         'Normalize-Null',
         'New-GitHoundNode',
         'New-GitHoundEdge',
+        'New-GithubSession',
         'Invoke-GithubRestMethod',
+        'Test-GitHubSessionTokenNeedsRefresh',
+        'Update-GitHubSessionToken',
         'Get-GitHoundRestErrorInfo',
         'Write-GitHoundRestSkipWarning',
         'Wait-GithubRestRateLimit',
@@ -76,7 +79,10 @@ function New-GithubSession {
 
         [Parameter(Mandatory = $false)]
         [string]
-        $PrivateKeyPath
+        $PrivateKeyPath,
+
+        [Parameter(Mandatory = $false)]
+        $TokenExpiresAt
     )
 
     if($Headers['Accept']) {
@@ -120,6 +126,7 @@ function New-GithubSession {
         PrivateKeyPath = $PrivateKeyPath
         HasPersonalAccessToken = ($null -ne $PatHeaders)
         TargetType = if ($EnterpriseName) { 'Enterprise' } elseif ($OrganizationName) { 'Organization' } else { 'Application' }
+        TokenExpiresAt = $TokenExpiresAt
     }
 }
 
@@ -221,9 +228,74 @@ function New-GitHubJwtSession
         -PatHeaders $patHeaders `
         -ClientId $ClientId `
         -InstallationId $InstallationId `
-        -PrivateKeyPath $PrivateKeyPath
-    
+        -PrivateKeyPath $PrivateKeyPath `
+        -TokenExpiresAt ([System.DateTimeOffset]::Parse($result.expires_at))
+
     Write-Output $session
+}
+
+function Test-GitHubSessionTokenNeedsRefresh {
+    param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session
+    )
+
+    # Only applicable to JWT-based sessions
+    if (-not $Session.ClientId) {
+        return $false
+    }
+
+    if (-not $Session.TokenExpiresAt) {
+        return $false
+    }
+
+    # Refresh if token expires within the next 10 minutes
+    $refreshThreshold = [System.DateTimeOffset]::UtcNow.AddMinutes(10)
+    return $Session.TokenExpiresAt -le $refreshThreshold
+}
+
+function Update-GitHubSessionToken {
+    param(
+        [Parameter(Position = 0, Mandatory = $true)]
+        [PSTypeName('GitHound.Session')]
+        $Session
+    )
+
+    if (-not $Session.ClientId) {
+        throw "Cannot refresh token: session was not created with GitHub App JWT credentials"
+    }
+
+    Write-Host "Refreshing GitHub App installation token..."
+
+    # Generate a new JWT
+    $header = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject @{
+        alg = "RS256"
+        typ = "JWT"
+    }))).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+
+    $payload = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject @{
+        iat = [System.DateTimeOffset]::UtcNow.AddSeconds(-10).ToUnixTimeSeconds()
+        exp = [System.DateTimeOffset]::UtcNow.AddMinutes(10).ToUnixTimeSeconds()
+        iss = $Session.ClientId
+    }))).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+
+    $rsa = [System.Security.Cryptography.RSA]::Create()
+    $rsa.ImportFromPem((Get-Content $Session.PrivateKeyPath -Raw))
+
+    $signature = [Convert]::ToBase64String($rsa.SignData([System.Text.Encoding]::UTF8.GetBytes("$header.$payload"), [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+
+    $jwt = "$header.$payload.$signature"
+
+    # Exchange JWT for a new installation access token using a temporary session
+    $jwtsession = New-GithubSession -Token $jwt
+    $result = Invoke-GithubRestMethod -Session $jwtsession -Path "app/installations/$($Session.InstallationId)/access_tokens" -Method POST
+
+    # Update the existing session in-place
+    $Session.Headers['Authorization'] = "Bearer $($result.token)"
+    $Session.TokenExpiresAt = [System.DateTimeOffset]::Parse($result.expires_at)
+
+    Write-Host "GitHub App installation token refreshed. New expiry: $($Session.TokenExpiresAt)"
 }
 
 function Get-GitHubAppInstallation
@@ -405,9 +477,15 @@ function Invoke-GithubRestMethod {
     $LinkHeader = $Null;
     try {
         do {
+            # Proactively refresh token if nearing expiry
+            if (Test-GitHubSessionTokenNeedsRefresh -Session $Session) {
+                Update-GitHubSessionToken -Session $Session
+            }
+
             $requestSuccessful = $false
             $retryCount = 0
-            
+            $tokenRefreshed = $false
+
             while (-not $requestSuccessful -and $retryCount -lt 3) {
                 try {
                     if($LinkHeader) {
@@ -426,14 +504,21 @@ function Invoke-GithubRestMethod {
                         Wait-GithubRestRateLimit -Session $Session
                         $retryCount++
                     }
+                    elseif ($errorInfo.Status -eq "401" -and -not $tokenRefreshed -and $Session.ClientId) {
+                        Write-Warning "Received 401 Unauthorized. Attempting token refresh..."
+                        Update-GitHubSessionToken -Session $Session
+                        $Headers = $Session.Headers
+                        $tokenRefreshed = $true
+                        $retryCount++
+                    }
                     else {
                         throw $_
                     }
                 }
             }
-            
+
             if (-not $requestSuccessful) {
-                throw "Failed after 3 retry attempts due to rate limiting"
+                throw "Failed after 3 retry attempts due to rate limiting or authentication failure"
             }
 
             
@@ -483,6 +568,11 @@ function Invoke-GitHubGraphQL
         $Variables
     )
 
+    # Proactively refresh token if nearing expiry
+    if (Test-GitHubSessionTokenNeedsRefresh -Session $Session) {
+        Update-GitHubSessionToken -Session $Session
+    }
+
     if (-not $Headers) {
         $Headers = $Session.Headers
     }
@@ -501,6 +591,7 @@ function Invoke-GitHubGraphQL
     $requestSuccessful = $false
     $retryCount = 0
     $maxRetries = 5
+    $tokenRefreshed = $false
 
     while (-not $requestSuccessful -and $retryCount -lt $maxRetries) {
         try {
@@ -510,12 +601,16 @@ function Invoke-GitHubGraphQL
         catch {
             $isRateLimit = $false
             $isRetryable = $false
+            $isUnauthorized = $false
             $errorString = "$($_.Exception.Message) $($_.ErrorDetails)"
 
             try {
                 $httpException = $_.ErrorDetails | ConvertFrom-Json
                 if (($httpException.status -eq "403" -and $httpException.message -match "rate limit") -or $httpException.status -eq "429") {
                     $isRateLimit = $true
+                }
+                if ($httpException.status -eq "401") {
+                    $isUnauthorized = $true
                 }
                 if ($httpException.message -match "couldn.t respond.*in time" -or $httpException.message -match "timeout") {
                     $isRetryable = $true
@@ -526,16 +621,26 @@ function Invoke-GitHubGraphQL
                 if ($errorString -match "rate limit" -or $errorString -match "abuse" -or $errorString -match "secondary" -or $errorString -match "429") {
                     $isRateLimit = $true
                 }
+                if ($errorString -match "401" -or $errorString -match "Bad credentials" -or $errorString -match "Unauthorized") {
+                    $isUnauthorized = $true
+                }
             }
 
             # Catch server errors (502, 503), timeouts, and gateway errors as retryable
-            if (-not $isRateLimit -and -not $isRetryable) {
+            if (-not $isRateLimit -and -not $isRetryable -and -not $isUnauthorized) {
                 if ($errorString -match "502" -or $errorString -match "503" -or $errorString -match "Bad Gateway" -or $errorString -match "couldn.t respond.*in time" -or $errorString -match "timeout") {
                     $isRetryable = $true
                 }
             }
 
-            if ($isRateLimit) {
+            if ($isUnauthorized -and -not $tokenRefreshed -and $Session.ClientId) {
+                Write-Warning "Received 401 Unauthorized on GraphQL call. Attempting token refresh..."
+                Update-GitHubSessionToken -Session $Session
+                $fparams.Headers = $Session.Headers
+                $tokenRefreshed = $true
+                $retryCount++
+            }
+            elseif ($isRateLimit) {
                 Write-Warning "Rate limit hit when doing GraphQL call. Retry $($retryCount + 1)/$maxRetries"
                 Write-Debug $_
                 Wait-GithubGraphQlRateLimit -Session $Session
@@ -554,7 +659,7 @@ function Invoke-GitHubGraphQL
     }
 
     if (-not $requestSuccessful) {
-        throw "Failed after $maxRetries retry attempts due to server errors or rate limiting"
+        throw "Failed after $maxRetries retry attempts due to server errors, rate limiting, or authentication failure"
     }
 
     return $result
