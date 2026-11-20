@@ -1,4 +1,4 @@
-# GitHound
+# GitHound has been deprecated in favor of [openhound-github](https://github.com/SpecterOps/openhound-github)
 
 ![GitHound](./Documentation/images/github_bloodhound.png)
 
